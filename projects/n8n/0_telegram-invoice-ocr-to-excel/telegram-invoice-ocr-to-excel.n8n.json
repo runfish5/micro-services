@@ -1,0 +1,731 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {}
+      },
+      "id": "9eed5fef-3e0e-4d52-9f47-6b115d49ec30",
+      "name": "Google Gemini Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -60,
+        -920
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kmqRSsOartR5rGAD",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -760,
+        -1080
+      ],
+      "id": "fba2a8a2-853a-43c9-be3e-e4a8a7aea79a",
+      "name": "Telegram Trigger1",
+      "webhookId": "5d8be2e2-4879-42c0-9dfe-233e61dcfd85",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      },
+      "notes": "Chat-ID : 7281469586"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -540,
+        -1080
+      ],
+      "id": "a1b0be88-ebd6-4016-ad6f-0fb0af56b632",
+      "name": "Telegram1",
+      "webhookId": "46445344-dbab-4454-8158-0a8a4110b9dd",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "={{ $json.Message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        40,
+        -860
+      ],
+      "id": "5869384d-94e6-4934-aa00-ab8fe2905d1a",
+      "name": "Telegram2",
+      "webhookId": "68939611-b78f-4de1-9d57-d723dd37a511",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Generate a caption for this image.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a Precision OCR Engine. Your task is to extract all visible and legible text from images with high accuracy and fidelity. Output only the exact text appearing in the image, maintaining its original case. Preserve the natural reading order (e.g., top-to-bottom, left-to-right). Do not infer, summarize, correct, or add any information not explicitly visible.\n\nIf text is partially visible/illegible, extract only what can be confidently read. \n\nMaintain original line breaks and significant structural spacing where present. If no readable text exists, respond solely with an empty string: \"\". \n\nYour primary objective is an accurate, faithful textual representation of the image."
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary"
+            }
+          ]
+        }
+      },
+      "id": "1860385a-b1c4-4137-b90a-febab3affd60",
+      "name": "Image-to-text",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        -100,
+        -1080
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<parsed-invoice>\n{{ $json.text }}\n</parsed-invoice>",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI data extractor. Your task is to convert the provided invoice (<parsed-invoice>) text into a single, valid JSON object.\n\n**Key Instructions:**\n\n1.  **Output JSON Only:** Your entire response MUST be the JSON object. No explanations or any other text.\n2.  **Key Creation:**\n  * Keys must be **`snake_case`** and in **English**.\n\n  * **Prioritize these standard keys** (grouped for clarity):\n\n    * **Supplier & Recipient:**\n      * `supplier_name`, `supplier_address`, `supplier_contact_details`, `supplier_tax_id`, `supplier_vat_number`\n      * `recipient_business_name`, `recipient_business_address`\n    * **Invoice Core Details:**\n      * `invoice_number`, `invoice_date`, `purchase_order_number`, `internal_reference_number`\n    * **Payment & Financials:**\n      * `due_date`, `payment_terms`, `supplier_bank_account_details`\n      * `total_amount_due`, `currency_code`\n      * `subtotal_amount`, `tax_amount`, `discount_amount`\n    * **Internal Processing:**\n      * `date_received`, `department_id`, `cost_center_code`, `approver_id`, `approver_name`\n      * `date_paid`, `payment_method`, `payment_reference`, `invoice_status`\n    * **General:**\n      * `notes`\n\n  * If invoice text provides a label (e.g., \"Invoice \\#:\") not matching a standard key, use it for the key (e.g., `invoice_hash`).\n\n  * For unlabeled info not matching a standard key, **create a concise, descriptive, logical `snake_case` key.**\n\n  * If unsure which key to assign, prefix your best guess key with `uncertain_` (e.g., `uncertain_delivery_code`).\n3.  **Value Extraction:**\n  * Line items: array of objects under `line_items`. Item keys: `snake_case` (e.g., `item_description`, `quantity`, `unit_price`, `line_item_total`; also `product_code`, `item_tax_amount` if applicable).\n4.  **Missing Information:** Do not include keys for information not present. Do not invent data.\n\n<parsed-invoice\\>\n\n</parsed-invoice\\>\n\n"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        -760,
+        -860
+      ],
+      "id": "98e54bd9-5859-4ae4-8232-c28a57fadadc",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {}
+      },
+      "id": "bc60e467-5374-4195-b63a-4147a828cfd9",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -720,
+        -680
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kmqRSsOartR5rGAD",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "252dc06a-a11a-4bd5-b32d-18d700b2ab1c",
+              "name": "text",
+              "value": "={{ $json.text.replace(/^(```json\\n)?(.*?)(\\n```)?$/s, '$2')}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        -860
+      ],
+      "id": "594fb9b3-fc3a-42c6-a809-507a08f131b8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<parsed-invoice>\n{{ $json.text }}\n</parsed-invoice>",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI data extractor. Your task is to convert the provided invoice (<parsed-invoice>) text into a single, valid JSON object.\n\nKey Instructions:\n\n1.  **Output JSON Only:** Your entire response MUST be the JSON object. No explanations or any other text.\n2.  **Key Creation:**\n    * All keys must be **snake\\_case** (e.g., `invoice_number`, `due_date`) and in **English**.\n    * If the invoice text provides a label (e.g., \"Invoice #:\", \"Date:\"), use that as the basis for the key (e.g., `invoice_hash`, `date`).\n    * **Crucially: If a piece of information has no explicit label in the text, you MUST create a concise, descriptive, and logical snake\\_case key for it.** (e.g., for an unlabeled company name, use `vendor_name` or `customer_name` based on context).\n3.  **Value Extraction:**\n    * Extract values accurately.\n    * Use actual numbers for numerical values (e.g., `123.45`).\n    * Format dates as `YYYY-MM-DD` if clearly identifiable, otherwise use the original date string.\n    * If there are line items, structure them as an array of objects within the JSON (e.g., under a key like `line_items`).\n4.  **Missing Information:** Do not include keys for information not present in the invoice. Do not invent data."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        -800,
+        -480
+      ],
+      "id": "c5583c16-90f2-400c-8bfb-5fc63c0c7363",
+      "name": "Basic LLM Chain1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {}
+      },
+      "id": "12882e79-5649-4b93-9fbc-ee5cbfb92705",
+      "name": "Google Gemini Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -760,
+        -300
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kmqRSsOartR5rGAD",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
+          "mode": "list",
+          "cachedResultName": "2505_Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "supplier_name": "={{ $json.text.supplier_name }}",
+            "supplier_address": "={{ $json.text.supplier_address }}",
+            "invoice_date": "{{ $json.text.invoice_date }}",
+            "total_amount_due": "={{ $json.text.total_amount_due }}",
+            "currency_code": "={{ $json.text.currency_code }}",
+            "subtotal_amount": "={{ $json.text.total_amount_due }}",
+            "recipient_business_name": "={{ $json.text.supplier_name }}",
+            "payment_method": "={{ $json.text.payment_method }}",
+            "date_paid": "={{ $json.text.transaction_date }}",
+            "payment_reference": "={{ $json.text.payment_reference }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier_name",
+              "displayName": "supplier_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_date",
+              "displayName": "invoice_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_amount_due",
+              "displayName": "total_amount_due",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency_code",
+              "displayName": "currency_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "invoice_status",
+              "displayName": "invoice_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "purchase_order_number",
+              "displayName": "purchase_order_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "subtotal_amount",
+              "displayName": "subtotal_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tax_amount",
+              "displayName": "tax_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment_terms",
+              "displayName": "payment_terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date_received",
+              "displayName": "date_received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_tax_id",
+              "displayName": "supplier_tax_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_vat_number",
+              "displayName": "supplier_vat_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "recipient_business_name",
+              "displayName": "recipient_business_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date_paid",
+              "displayName": "date_paid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_reference",
+              "displayName": "payment_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "discount_amount",
+              "displayName": "discount_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "approver_id",
+              "displayName": "approver_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "approver_name",
+              "displayName": "approver_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "department_id",
+              "displayName": "department_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cost_center_code",
+              "displayName": "cost_center_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_address",
+              "displayName": "supplier_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier_contact_details",
+              "displayName": "supplier_contact_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_bank_account_details",
+              "displayName": "supplier_bank_account_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "internal_reference_number",
+              "displayName": "internal_reference_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "recipient_business_address",
+              "displayName": "recipient_business_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -160,
+        -720
+      ],
+      "id": "aa347958-26b4-43fe-8d2c-e84663b8adeb",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleApi": {
+          "id": "c8nbjZwjbgoLDWIt",
+          "name": "Google Service Acc_"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "borderWidth": 1,
+        "borderHeight": 1,
+        "options": {}
+      },
+      "id": "95550a33-ad41-43b5-b860-96ebd0bfd97c",
+      "name": "conversion",
+      "type": "n8n-nodes-base.editImage",
+      "position": [
+        -320,
+        -1080
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
+              "name": "Message",
+              "value": "=---\n{{ $now }}\n---\n{{ $json.text.toJsonString().substr(0, 1000).replace(/,/g, ',\\n') }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        -840
+      ],
+      "id": "99faf9d3-e21f-495f-9a77-e9d86e656e05",
+      "name": "Edit Fields1"
+    }
+  ],
+  "connections": {
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Image-to-text",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        [
+          {
+            "node": "conversion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram2": {
+      "main": [
+        []
+      ]
+    },
+    "Image-to-text": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        []
+      ]
+    },
+    "conversion": {
+      "main": [
+        [
+          {
+            "node": "Image-to-text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Telegram2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
