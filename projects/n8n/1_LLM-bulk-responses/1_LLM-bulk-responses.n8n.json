@@ -2,19 +2,6 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Summary of processing results\nconst workflowData = $getWorkflowStaticData('global');\nconst processedCount = workflowData.processedCount || 0;\nconst newProcessedCount = processedCount + ($input.all().length || 0);\n\n// Update static data\nworkflowData.processedCount = newProcessedCount;\nworkflowData.lastProcessedAt = new Date().toISOString();\n\nreturn [{\n  json: {\n    message: `Batch processing completed successfully`,\n    totalProcessed: newProcessedCount,\n    currentBatchSize: $input.all().length || 0,\n    lastProcessedAt: workflowData.lastProcessedAt,\n    workflowStatus: 'completed'\n  }\n}];"
-      },
-      "id": "6547dbe2-0796-4c18-a2e6-1b1c10580e29",
-      "name": "Processing Complete",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -624,
-        32
-      ]
-    },
-    {
-      "parameters": {
         "content": "# The alrounder assistant\n- eliminates copy-pasting",
         "height": 176,
         "width": 544,
@@ -22,54 +9,55 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -592,
-        -96
+        16,
+        -160
       ],
       "typeVersion": 1,
-      "id": "820712a6-e00a-41fe-860a-311e96030eaa",
+      "id": "ca9ec78e-c0a7-4bfd-927f-fbc986e2333e",
       "name": "Sticky Note1"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=\nANALYZE THE TEXT BELOW AND FILL IN THIS SCHEMA:\nTarget audience: [describe who this content is aimed at]\nContent_Poles: [select ONE: entertain, inspire, educate, convince]\nPerspective: [select ONE: Personal story, Expert Advice, General Advice]\nDomain: [provide 2 specific keyword suggestions for the main theme/topic]\nContent subj.: [one sentence description, max 10 words]\nCampaign: [shortest possible tl;dr title]\n\n<post-text>\n{{ $json.LinkedIn }}\n</post-text>",
+        "text": "=\"text\": \"# DATA EXTRACTION TASK\n\nYou are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<source_text>\n{{JSON.stringify($json, null, 2)}}\n</source_text>\n\n## CRITICAL INSTRUCTIONS:\n1. **READ CAREFULLY**: Analyze the entire source text thoroughly before extracting any information\n2. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n3. **REQUIRED FIELDS**: Fill ALL JSON fields - never leave empty strings or null values\n4. **DEFAULT VALUES**: Do not leave any of the JSON entries empty. use \"-\" or \"0\" or \"F\" instead.\n\n## EXPECTED OUTPUT FORMAT:\n- is given.\n\n## QUALITY CHECK:\n- Verify each extracted value against the source text\n- Ensure no information is fabricated or estimated\n- Double-check numerical values for accuracy\n- Confirm all fields are filled (no empty values)\n\nStart here.",
         "hasOutputParser": true,
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -448,
-        160
+        160,
+        96
       ],
-      "id": "a26e1552-f538-4c86-805d-734876e2ddff",
-      "name": "process row"
+      "id": "a7febc7f-0ac6-47f0-9583-0f25f6afe7ea",
+      "name": "process row",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo",
+          "value": "13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c",
           "mode": "list",
-          "cachedResultName": "Content_Calendar_DB",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo/edit?usp=drivesdk"
+          "cachedResultName": "Elderly_care_replies",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit#gid=0"
         },
         "options": {}
       },
-      "id": "c730633d-f777-44e8-aeea-6fcd7336f5ea",
+      "id": "a62b949a-e401-45c0-83b1-c6fe99d3a92e",
       "name": "Read Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        -784,
-        -112
+        -176,
+        -176
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -77,40 +65,6 @@
           "name": "Google Sheets_FirstProject"
         }
       }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "8c9e5a3d-2f1b-4e6a-9c8d-7b5a4f3e2d1c",
-              "leftValue": "={{ $json.LinkedIn }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "string",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "6951c22e-556d-4084-b98e-7a23ae598e4d",
-      "name": "format validation",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -624,
-        160
-      ]
     },
     {
       "parameters": {
@@ -125,16 +79,16 @@
             {
               "id": "186b90da-f161-4f4d-8d94-ac9502f6429b",
               "leftValue": "={{ $json.row_number }}",
-              "rightValue": 6,
+              "rightValue": 1,
               "operator": {
                 "type": "number",
-                "operation": "gt"
+                "operation": "gte"
               }
             },
             {
               "id": "c41503c0-a340-4617-a615-68b957975fa3",
               "leftValue": "={{ $json.row_number }}",
-              "rightValue": 9,
+              "rightValue": 3,
               "operator": {
                 "type": "number",
                 "operation": "lt"
@@ -148,10 +102,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        -944,
-        80
+        -336,
+        16
       ],
-      "id": "2095acd5-8f19-4ffe-aefa-14428374da5a",
+      "id": "7814d314-9deb-46d3-b6a4-d6572dbb76aa",
       "name": "P1"
     },
     {
@@ -160,41 +114,41 @@
           "reset": false
         }
       },
-      "id": "91a8c50f-82e0-481c-8993-24a9b05d054d",
+      "id": "6cdb8422-3814-474e-abfd-4ec4c509f5ab",
       "name": "Loop1",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -784,
-        80
+        -176,
+        16
       ]
     },
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"target_audience\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Description of who this content is aimed at\"\n\t\t},\n\t\t\"content_poles\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"enum\": [\"entertain\", \"inspire\", \"educate\", \"convince\"],\n\t\t\t\"description\": \"Primary purpose/pole of the content\"\n\t\t},\n\t\t\"perspective\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"enum\": [\"Personal story\", \"Expert Advice\", \"General Advice\"],\n\t\t\t\"description\": \"The viewpoint or approach used in the content\"\n\t\t},\n\t\t\"domain\": {\n\t\t\t\"type\": \"array\",\n\t\t\t\"items\": {\n\t\t\t\t\"type\": \"string\"\n\t\t\t},\n\t\t\t\"description\": \"Two specific keyword suggestions for the main theme/topic\",\n\t\t\t\"minItems\": 2,\n\t\t\t\"maxItems\": 2\n\t\t},\n\t\t\"content_subject\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"maxLength\": 60,\n\t\t\t\"description\": \"One sentence description, maximum 10 words\"\n\t\t},\n\t\t\"campaign\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"maxLength\": 30,\n\t\t\t\"description\": \"Shortest possible tl;dr title, even shorter than content subject\"\n\t\t}\n\t},\n\t\"required\": [\n\t\t\"target_audience\",\n\t\t\"content_poles\",\n\t\t\"perspective\",\n\t\t\"domain\",\n\t\t\"content_subject\",\n\t\t\"campaign\"\n\t]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cost_range\": {\n      \"type\": \"string\",\n      \"description\": \"Cost category for easy comparison\",\n      \"enum\": [\"under_3000\", \"3000_4000\", \"4000_5000\", \"5000_7000\", \"over_7000\"]\n    },\n    \"cognitive_stimulation_programs\": {\n      \"type\": \"string\",\n      \"description\": \"Mental stimulation activities or programs offered\"\n    },\n    \"public_transport_connections\": {\n      \"type\": \"string\",\n      \"description\": \"Access to public transportation mentioned\"\n    }\n  },\n  \"required\": [\"availability_status\", \"cost_range\", \"specialized_dementia_care\", \"cognitive_stimulation_programs\", \"public_transport_connections\", \"medical_services\", \"staff_ratio\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -256,
-        256
+        352,
+        192
       ],
-      "id": "7f324199-b67a-4b06-b149-34b5ad00765f",
+      "id": "fff5e001-91df-4ca2-a432-9be3df98755a",
       "name": "SO1"
     },
     {
       "parameters": {
-        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "model": "openai/gpt-oss-120b",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -336,
-        256
+        272,
+        192
       ],
-      "id": "71345d2f-37f1-44e2-8855-48d7c4dd6e98",
+      "id": "01ff9f9f-4fc9-4643-a001-7f6b5d4fb7f2",
       "name": "LLM1",
       "credentials": {
         "groqApi": {
@@ -208,10 +162,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -912,
-        -112
+        -304,
+        -176
       ],
-      "id": "ee52000f-bc26-47eb-8fcd-ac2dd826147a",
+      "id": "737b048d-538f-44e9-88ea-dfaa0b99cd22",
       "name": "Trigger1"
     },
     {
@@ -219,35 +173,47 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo",
+          "value": "13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c",
           "mode": "list",
-          "cachedResultName": "Content_Calendar_DB",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo/edit?usp=drivesdk"
+          "cachedResultName": "Elderly_care_replies",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RoRFPCA2nacux7nIh381ErMIKPVYeg8m66bdq49khvo/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Campaign": "={{$now}}",
-            "row_number": "={{ $('format validation').item.json.row_number }}",
-            "Content Subject": "={{ $json.output.content_subject }}",
-            "Perspective": "={{ $json.output.perspective }}",
-            "Target Audience": "={{ $json.output.target_audience }}",
-            "Content_Pole": "={{ $json.output.content_poles }}"
+            "availability_status": "={{ $json.output.availability_status }}",
+            "cost_range": "={{ $json.output.cost_range }}",
+            "specialized_dementia_care": "={{ $json.output.specialized_dementia_care }}",
+            "cognitive_stimulation_programs": "={{ $json.output.cognitive_stimulation_programs }}",
+            "public_transport_connections": "={{ $json.output.public_transport_connections }}",
+            "medical_services": "={{ $json.output.medical_services }}",
+            "staff_ratio": "={{ $json.output.staff_ratio }}",
+            "Response_ID": "={{ $('format validation').item.json.Response_ID }}"
           },
           "matchingColumns": [
-            "row_number"
+            "Response_ID"
           ],
           "schema": [
             {
-              "id": "active",
-              "displayName": "active",
+              "id": "Response_ID",
+              "displayName": "Response_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Facility_Name",
+              "displayName": "Facility_Name",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -256,8 +222,38 @@
               "removed": true
             },
             {
-              "id": "Campaign",
-              "displayName": "Campaign",
+              "id": "Date_Sent",
+              "displayName": "Date_Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Date_Received",
+              "displayName": "Date_Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email_Response",
+              "displayName": "Email_Response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "availability_status",
+              "displayName": "availability_status",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -265,8 +261,26 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "Content Subject",
-              "displayName": "Content Subject",
+              "id": "cost_range",
+              "displayName": "cost_range",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "specialized_dementia_care",
+              "displayName": "specialized_dementia_care",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cognitive_stimulation_programs",
+              "displayName": "cognitive_stimulation_programs",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -275,8 +289,8 @@
               "removed": false
             },
             {
-              "id": "Target Audience",
-              "displayName": "Target Audience",
+              "id": "public_transport_connections",
+              "displayName": "public_transport_connections",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -285,234 +299,23 @@
               "removed": false
             },
             {
-              "id": "Content_Pole",
-              "displayName": "Content_Pole",
+              "id": "medical_services",
+              "displayName": "medical_services",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "staff_ratio",
+              "displayName": "staff_ratio",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
               "removed": false
-            },
-            {
-              "id": "Perspective",
-              "displayName": "Perspective",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Platforms",
-              "displayName": "Platforms",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "\"LEN(A1)\"",
-              "displayName": "\"LEN(A1)\"",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "LinkedIn",
-              "displayName": "LinkedIn",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Publish Date",
-              "displayName": "Publish Date",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Repost (Y/n)",
-              "displayName": "Repost (Y/n)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Link_to_Post",
-              "displayName": "Link_to_Post",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "core_idea",
-              "displayName": "core_idea",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "sub_ideas",
-              "displayName": "sub_ideas",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "contrasting_ideas",
-              "displayName": "contrasting_ideas",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "supporting_examples",
-              "displayName": "supporting_examples",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "proposed_resolutions",
-              "displayName": "proposed_resolutions",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "overall_tone",
-              "displayName": "overall_tone",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "LinkedIn to repost",
-              "displayName": "LinkedIn to repost",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "key_sections",
-              "displayName": "key_sections",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "draft_outline",
-              "displayName": "draft_outline",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "refined_query",
-              "displayName": "refined_query",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "messy_notes",
-              "displayName": "messy_notes",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Engagement rate",
-              "displayName": "Engagement rate",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "X",
-              "displayName": "X",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Blog",
-              "displayName": "Blog",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Image prompt",
-              "displayName": "Image prompt",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
             },
             {
               "id": "row_number",
@@ -523,7 +326,7 @@
               "type": "number",
               "canBeUsedToMatch": true,
               "readOnly": true,
-              "removed": false
+              "removed": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -531,13 +334,13 @@
         },
         "options": {}
       },
-      "id": "e89400e1-cc82-4f52-8d5f-adce8935c258",
+      "id": "9873b8ee-ef52-45fb-b7df-56a00f6c03ee",
       "name": "Write_Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        -160,
-        160
+        448,
+        96
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -548,19 +351,53 @@
     },
     {
       "parameters": {
-        "content": "looping \nover items",
-        "height": 240,
+        "content": "items looping",
+        "height": 208,
         "width": 422,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -464,
-        96
+        144,
+        48
       ],
       "typeVersion": 1,
-      "id": "9c1a77ad-c498-4519-9155-ea3b19349320",
+      "id": "6cf7c304-f010-439a-97dd-d4658c88dfa1",
       "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "8c9e5a3d-2f1b-4e6a-9c8d-7b5a4f3e2d1c",
+              "leftValue": "={{ $json.Email_Response }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b45c23e5-e9ba-4e8b-8d96-26abbef66dc9",
+      "name": "format validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        96
+      ]
     }
   ],
   "connections": {
@@ -586,24 +423,6 @@
         ]
       ]
     },
-    "format validation": {
-      "main": [
-        [
-          {
-            "node": "process row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Loop1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "P1": {
       "main": [
         [
@@ -617,13 +436,7 @@
     },
     "Loop1": {
       "main": [
-        [
-          {
-            "node": "Processing Complete",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [],
         [
           {
             "node": "format validation",
@@ -676,11 +489,21 @@
           }
         ]
       ]
+    },
+    "format validation": {
+      "main": [
+        [
+          {
+            "node": "process row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
   }
 }
