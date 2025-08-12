@@ -9,11 +9,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        16,
-        -384
+        272,
+        -640
       ],
       "typeVersion": 1,
-      "id": "2fc99b8a-a6b9-45c2-a076-da43f61de987",
+      "id": "b4733bca-a34c-4d1c-9243-d3f1af0a408d",
       "name": "Sticky Note1"
     },
     {
@@ -26,10 +26,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        160,
-        -128
+        416,
+        -384
       ],
-      "id": "12e71a9f-37e9-4fd2-95e3-f2132cf47e07",
+      "id": "4eff122a-9b4e-49ee-a3ee-4675249589ed",
       "name": "process row",
       "alwaysOutputData": true
     },
@@ -50,13 +50,13 @@
           "cachedResultUrl": ""
         }
       },
-      "id": "be40e781-d503-4607-8b53-cd3e28e3417e",
+      "id": "1105ff53-7041-4f78-83ae-ec03259d0a78",
       "name": "Read Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        -176,
-        -400
+        80,
+        -656
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -71,13 +71,13 @@
           "reset": false
         }
       },
-      "id": "8fb27f1d-f956-4757-8509-3012ed5ef94a",
+      "id": "94eb9038-283b-409f-aa83-8b20519d90ba",
       "name": "Loop1",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -176,
-        -208
+        80,
+        -464
       ]
     },
     {
@@ -88,10 +88,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        304,
-        -32
+        560,
+        -288
       ],
-      "id": "32b0465f-3d06-41e5-875d-45526efacd04",
+      "id": "9d9a1f56-1588-423d-b35d-dd1bec686724",
       "name": "SO1"
     },
     {
@@ -102,10 +102,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        224,
-        -32
+        480,
+        -288
       ],
-      "id": "62e5ad91-5acf-4dcc-a0ae-41dcceb2ddf8",
+      "id": "3773ec53-bed7-4a58-aae3-b1cc9c095b82",
       "name": "LLM1",
       "credentials": {
         "groqApi": {
@@ -119,10 +119,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -304,
-        -400
+        -48,
+        -656
       ],
-      "id": "b5126b1c-dc05-4ab3-94b4-2e57866da654",
+      "id": "8b27bbe4-c455-4027-9e5d-0995607a633a",
       "name": "Trigger1"
     },
     {
@@ -143,10 +143,8 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "availability_status": "={{ $json.output.availability_status }}",
             "cost_range": "={{ $json.output.cost_range }}",
             "specialized_dementia_care": "={{ $json.output.specialized_dementia_care }}",
-            "cognitive_stimulation_programs": "={{ $json.output.cognitive_stimulation_programs }}",
             "public_transport_connections": "={{ $json.output.public_transport_connections }}",
             "medical_services": "={{ $json.output.medical_services }}",
             "staff_ratio": "={{ $json.output.staff_ratio }}",
@@ -213,7 +211,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "cost_range",
@@ -241,7 +240,7 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": false
+              "removed": true
             },
             {
               "id": "public_transport_connections",
@@ -289,13 +288,13 @@
         },
         "options": {}
       },
-      "id": "9c81f1cc-c1c7-432e-8703-ecb189de9401",
+      "id": "38fa3389-7c47-4290-9d69-852324ece9bc",
       "name": "Write_Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        448,
-        -128
+        704,
+        -384
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -313,11 +312,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        144,
-        -176
+        400,
+        -432
       ],
       "typeVersion": 1,
-      "id": "91a34e2c-5278-45d7-9d10-2ccf8c13c6a8",
+      "id": "49639f90-8bac-4928-965f-c2b4826d2a22",
       "name": "Sticky Note"
     },
     {
@@ -345,237 +344,14 @@
         },
         "options": {}
       },
-      "id": "69ed1be1-4e06-45e8-adb9-44302b058793",
+      "id": "98190227-6fed-4a8c-aeca-441855742f12",
       "name": "format validation",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -16,
-        -128
+        240,
+        -384
       ]
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n      \"availability_status\": {\n          \"type\": \"string\",\n          \"description\": \"When they have openings available\"\n      },\n      \"cost_range\": {\n          \"type\": \"string\",\n          \"description\": \"Cost category for easy comparison\",\n          \"enum\": [\"under_3000\", \"3000_4000\", \"4000_5000\", \"5000_7000\", \"over_7000\"]\n      },\n      \"cognitive_stimulation_programs\": {\n          \"type\": \"string\",\n          \"description\": \"Mental stimulation activities or programs offered\"\n      },\n      \"facility_size\": {\n          \"type\": \"string\",\n          \"description\": \"Approximate size of facility\"\n      },\n      \"required\": [\"availability_status\", \"cost_range\", \"cognitive_stimulation_programs\"]\n  }\n}"
-      },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        -192,
-        336
-      ],
-      "id": "d6d24395-8824-4d69-9d03-f858880338f4",
-      "name": "SO",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit#gid=0"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "Response_ID": "={{ $('format validation').item.json.Response_ID }}"
-          },
-          "matchingColumns": [
-            "Response_ID"
-          ],
-          "schema": [
-            {
-              "id": "Response_ID",
-              "displayName": "Response_ID",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Facility_Name",
-              "displayName": "Facility_Name",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Date_Sent",
-              "displayName": "Date_Sent",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Date_Received",
-              "displayName": "Date_Received",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "Email_Response",
-              "displayName": "Email_Response",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "availability_status",
-              "displayName": "availability_status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "cost_range",
-              "displayName": "cost_range",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "specialized_dementia_care",
-              "displayName": "specialized_dementia_care",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "cognitive_stimulation_programs",
-              "displayName": "cognitive_stimulation_programs",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "public_transport_connections",
-              "displayName": "public_transport_connections",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "medical_services",
-              "displayName": "medical_services",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "staff_ratio",
-              "displayName": "staff_ratio",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "row_number",
-              "displayName": "row_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "readOnly": true,
-              "removed": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "id": "f8a9084b-7c1f-43d7-aa92-9467c3014bc4",
-      "name": "Write_Excel1",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        320,
-        320
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "Google Sheets_FirstProject"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "",
-          "mode": "list",
-          "cachedResultName": "",
-          "cachedResultUrl": ""
-        }
-      },
-      "id": "c33aa218-84e8-4cd4-aa22-87b88e85af8e",
-      "name": "Read Excel1",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        -64,
-        320
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "Google Sheets_FirstProject"
-        }
-      },
-      "disabled": true
     },
     {
       "parameters": {
@@ -613,70 +389,11 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        -336,
-        -208
+        -80,
+        -464
       ],
-      "id": "965ce3fd-74f1-49c9-b117-06a6e8b2f2c1",
+      "id": "d8539735-c7b5-4c4d-8562-194fcf8e1c61",
       "name": "Select Range"
-    },
-    {
-      "parameters": {
-        "content": "### Only modify these objects\n",
-        "height": 224,
-        "width": 736,
-        "color": 5
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -208,
-        272
-      ],
-      "typeVersion": 1,
-      "id": "3f52b4a9-434d-4e0c-aa69-6bdc31e99124",
-      "name": "Sticky Note2"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "186b90da-f161-4f4d-8d94-ac9502f6429b",
-              "leftValue": "={{ $json.row_number }}",
-              "rightValue": 11,
-              "operator": {
-                "type": "number",
-                "operation": "gte"
-              }
-            },
-            {
-              "id": "c41503c0-a340-4617-a615-68b957975fa3",
-              "leftValue": "={{ $json.row_number }}",
-              "rightValue": 13,
-              "operator": {
-                "type": "number",
-                "operation": "lt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        112,
-        320
-      ],
-      "id": "a7441009-01fd-421f-90ba-a7f1974a957a",
-      "name": "Select Range1",
-      "disabled": true
     }
   ],
   "connections": {
