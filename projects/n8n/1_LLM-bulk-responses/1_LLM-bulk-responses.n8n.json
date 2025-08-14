@@ -9,12 +9,12 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        272,
-        -640
+        -1008,
+        -112
       ],
       "typeVersion": 1,
-      "id": "b4733bca-a34c-4d1c-9243-d3f1af0a408d",
-      "name": "Sticky Note1"
+      "id": "f528d0a7-efb6-4b6e-9eb1-06b6e2631106",
+      "name": "Sticky Note3"
     },
     {
       "parameters": {
@@ -26,11 +26,11 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        416,
-        -384
+        -864,
+        144
       ],
-      "id": "4eff122a-9b4e-49ee-a3ee-4675249589ed",
-      "name": "process row",
+      "id": "88305839-5ba5-4cb3-b3b9-ad3322568502",
+      "name": "process row1",
       "alwaysOutputData": true
     },
     {
@@ -50,13 +50,13 @@
           "cachedResultUrl": ""
         }
       },
-      "id": "1105ff53-7041-4f78-83ae-ec03259d0a78",
-      "name": "Read Excel",
+      "id": "03806a78-e306-4934-a108-98ddb3117e1f",
+      "name": "Read Excel2",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        80,
-        -656
+        -1200,
+        -128
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -71,13 +71,13 @@
           "reset": false
         }
       },
-      "id": "94eb9038-283b-409f-aa83-8b20519d90ba",
-      "name": "Loop1",
+      "id": "a179b6fe-d6ed-4b26-9aeb-01b6e193dd13",
+      "name": "Loop",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        80,
-        -464
+        -1200,
+        64
       ]
     },
     {
@@ -88,11 +88,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        560,
-        -288
+        -720,
+        240
       ],
-      "id": "9d9a1f56-1588-423d-b35d-dd1bec686724",
-      "name": "SO1"
+      "id": "04d1fd4f-3265-43b5-a4a4-e67506930e85",
+      "name": "SO2"
     },
     {
       "parameters": {
@@ -102,28 +102,17 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        480,
-        -288
+        -800,
+        240
       ],
-      "id": "3773ec53-bed7-4a58-aae3-b1cc9c095b82",
-      "name": "LLM1",
+      "id": "357250d5-5a81-44d1-8eb8-d2cb274bb5fc",
+      "name": "LLM",
       "credentials": {
         "groqApi": {
           "id": "sue07pcKIgrn1xhP",
           "name": "Groq account"
         }
       }
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -48,
-        -656
-      ],
-      "id": "8b27bbe4-c455-4027-9e5d-0995607a633a",
-      "name": "Trigger1"
     },
     {
       "parameters": {
@@ -148,7 +137,7 @@
             "public_transport_connections": "={{ $json.output.public_transport_connections }}",
             "medical_services": "={{ $json.output.medical_services }}",
             "staff_ratio": "={{ $json.output.staff_ratio }}",
-            "Response_ID": "={{ $('format validation').item.json.Response_ID }}"
+            "Response_ID": "={{ $('format validation1').item.json.Response_ID }}"
           },
           "matchingColumns": [
             "Response_ID"
@@ -288,13 +277,13 @@
         },
         "options": {}
       },
-      "id": "38fa3389-7c47-4290-9d69-852324ece9bc",
-      "name": "Write_Excel",
+      "id": "d8aabcf5-be50-4420-906e-2e331e2c8be9",
+      "name": "Write_Excel2",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        704,
-        -384
+        -576,
+        144
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -312,12 +301,12 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        400,
-        -432
+        -880,
+        96
       ],
       "typeVersion": 1,
-      "id": "49639f90-8bac-4928-965f-c2b4826d2a22",
-      "name": "Sticky Note"
+      "id": "cdb1d613-f9fd-4a1e-9482-cf22c905ad6d",
+      "name": "Sticky Note4"
     },
     {
       "parameters": {
@@ -344,13 +333,13 @@
         },
         "options": {}
       },
-      "id": "98190227-6fed-4a8c-aeca-441855742f12",
-      "name": "format validation",
+      "id": "795f23d2-6896-4cb8-9ff5-762fefec2a57",
+      "name": "format validation1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        240,
-        -384
+        -1040,
+        144
       ]
     },
     {
@@ -389,108 +378,379 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        -80,
-        -464
+        -1360,
+        64
       ],
-      "id": "d8539735-c7b5-4c4d-8562-194fcf8e1c61",
-      "name": "Select Range"
+      "id": "52eef02a-6dcd-48d6-8597-3aa3f9ca1c37",
+      "name": "Select Range2"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n      \"availability_status\": {\n          \"type\": \"string\",\n          \"description\": \"When they have openings available\"\n      },\n      \"cost_range\": {\n          \"type\": \"string\",\n          \"description\": \"Cost category for easy comparison\",\n          \"enum\": [\"under_3000\", \"3000_4000\", \"4000_5000\", \"5000_7000\", \"over_7000\"]\n      },\n      \"cognitive_stimulation_programs\": {\n          \"type\": \"string\",\n          \"description\": \"Mental stimulation activities or programs offered\"\n      },\n      \"facility_size\": {\n          \"type\": \"string\",\n          \"description\": \"Approximate size of facility\"\n      },\n      \"required\": [\"availability_status\", \"cost_range\", \"cognitive_stimulation_programs\"]\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1216,
+        592
+      ],
+      "id": "ae4ff2b2-5669-4083-af05-6cb25cefa983",
+      "name": "SO4",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13_rsLrDZhf-I3LmjzyhV9nHDcXXzTReBYorf3czow1c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Response_ID": "={{ $('format validation2').item.json.Response_ID }}"
+          },
+          "matchingColumns": [
+            "Response_ID"
+          ],
+          "schema": [
+            {
+              "id": "Response_ID",
+              "displayName": "Response_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Facility_Name",
+              "displayName": "Facility_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Date_Sent",
+              "displayName": "Date_Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Date_Received",
+              "displayName": "Date_Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email_Response",
+              "displayName": "Email_Response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "availability_status",
+              "displayName": "availability_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cost_range",
+              "displayName": "cost_range",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "specialized_dementia_care",
+              "displayName": "specialized_dementia_care",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cognitive_stimulation_programs",
+              "displayName": "cognitive_stimulation_programs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "public_transport_connections",
+              "displayName": "public_transport_connections",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "medical_services",
+              "displayName": "medical_services",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "staff_ratio",
+              "displayName": "staff_ratio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ae1e3509-673e-407e-87bb-748f913aba72",
+      "name": "Write_Excel4",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -704,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "Google Sheets_FirstProject"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        }
+      },
+      "id": "681be0f3-42f7-4891-9941-62babbcbb47f",
+      "name": "Read Excel4",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -1088,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "Google Sheets_FirstProject"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "### Only modify these objects\n",
+        "height": 224,
+        "width": 736,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1232,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "788662e1-dc71-4b62-bb7d-30c1eaa7a21e",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "186b90da-f161-4f4d-8d94-ac9502f6429b",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 11,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "c41503c0-a340-4617-a615-68b957975fa3",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 13,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -912,
+        576
+      ],
+      "id": "277e7eb6-43f1-4afa-a215-47d9194ea293",
+      "name": "Select Range4",
+      "disabled": true
     }
   ],
   "connections": {
-    "process row": {
+    "process row1": {
       "main": [
         [
           {
-            "node": "Write_Excel",
+            "node": "Write_Excel2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read Excel": {
+    "Read Excel2": {
       "main": [
         [
           {
-            "node": "Select Range",
+            "node": "Select Range2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Loop1": {
+    "Loop": {
       "main": [
         [],
         [
           {
-            "node": "format validation",
+            "node": "format validation1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SO1": {
+    "SO2": {
       "ai_outputParser": [
         [
           {
-            "node": "process row",
+            "node": "process row1",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "LLM1": {
+    "LLM": {
       "ai_languageModel": [
         [
           {
-            "node": "process row",
+            "node": "process row1",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Trigger1": {
+    "Write_Excel2": {
       "main": [
         [
           {
-            "node": "Read Excel",
+            "node": "Loop",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Write_Excel": {
+    "format validation1": {
       "main": [
         [
           {
-            "node": "Loop1",
+            "node": "process row1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "format validation": {
+    "Select Range2": {
       "main": [
         [
           {
-            "node": "process row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Select Range": {
-      "main": [
-        [
-          {
-            "node": "Loop1",
+            "node": "Loop",
             "type": "main",
             "index": 0
           }
