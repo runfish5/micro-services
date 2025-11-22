@@ -1,0 +1,20 @@
+# Environment & Secrets
+.env
+*.env
+*credentials*.json
+*secret*.json
+
+# n8n
+.n8n/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temp
+*.log
+tmp/
