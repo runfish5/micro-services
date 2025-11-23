@@ -1,1 +1,1871 @@
-{}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3664,
+        320
+      ],
+      "id": "6c3c43c8-ad2f-499a-9635-72235732aff2",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.email_ID}}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3344,
+        496
+      ],
+      "id": "a799331e-fa2e-4e91-b083-6aa0fc64acd4",
+      "name": "Gmail",
+      "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3472,
+        1056
+      ],
+      "id": "93f11d26-754d-4618-9c72-7f0dedd80fa8",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "10646eae-ae46-4327-a4dc-9987c2d76173",
+              "name": "email_ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "51351690-f890-4607-8e5a-de403767da9e",
+      "name": "Set File ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3472,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0af57e1c-21ab-433b-a109-3e21070857a2",
+              "name": "binary_files",
+              "value": "={{ $input.item.binary || JSON.parse('{\"message\": \"No binary Attachment\"}') }}",
+              "type": "object"
+            },
+            {
+              "id": "dde8fd18-7822-4f3b-8fd0-a9614db9e0b8",
+              "name": "attachment_names",
+              "value": "={{ Object.keys($binary) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3616,
+        688
+      ],
+      "id": "543d6d5a-cfcd-4dd8-8903-6644a8c3fb38",
+      "name": "Get $('Gmail').item.binary"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "={{ $json.Message || \"SANTA ERROR\" }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1920,
+        704
+      ],
+      "id": "2088e672-f767-427d-9460-9668da9da6d7",
+      "name": "Telegram",
+      "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
+              "name": "Message",
+              "value": "=EMAIL: completed\n---\nWe sorted out this instance for you:\n📤 {{ $('Set File ID').all()[0].json.from.value[0].address }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>\n\n✍ {{ $('Set File ID').first().json.subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2096,
+        704
+      ],
+      "id": "f8efc549-1807-4f55-b199-782f65406111",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "content": "# attachment processer",
+        "height": 512,
+        "width": 720,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3664,
+        864
+      ],
+      "typeVersion": 1,
+      "id": "16a62643-10ac-42bf-a3aa-d0491fdf9a90",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# E-Mail trigger",
+        "height": 624,
+        "width": 480,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3664,
+        240
+      ],
+      "typeVersion": 1,
+      "id": "05663fd1-3317-4260-96db-6cc14ded1409",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "45df079e-7a07-406b-8cee-c236cf13c0d3",
+              "leftValue": "={{ $json.labelIds }}",
+              "rightValue": "=CATEGORY_PROMOTIONS",
+              "operator": {
+                "type": "array",
+                "operation": "notContains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3472,
+        320
+      ],
+      "id": "c33339f7-43e6-439c-9899-2bd0067b0a95",
+      "name": "Stop promotions"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{[\"invoice\", \"financial\"]}}",
+                    "rightValue": "={{ $json.output.type_of_document }}",
+                    "operator": {
+                      "type": "array",
+                      "operation": "contains",
+                      "rightType": "any"
+                    },
+                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2704,
+        560
+      ],
+      "id": "c0385e60-34c4-4ec7-a6b6-db6e5bc82e8a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "content": "# subject classifier",
+        "height": 352,
+        "width": 1024,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3184,
+        512
+      ],
+      "typeVersion": 1,
+      "id": "6f0c3eb5-40f4-4681-9a83-5bd64287668e",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me1",
+      "typeVersion": 1,
+      "position": [
+        -2704,
+        720
+      ],
+      "id": "944a218f-66c3-40a7-9b5a-15716f05b4e6"
+    },
+    {
+      "parameters": {
+        "content": "#  Invoices & Receipts: \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n- invoicing period > folder (YY/MM)",
+        "height": 528,
+        "width": 928,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2928,
+        864
+      ],
+      "typeVersion": 1,
+      "id": "00bfa020-947a-4bfb-994f-39da6439e825",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "README.md\n# inbox_agent\n\n- Alert on Telegram for Emails.\n- n8n Invoice Processing Workflow Summary\n\n## 1. Email Trigger & Processing\n- **Gmail Trigger**: Poll every minute → **Stop promotions** filter → **Set File ID** metadata\n- **Gmail**: Retrieve full email → **Get binary** → **Split Out All Attachments** → **If** check attachments exist\n\n## 2. Attachment Processing Loop\n- **Loop Over Items**: Batch process\n- **Execute Workflow1**: Call \"Any-file2json converter\" sub-workflow\n\n## 3. Document Classification\n- **Edit Fields2**: Extract text\n- **Basic LLM Chain** (Groq Llama 4): Classify via Swiss SME chart of accounts\n  - **Structured Output Parser1**: Validate schema\n- **Switch**: Route by document type (invoice/other)\n\n## 4. Data Extraction & Storage\n- **Replace Me1** → **Basic LLM Chain2** (Google Gemini 2.5): Extract invoice fields\n- **Edit Fields3**: Clean JSON output\n- **Google Sheets1**: Append to \"2505_Invoices\" \n- **Get row(s)** → **If2** → **Execute Workflow2** → **Upload file** to Google Drive\n- **Edit Fields5** → **Telegram**: Send notification",
+        "height": 864,
+        "width": 512,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -4208,
+        512
+      ],
+      "typeVersion": 1,
+      "id": "1ab347e6-5a33-4686-b3df-3e6c143e6c0b",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
+              "leftValue": "={{ $json.binary_files.message }}",
+              "rightValue": "No binary Attachment",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3296,
+        720
+      ],
+      "id": "7d175608-d04b-41c7-8523-5dbf522e871c",
+      "name": "Empty?"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GtcLjBMusAUB0h30",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GtcLjBMusAUB0h30",
+          "cachedResultName": "Any-file2json converter"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "binary_files",
+              "displayName": "binary_files",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "metadata",
+              "displayName": "metadata",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -3264,
+        1168
+      ],
+      "id": "f492e836-2a5e-4c38-b299-93eeb80e8b2b",
+      "name": "Analyze file",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "99c26d9b-04e1-41df-a433-47fe400f2f84",
+              "name": "data.text",
+              "value": "={{ $('Get $(\\'Gmail\\').item.binary').item.json.text  }}",
+              "type": "string"
+            },
+            {
+              "id": "fadec21f-011e-4f8c-af73-1db0fd72a6c7",
+              "name": "address",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3472,
+        688
+      ],
+      "id": "bc4a5430-5939-4ddf-b82c-f866b774979b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// // Ultra-Aggressive Email Text Cleaner for n8n\n// // Removes ALL formatting artifacts for clean LLM processing\n\n// // Process ALL items\n// const items = $input.all();\n// const results = [];\n\n// for (const item of items) {\n//   const $json = item.json;\n  \n//   // Get the raw text from various possible locations\n//   let rawText = '';\n\n//   // Try different paths to find the text\n//   if ($json.text) {\n//     rawText = $json.text;\n//   } else if ($json.data && $json.data.text) {\n//     rawText = $json.data.text;\n//   } else if ($json['data.text']) {\n//     rawText = $json['data.text'];\n//   } else if ($input.item.json.text) {\n//     rawText = $input.item.json.text;\n//   } else if ($input.item.json.data && $input.item.json.data.text) {\n//     rawText = $input.item.json.data.text;\n//   }\n\n//   // If still no text, return error\n//   if (!rawText || rawText.trim().length === 0) {\n//     return {\n//       error: 'No text content found',\n//       paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n//       available_keys: Object.keys($json || {})\n//     };\n//   }\n\n//   // EXTRACT ATTACHMENT NAMES from item.binary (simple key extraction)\n//   const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n//   // STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\n//   let text = rawText\n//     // Convert to standard ASCII where possible\n//     .normalize('NFD')\n//     // Remove ALL control and invisible characters\n//     .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n//     // Remove zero-width characters\n//     .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n//     // Remove other invisibles\n//     .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n//     // Remove soft hyphens and special spaces\n//     .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n//     // Remove the specific problematic characters from your email\n//     .replace(/[­͏‌]/g, ' ')\n//     // Replace ALL multiple spaces with single space\n//     .replace(/\\s+/g, ' ')\n//     // Trim each line\n//     .split('\\n')\n//     .map(line => line.trim())\n//     .join('\\n');\n\n//   // STEP 2: Extract URLs and create a clean mapping\n//   const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n//   const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n//   // First remove image URLs completely\n//   text = text.replace(imageRegex, ' ');\n\n//   // Then handle other URLs\n//   const urls = text.match(urlRegex) || [];\n//   const uniqueUrls = [...new Set(urls)];\n//   const urlMap = {};\n\n//   uniqueUrls.forEach((url, i) => {\n//     const linkId = `[Link${i + 1}]`;\n//     urlMap[linkId] = url;\n//     // Replace URL with placeholder\n//     text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n//   });\n\n//   // STEP 3: Fix spacing issues caused by removed content\n//   text = text\n//     // Fix spaces around punctuation\n//     .replace(/\\s+([.,;!?])/g, '$1')\n//     .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n//     // Remove multiple spaces again\n//     .replace(/\\s+/g, ' ')\n//     // Fix line breaks - ensure proper spacing\n//     .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n//     .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n//     ;\n\n//   // STEP 4: Clean up brackets and special formatting\n//   text = text\n//     .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n//     .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n//     .replace(/\\s*\\]\\s*/g, '] ')\n//     .replace(/\\s+/g, ' '); // Final space cleanup\n\n//   // STEP 5: Smart paragraph detection and formatting\n//   const lines = text.split('\\n');\n//   const formattedLines = [];\n//   let currentParagraph = '';\n\n//   for (const line of lines) {\n//     const trimmed = line.trim();\n//     if (trimmed.length === 0) continue;\n    \n//     // Check if this looks like a new section/paragraph\n//     if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n//         trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n//       // Save current paragraph if exists\n//       if (currentParagraph) {\n//         formattedLines.push(currentParagraph.trim());\n//       }\n//       currentParagraph = trimmed;\n//     } else {\n//       // Continue current paragraph\n//       currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n//     }\n//   }\n//   // Don't forget the last paragraph\n//   if (currentParagraph) {\n//     formattedLines.push(currentParagraph.trim());\n//   }\n\n//   text = formattedLines.join('\\n\\n');\n\n//   // STEP 6: Extract key information\n//   const extractedInfo = {\n//     orderNumber: null,\n//     trackingNumber: null,\n//     product: null,\n//     deliveryAddress: null,\n//     amounts: [],\n//     dates: []\n//   };\n\n//   // Extract order number\n//   const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n//   if (orderMatch) {\n//     extractedInfo.orderNumber = orderMatch[1];\n//   }\n\n//   // Extract tracking number (long number that's not the order)\n//   const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n//   extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n//   // Extract product name\n//   const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n//   if (productMatch) {\n//     extractedInfo.product = productMatch[0].trim();\n//   }\n\n//   // Extract delivery address\n//   const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n//   if (addressMatch) {\n//     extractedInfo.deliveryAddress = addressMatch[1].trim();\n//   }\n\n//   // Extract dates\n//   const dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\n//   if (dateMatches) {\n//     extractedInfo.dates = dateMatches;\n//   }\n\n//   // STEP 7: Create super-clean version for LLM\n//   const textForLLM = text\n//     .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n//     .replace(/\\[\\]/g, '') // Remove empty brackets\n//     .replace(/\\s+/g, ' ') // Normalize spaces\n//     .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n//     .trim();\n\n//   // STEP 8: Create a structured summary for LLM\n//   const attachmentList = attachmentNames.length > 0 \n//     ? attachmentNames.join(', ')\n//     : 'No attachments';\n\n//   const structuredSummary = `\n// ORDER DETAILS:\n// - Order Number: ${extractedInfo.orderNumber || 'Not found'}\n// - Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n// - Product: ${extractedInfo.product || 'Not found'}\n// - Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n// - Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n// - Attachments: ${attachmentList}\n\n// ORIGINAL MESSAGE:\n// ${textForLLM}\n// `.trim();\n\n//   // STEP 9: Get metadata safely\n//   const metadata = {\n//     subject: $json.subject || $input.item?.json?.subject || 'No subject',\n//     from: $json.from || $input.item?.json?.from || 'Unknown',\n//     to: $json.to || $input.item?.json?.to || 'Unknown',\n//     date: $json.date || $input.item?.json?.date || new Date().toISOString()\n//   };\n\n//   // Add to results array - ATTACHMENT NAMES AT TOP\n//   results.push({\n//     // Attachment names FIRST\n//     attachmentNames: attachmentNames,\n    \n//     // Ultra-clean version for LLM\n//     textForLLM: textForLLM,\n    \n//     // Structured summary for better LLM understanding\n//     structuredSummary: structuredSummary,\n    \n//     // Main cleaned text with placeholders\n//     text: text,\n    \n//     // Keep the data structure for compatibility\n//     data: {\n//       text: textForLLM\n//     },\n    \n//     // Metadata\n//     ...metadata,\n    \n//     // Extracted information\n//     extracted: extractedInfo,\n    \n//     // URL mapping (if you need references)\n//     linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n    \n//     // Statistics\n//     stats: {\n//       originalLength: rawText.length,\n//       cleanLength: text.length,\n//       llmLength: textForLLM.length,\n//       reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n//       linkCount: Object.keys(urlMap).length\n//     }\n//   });\n// } // Close the for loop\n\n// // Return all processed items in n8n format\n// return results.map(result => ({ json: result }));\n\n\n// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Process ALL items\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const $json = item.json;\n  \n  // Get the raw text from various possible locations\n  let rawText = '';\n\n  // Try different paths to find the text\n  if ($json.text) {\n    rawText = $json.text;\n  } else if ($json.data && $json.data.text) {\n    rawText = $json.data.text;\n  } else if ($json['data.text']) {\n    rawText = $json['data.text'];\n  } else if ($input.item.json.text) {\n    rawText = $input.item.json.text;\n  } else if ($input.item.json.data && $input.item.json.data.text) {\n    rawText = $input.item.json.data.text;\n  }\n\n  // If still no text, return error\n  if (!rawText || rawText.trim().length === 0) {\n    return {\n      json: { // Wrap error in json to maintain standard format\n        error: 'No text content found',\n        paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n        available_keys: Object.keys($json || {})\n      }\n    };\n  }\n\n  // EXTRACT ATTACHMENT NAMES from item.binary (simple key extraction)\n  const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n  // STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\n  let text = rawText\n    // Convert to standard ASCII where possible\n    .normalize('NFD')\n    // Remove ALL control and invisible characters\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    // Remove zero-width characters\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n    // Remove other invisibles\n    .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n    // Remove soft hyphens and special spaces\n    .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n    // Remove the specific problematic characters from your email\n    .replace(/[­͏‌]/g, ' ')\n    // Replace ALL multiple spaces with single space\n    .replace(/\\s+/g, ' ')\n    // Trim each line\n    .split('\\n')\n    .map(line => line.trim())\n    .join('\\n');\n\n  // STEP 2: Extract URLs and create a clean mapping\n  const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n  const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n  // First remove image URLs completely\n  text = text.replace(imageRegex, ' ');\n\n  // Then handle other URLs\n  const urls = text.match(urlRegex) || [];\n  const uniqueUrls = [...new Set(urls)];\n  const urlMap = {};\n\n  uniqueUrls.forEach((url, i) => {\n    const linkId = `[Link${i + 1}]`;\n    urlMap[linkId] = url;\n    // Replace URL with placeholder\n    text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n  });\n\n  // STEP 3: Fix spacing issues caused by removed content\n  text = text\n    // Fix spaces around punctuation\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n    // Remove multiple spaces again\n    .replace(/\\s+/g, ' ')\n    // Fix line breaks - ensure proper spacing\n    .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n    .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n    ;\n\n  // STEP 4: Clean up brackets and special formatting\n  text = text\n    .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n    .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n    .replace(/\\s*\\]\\s*/g, '] ')\n    .replace(/\\s+/g, ' '); // Final space cleanup\n\n  // STEP 5: Smart paragraph detection and formatting\n  const lines = text.split('\\n');\n  const formattedLines = [];\n  let currentParagraph = '';\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (trimmed.length === 0) continue;\n    \n    // Check if this looks like a new section/paragraph\n    if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n        trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n      // Save current paragraph if exists\n      if (currentParagraph) {\n        formattedLines.push(currentParagraph.trim());\n      }\n      currentParagraph = trimmed;\n    } else {\n      // Continue current paragraph\n      currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n    }\n  }\n  // Don't forget the last paragraph\n  if (currentParagraph) {\n    formattedLines.push(currentParagraph.trim());\n  }\n\n  text = formattedLines.join('\\n\\n');\n\n  // STEP 6: Extract key information\n  const extractedInfo = {\n    orderNumber: null,\n    trackingNumber: null,\n    product: null,\n    deliveryAddress: null,\n    amounts: [],\n    dates: []\n  };\n\n  // Extract order number\n  const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n  if (orderMatch) {\n    extractedInfo.orderNumber = orderMatch[1];\n  }\n\n  // Extract tracking number (long number that's not the order)\n  const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n  extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n  // Extract product name\n  const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n  if (productMatch) {\n    extractedInfo.product = productMatch[0].trim();\n  }\n\n  // Extract delivery address\n  const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n  if (addressMatch) {\n    extractedInfo.deliveryAddress = addressMatch[1].trim();\n  }\n\n  // Extract dates\n  const dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\n  if (dateMatches) {\n    extractedInfo.dates = dateMatches;\n  }\n\n  // STEP 7: Create super-clean version for LLM\n  const textForLLM = text\n    .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n    .replace(/\\[\\]/g, '') // Remove empty brackets\n    .replace(/\\s+/g, ' ') // Normalize spaces\n    .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n    .trim();\n\n  // STEP 8: Create a structured summary for LLM\n  const attachmentList = attachmentNames.length > 0 \n    ? attachmentNames.join(', ')\n    : 'No attachments';\n\n  const structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n- Attachments: ${attachmentList}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n  // STEP 9: Get metadata safely\n  const metadata = {\n    subject: $json.subject || $input.item?.json?.subject || 'No subject',\n    from: $json.from || $input.item?.json?.from || 'Unknown',\n    to: $json.to || $input.item?.json?.to || 'Unknown',\n    date: $json.date || $input.item?.json?.date || new Date().toISOString()\n  };\n\n  // Add to results array - WITH BINARY DATA INCLUDED\n  results.push({\n    // 1. JSON Part\n    json: {\n      attachmentNames: attachmentNames,\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: {\n        text: textForLLM\n      },\n      ...metadata,\n      extracted: extractedInfo,\n      linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: Object.keys(urlMap).length\n      }\n    },\n    // 2. Binary Part (The Fix)\n    // This passes the input binary data directly to the output\n    binary: item.binary \n  });\n} // Close the for loop\n\n// Return results directly (we already structured them as {json, binary} above)\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3264,
+        976
+      ],
+      "id": "cf9d6f27-75dc-4387-bb53-a0224ab61fde",
+      "name": "Clean Email Text"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Get the raw text from various possible locations\nlet rawText = '';\n\n// Try different paths to find the text\nif ($json.text) {\n  rawText = $json.text;\n} else if ($json.data && $json.data.text) {\n  rawText = $json.data.text;\n} else if ($json['data.text']) {\n  rawText = $json['data.text'];\n} else if ($input.item.json.text) {\n  rawText = $input.item.json.text;\n} else if ($input.item.json.data && $input.item.json.data.text) {\n  rawText = $input.item.json.data.text;\n}\n\n// If still no text, return error\nif (!rawText || rawText.trim().length === 0) {\n  return {\n    error: 'No text content found',\n    paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\nlet text = rawText\n  // Convert to standard ASCII where possible\n  .normalize('NFD')\n  // Remove ALL control and invisible characters\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n  // Remove zero-width characters\n  .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n  // Remove other invisibles\n  .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n  // Remove soft hyphens and special spaces\n  .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n  // Remove the specific problematic characters from your email\n  .replace(/[­͏‌]/g, ' ')\n  // Replace ALL multiple spaces with single space\n  .replace(/\\s+/g, ' ')\n  // Trim each line\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// STEP 2: Extract URLs and create a clean mapping\nconst urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\nconst imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n// First remove image URLs completely\ntext = text.replace(imageRegex, ' ');\n\n// Then handle other URLs\nconst urls = text.match(urlRegex) || [];\nconst uniqueUrls = [...new Set(urls)];\nconst urlMap = {};\n\nuniqueUrls.forEach((url, i) => {\n  const linkId = `[Link${i + 1}]`;\n  urlMap[linkId] = url;\n  // Replace URL with placeholder\n  text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n});\n\n// STEP 3: Fix spacing issues caused by removed content\ntext = text\n  // Fix spaces around punctuation\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n  // Remove multiple spaces again\n  .replace(/\\s+/g, ' ')\n  // Fix line breaks - ensure proper spacing\n  .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n  .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n  ;\n\n// STEP 4: Clean up brackets and special formatting\ntext = text\n  .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n  .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n  .replace(/\\s*\\]\\s*/g, '] ')\n  .replace(/\\s+/g, ' '); // Final space cleanup\n\n// STEP 5: Smart paragraph detection and formatting\nconst lines = text.split('\\n');\nconst formattedLines = [];\nlet currentParagraph = '';\n\nfor (const line of lines) {\n  const trimmed = line.trim();\n  if (trimmed.length === 0) continue;\n  \n  // Check if this looks like a new section/paragraph\n  if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n      trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n    // Save current paragraph if exists\n    if (currentParagraph) {\n      formattedLines.push(currentParagraph.trim());\n    }\n    currentParagraph = trimmed;\n  } else {\n    // Continue current paragraph\n    currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n  }\n}\n// Don't forget the last paragraph\nif (currentParagraph) {\n  formattedLines.push(currentParagraph.trim());\n}\n\ntext = formattedLines.join('\\n\\n');\n\n// STEP 6: Extract key information\nconst extractedInfo = {\n  orderNumber: null,\n  trackingNumber: null,\n  product: null,\n  deliveryAddress: null,\n  amounts: [],\n  dates: []\n};\n\n// Extract order number\nconst orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\nif (orderMatch) {\n  extractedInfo.orderNumber = orderMatch[1];\n}\n\n// Extract tracking number (long number that's not the order)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// Extract product name (stop at quantity indicator or duplicate)\nconst productMatch = text.match(/tomtoc[^-\\n]*?(?:\\([^)]+\\))?/i);\nif (productMatch) {\n  extractedInfo.product = productMatch[0].trim()\n    .replace(/\\s*-\\s*$/, '') // Remove trailing dash\n    .replace(/\\s+/g, ' '); // Normalize spaces\n}\n\n// Extract delivery address\nconst addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\nif (addressMatch) {\n  extractedInfo.deliveryAddress = addressMatch[1].trim();\n}\n\n// Extract dates\nconst dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\nif (dateMatches) {\n  extractedInfo.dates = dateMatches;\n}\n\n// STEP 7: Create super-clean version for LLM\nconst textForLLM = text\n  .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n  .replace(/\\[\\]/g, '') // Remove empty brackets\n  .replace(/\\s+/g, ' ') // Normalize spaces\n  .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n  .trim();\n\n// STEP 8: Create a structured summary for LLM\nconst structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n// STEP 9: Get metadata safely\nconst metadata = {\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString()\n};\n\n// Return comprehensive cleaned data\nreturn {\n  // Ultra-clean version for LLM\n  textForLLM: textForLLM,\n  \n  // Structured summary for better LLM understanding\n  structuredSummary: structuredSummary,\n  \n  // Main cleaned text with placeholders\n  text: text,\n  \n  // Keep the data structure for compatibility\n  data: {\n    text: textForLLM\n  },\n  \n  // Metadata\n  ...metadata,\n  \n  // Extracted information\n  extracted: extractedInfo,\n  \n  // URL mapping (if you need references)\n  linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n  \n  // Statistics\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: Object.keys(urlMap).length\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3136,
+        592
+      ],
+      "id": "87b90f74-cc40-46e2-881b-6dd24743bf23",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accounts }}",
+                    "rightValue": "={{ $('Gmail').item.json.from.value[0].address }}",
+                    "operator": {
+                      "type": "array",
+                      "operation": "contains",
+                      "rightType": "any"
+                    },
+                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2320,
+        704
+      ],
+      "id": "1a73ad78-8105-4e72-89e7-b06f4791923d",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        928
+      ],
+      "id": "119ae2db-647b-4919-924b-231fd7092253",
+      "name": "Telegram1",
+      "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "mlZdNwRkWhIVuDdr",
+          "name": "Telegram inbox_important"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "428fdabf-11e1-4b90-bd4b-ea048380e229",
+              "name": "data",
+              "value": "={{ $('Gmail').first().binary['attachment_0'] || JSON.parse('{\"message\": \"No binary Attachment\"}') }}",
+              "type": "binary"
+            },
+            {
+              "id": "e489f8d0-446e-464b-9446-ae9b4078b32e",
+              "name": "month",
+              "value": "={{ ['', '01_January', '02_February', '03_March', '04_April', '05_May', '06_June', '07_July', '08_August', '09_September', '10_October', '11_November', '12_December'][$json.output.month] }}",
+              "type": "string"
+            },
+            {
+              "id": "43624b46-abd7-4453-9515-42a3cbc6815a",
+              "name": "accounting_category",
+              "value": "={{ $json.output.accounting_category }}",
+              "type": "string"
+            },
+            {
+              "id": "ff57ef18-6264-4863-82ca-9fc3018cfd29",
+              "name": "text11111111111111111",
+              "value": "={{$('subject-classifier-LM').item.json.output.toJsonString()}}",
+              "type": "object"
+            },
+            {
+              "id": "acbcaeee-2185-4281-9650-3e7f40a837e1",
+              "name": "financial categories",
+              "value": "[\"invoice\", \"recipe\", \"bill\"]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2608,
+        1200
+      ],
+      "id": "4e6c2567-9768-4f43-a5ae-f1f5e636663d",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "salS1YqWh7Dq4PRF",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/salS1YqWh7Dq4PRF",
+          "cachedResultName": "Google Drive Folder ID Lookup"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "target_path": "=/Accounting/{{ $('Accountant-concierge').item.json.output.year }}/{{ $json.month }}/{{ $json.accounting_category }}",
+            "root_folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+            "root_path": "/Accounting"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "target_path",
+              "displayName": "target_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "root_folder_id",
+              "displayName": "root_folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "root_path",
+              "displayName": "root_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -2432,
+        1216
+      ],
+      "id": "cf227268-b602-41c5-b83d-1990d1f318d5",
+      "name": "Call 'Google Drive Folder ID Lookup'"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "$binary",
+        "include": "selectedOtherFields",
+        "fieldsToInclude": "binary",
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -3632,
+        1056
+      ],
+      "id": "a8521988-a892-44cd-a2dc-a774d14bde4d",
+      "name": "sp"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Create your dictionary/JSON data\noutput_data = {\n  \"accounts\": \n    [\n      \"payments-noreply@google.com\",\n      \"invoice+statements@mail.anthropic.com\",\n      \"uniqued4ve@gmail.com\"\n    ]\n}\n\n# Set it to the first input item's json\nfor item in _input.all():\n    item.json = output_data\n    break  # Only set first item\n\nreturn _input.all()"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2512,
+        560
+      ],
+      "id": "692a931b-7fb7-42b7-96ce-64e4554b42c3",
+      "name": "Accounting-email-List"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"accounting_category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Revenue\", \"Expense\"],\n      \"description\": \"Revenue = we bill customers; Expense = we pay suppliers\"\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"Invoice\", \"Receipt\"],\n      \"description\": \"Invoice = formal billing; Receipt = payment proof\"\n    },\n    \"year\": {\n      \"type\": \"integer\",\n      \"description\": \"Year from document date\"\n    },\n    \"month\": {\n      \"type\": \"integer\",\n      \"description\": \"Month from document date (1-12)\"\n    },\n    \"invoice_data\": {\n      \"type\": \"object\",\n      \"description\": \"Extracted invoice fields in snake_case\",\n      \"additionalProperties\": true\n    }\n  },\n  \"required\": [\"accounting_category\", \"document_type\", \"year\", \"month\", \"invoice_data\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2752,
+        1248
+      ],
+      "id": "705f1ebd-4081-4c66-b4ed-cf0a786a2f21",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -2896,
+        1248
+      ],
+      "id": "47fad5fd-416f-4bf9-8b64-6c55944d07f6",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').item.json.text }}\n---\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# Role\nYou You're an employe of a Swiss Company responsible for Invoice Classification.\n\n## TASK\nAnalyze the following invoice or financial document text and classify it accordingly.  \nDecide if each item is an **Investment** (Balance Sheet/Assets) or an **Expense** (Income Statement).\n\n## Output\nA json based on the schema with following keys:"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -2976,
+        592
+      ],
+      "id": "fab34414-f12a-4e65-80f5-2a8e3d3b719f",
+      "name": "subject-classifier-LM",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<parsed-document-content>\n{{ $json['processed_attachments.data'].textForLLM }}\n</parsed-document-content>\n\nClassify this document and extract all available data.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- Revenue: Customer invoices we send\n- Expense: Invoices/receipts we receive from suppliers\n- Invoice: Formal billing document with invoice number\n- Receipt: Proof of payment (often simpler, may lack invoice #)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, invoice_date, supplier_name, recipient_business_name, total_amount_due, currency_code, due_date, line_items, etc.\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -2896,
+        1152
+      ],
+      "id": "2d5dd79d-ff59-45cb-ae47-273d3359a873",
+      "name": "Accountant-concierge",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
+          "mode": "list",
+          "cachedResultName": "2505_Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "supplier_name": "={{ $json.output.invoice_data.supplier_name }}",
+            "supplier_address": "={{ $json.output.invoice_data.supplier_address || \"-\"}}",
+            "invoice_date": "={{ $json.output.invoice_data.invoice_date }}",
+            "total_amount_due": "={{ $json.output.invoice_data.total_amount_due || \"-\" }}",
+            "currency_code": "={{ $json.output.invoice_data.currency_code || \"-\" }}",
+            "subtotal_amount": "={{ $json.output.invoice_data.total_amount_due || \"-\" }}",
+            "recipient_business_name": "={{ $json.output.invoice_data.supplier_name || \"-\" }}",
+            "payment_method": "={{ $json.output.invoice_data.payment_method || \"-\" }}",
+            "date_paid": "={{ $json.output.invoice_data.transaction_date || \"-\" }}",
+            "payment_reference": "={{ $json.output.invoice_data.payment_reference || \"-\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier_name",
+              "displayName": "supplier_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_date",
+              "displayName": "invoice_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_amount_due",
+              "displayName": "total_amount_due",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency_code",
+              "displayName": "currency_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "invoice_status",
+              "displayName": "invoice_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "purchase_order_number",
+              "displayName": "purchase_order_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "subtotal_amount",
+              "displayName": "subtotal_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tax_amount",
+              "displayName": "tax_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment_terms",
+              "displayName": "payment_terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date_received",
+              "displayName": "date_received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_tax_id",
+              "displayName": "supplier_tax_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_vat_number",
+              "displayName": "supplier_vat_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "recipient_business_name",
+              "displayName": "recipient_business_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date_paid",
+              "displayName": "date_paid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_reference",
+              "displayName": "payment_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "discount_amount",
+              "displayName": "discount_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "approver_id",
+              "displayName": "approver_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "approver_name",
+              "displayName": "approver_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "department_id",
+              "displayName": "department_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cost_center_code",
+              "displayName": "cost_center_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_address",
+              "displayName": "supplier_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier_contact_details",
+              "displayName": "supplier_contact_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "supplier_bank_account_details",
+              "displayName": "supplier_bank_account_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "internal_reference_number",
+              "displayName": "internal_reference_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "recipient_business_address",
+              "displayName": "recipient_business_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1920,
+        1072
+      ],
+      "id": "69cce882-82de-465d-b8db-7b342754af13",
+      "name": "Google Sheets2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b649d9b4-d34b-4dbd-bd06-6a7a57cba287",
+              "name": "attachment_array",
+              "value": "={{ $('Aggregate1').item.json.data }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2896,
+        944
+      ],
+      "id": "9cf3a39d-adfa-4abb-86a0-074eaafe0977",
+      "name": "binary_data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dc0d2a51-cf92-4b68-82d2-c1d17a69e627",
+              "name": "all_attachements_text",
+              "value": "={{$('attachement_as_text').item.json.summary_attachments }}",
+              "type": "object"
+            },
+            {
+              "id": "ac5d47fe-4014-46cc-885f-b4fdeee3f74b",
+              "name": "",
+              "value": "={{ $('Clean Email Text').all()[1].json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "290dd0a6-a92b-48c9-b5de-ae15ea4199fc",
+              "name": "processed_attachments.data",
+              "value": "={{ $('attachement_as_text').item.json.processed_attachments.data }}",
+              "type": "array"
+            },
+            {
+              "id": "724ccebf-8dcc-450e-a97a-551a9522f54c",
+              "name": "attachement_names",
+              "value": "={{ Object.keys($('Gmail').first().binary) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2752,
+        944
+      ],
+      "id": "329c80e3-066f-4af4-97ba-1bdd3c717685",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3104,
+        1168
+      ],
+      "id": "b4d1602f-8096-4de3-a4b0-a3f7018321a6",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "processed_attachments.data",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2592,
+        944
+      ],
+      "id": "7f5ee79c-cacc-48d7-9c42-b87d09a2a94d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2432,
+        944
+      ],
+      "id": "a3713a9e-d0f1-4f82-a5c4-ad988ef6e01b",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -3664,
+        496
+      ],
+      "id": "532b5da4-3900-40da-959c-f7af092c6176",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b42ef4b6-3228-4fca-87ea-ad1ebe176a1e",
+              "name": "processed_attachments",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "897e3bce-eacf-4fe3-9b96-652edd2186c3",
+              "name": "summary_attachments",
+              "value": "={{ $json.data.map(item => item.text).join('\\n---\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "d6bbbe24-bfb6-4d2e-a17f-2afcd018ddc9",
+              "name": "attachement_names",
+              "value": "={{ Object.keys($('Gmail').first().binary) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3104,
+        816
+      ],
+      "id": "5794637c-6d29-40d0-836d-6b451e2527e8",
+      "name": "attachement_as_text"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        }\n      \n\t},\n\t\"required\": [\n      \"classification_rationale\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2832,
+        688
+      ],
+      "id": "7b6afd76-55a7-4edb-acaa-7aa0164e52b7",
+      "name": "SP1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {
+          "includeBinaries": false
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -3104,
+        976
+      ],
+      "id": "c9fb07b8-e2ee-4b09-8f90-1a9f4ee58f49",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2976,
+        688
+      ],
+      "id": "fdffc0c5-bc0c-4941-8eb4-27f10aceca33",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kmqRSsOartR5rGAD",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "=on",
+                    "rightValue": "=on",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2320,
+        560
+      ],
+      "id": "a251b85f-77ed-4a81-9d9f-59de4b7a431a",
+      "name": "Switch3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c259a48-b3c0-4d98-a5b0-bc81786bc978",
+              "name": "file1",
+              "value": "={{ $('Get $(\\'Gmail\\').item.binary').item.json.binary_files[\n  $('Loop Over Items1').item.json['processed_attachments.data'].attachmentNames[0]\n] }}",
+              "type": "binary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2176,
+        1216
+      ],
+      "id": "11247066-a048-4977-8c71-f05249c1fa92",
+      "name": "binary_data_files"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "file1",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Call \\'Google Drive Folder ID Lookup\\'').item.json.folder_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1920,
+        1216
+      ],
+      "id": "66656436-76ad-46c6-8751-220e2dafab9c",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Stop promotions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Get $('Gmail').item.binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Clean Email Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set File ID": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get $('Gmail').item.binary": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop promotions": {
+      "main": [
+        [
+          {
+            "node": "Set File ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Accounting-email-List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me1": {
+      "main": [
+        []
+      ]
+    },
+    "Empty?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze file": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Empty?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Email Text": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "subject-classifier-LM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "binary_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Call 'Google Drive Folder ID Lookup'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Google Drive Folder ID Lookup'": {
+      "main": [
+        [
+          {
+            "node": "binary_data_files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sp": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accounting-email-List": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Accountant-concierge",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Accountant-concierge",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subject-classifier-LM": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accountant-concierge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        []
+      ]
+    },
+    "binary_data": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Accountant-concierge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set File ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "attachement_as_text": {
+      "main": [
+        [
+          {
+            "node": "subject-classifier-LM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SP1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "subject-classifier-LM",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "attachement_as_text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "subject-classifier-LM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "binary_data_files": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

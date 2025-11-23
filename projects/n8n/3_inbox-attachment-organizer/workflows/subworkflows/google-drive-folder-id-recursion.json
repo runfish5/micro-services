@@ -1,0 +1,462 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "folder_id"
+            },
+            {
+              "name": "folder_path"
+            },
+            {
+              "name": "target_path"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1120,
+        -256
+      ],
+      "id": "df3dd94f-f7d0-4990-9be8-215f2ff3344b",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.folder_id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -928,
+        -240
+      ],
+      "id": "ea15088e-3016-450c-b7bf-f23dcbd4abdd",
+      "name": "Query Google Drive",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-children",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        -240
+      ],
+      "id": "eb33b403-f2da-4d38-bb12-ced2921e549f",
+      "name": "Has Children?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare children with their full paths\nconst items = $input.all();\nconst parentId = $('When Executed by Another Workflow').item.json.folder_id;\nconst parentPath = $('When Executed by Another Workflow').item.json.folder_path;\nconst targetPath = $('When Executed by Another Workflow').item.json.target_path;\n\nconst children = {};\nconst childrenForRecursion = [];\n\nfor (const item of items) {\n  const childId = item.json.id;\n  const childName = item.json.name;\n  const childPath = parentPath + '/' + childName;\n  \n  // Store child as name: id\n  children[childName] = childId;\n  \n  // Only recurse into children that are on the path to target or might contain it\n  if (targetPath.startsWith(childPath)) {\n    childrenForRecursion.push({\n      child_name: childName,  // Added this!\n      folder_id: childId,\n      folder_path: childPath,\n      target_path: targetPath\n    });\n  }\n}\n\n// Cache data\nconst cacheData = {\n  folder_id: parentId,\n  folder_path: parentPath,\n  children: children,\n  last_updated: new Date().toISOString()\n};\n\nreturn {\n  cache_entry: cacheData,\n  recursion_targets: childrenForRecursion\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -352
+      ],
+      "id": "d72b98cc-09dd-416f-b180-ace4e405fb8c",
+      "name": "Prepare Cache & Recurse"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE",
+          "mode": "list",
+          "cachedResultName": "PathToIDLookup",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "path": "={{ $json.cache_entry.folder_path }}/{{ $json.recursion_targets[0].child_name }}",
+            "child_ids": "={{ $json.cache_entry.children.toJsonString() }}",
+            "folder_id": "={{ $json.cache_entry.folder_id }}",
+            "last_update": "={{ $json.cache_entry.last_updated }}"
+          },
+          "matchingColumns": [
+            "path"
+          ],
+          "schema": [
+            {
+              "id": "path",
+              "displayName": "path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "folder_id",
+              "displayName": "folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "child_ids",
+              "displayName": "child_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -320,
+        -400
+      ],
+      "id": "9a5f382f-5d6d-4544-9692-e50fef90fbba",
+      "name": "Update Cache",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "filter-for-recursion",
+              "name": "folder_id",
+              "value": "={{ $json.cache_entry.children[$json.recursion_targets[0].child_name] }}",
+              "type": "string"
+            },
+            {
+              "id": "filter-path",
+              "name": "folder_path",
+              "value": "={{ $json.recursion_targets[0].folder_path }}",
+              "type": "string"
+            },
+            {
+              "id": "filter-target",
+              "name": "target_path",
+              "value": "={{ $json.recursion_targets[0].target_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        -256
+      ],
+      "id": "e06a8574-a73a-458b-bef2-6354033339be",
+      "name": "Filter for Recursion"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VzWAdxUdTKRfcUSh",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/VzWAdxUdTKRfcUSh",
+          "cachedResultName": "Subworkflow - Recursive Folder Tree Walker"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "folder_id": "={{ $json.folder_id }}",
+            "folder_path": "={{ $json.folder_path }}",
+            "target_path": "={{ $json.target_path }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "folder_id",
+              "displayName": "folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "folder_path",
+              "displayName": "folder_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "target_path",
+              "displayName": "target_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        -256
+      ],
+      "id": "e11123e3-f11d-486c-8896-fd4c07325bea",
+      "name": "Recurse"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "leaf-id",
+              "name": "folder_id",
+              "value": "={{ $('When Executed by Another Workflow').item.json.folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "leaf-path",
+              "name": "folder_path",
+              "value": "={{ $('When Executed by Another Workflow').item.json.folder_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -128
+      ],
+      "id": "acee7fbe-5aaa-4bfd-9416-df493ca56ed5",
+      "name": "Leaf Node"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all discovered folders\nconst currentFolder = $('When Executed by Another Workflow').first().json;\n\nfunction deepCollectFolders(input) {\n  if (Array.isArray(input)) {\n    return input.flatMap(deepCollectFolders);\n  }\n  if (input && typeof input === 'object') {\n    if (Array.isArray(input.all)) {\n      return deepCollectFolders(input.all);\n    }\n    if ('folder_id' in input && 'folder_path' in input) {\n      return [{ folder_id: input.folder_id, folder_path: input.folder_path }];\n    }\n    return [];\n  }\n  return [];\n}\n\nconst items = $input.all().map(item => item.json);\nconst descendants = deepCollectFolders(items);\n\nconst all = [\n  { folder_id: currentFolder.folder_id, folder_path: currentFolder.folder_path },\n  ...descendants\n];\n\nreturn { all };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -384
+      ],
+      "id": "2c1a1ba1-ec28-40b8-9d4f-1ccff9273c27",
+      "name": "Collect All",
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Query Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Has Children?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Children?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cache & Recurse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leaf Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Cache & Recurse": {
+      "main": [
+        [
+          {
+            "node": "Update Cache",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter for Recursion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Cache": {
+      "main": [
+        [
+          {
+            "node": "Collect All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter for Recursion": {
+      "main": [
+        [
+          {
+            "node": "Recurse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recurse": {
+      "main": [
+        [
+          {
+            "node": "Collect All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leaf Node": {
+      "main": [
+        [
+          {
+            "node": "Collect All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+        "folder_path": "/Accounting",
+        "target_path": "/Accounting/2025/11_November/Expense"
+      },
+      {
+        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+        "folder_path": "/Accounting",
+        "target_path": "/Accounting/2025/11_November/Expense"
+      },
+      {
+        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+        "folder_path": "/Accounting",
+        "target_path": "/Accounting/2025/11_November/Expense"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

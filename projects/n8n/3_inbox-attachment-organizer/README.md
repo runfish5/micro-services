@@ -25,8 +25,10 @@ Automatically process email attachments (images, PDFs, documents), understand co
  ✅ Reads images via AI vision (Gemini Flash OCR) andprocesses PDFs and documents.
 
  ✅ Logs to Google Sheets
- 
+
  ✅ Extensible via structured output schemas
+
+ ✅ Processes existing emails in mailbox (not just new incoming emails)
 
 ---
 ---

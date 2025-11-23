@@ -18,3 +18,5 @@ Thumbs.db
 # Temp
 *.log
 tmp/
+
+.claude/

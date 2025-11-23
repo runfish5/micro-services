@@ -1,1 +1,616 @@
-{}
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Path to Folder ID Resolver",
+        "height": 752,
+        "width": 1440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -256,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "9f34e71a-cd65-4166-ad77-dc0b1aff7e2d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -304
+      ],
+      "id": "85fe0e0d-bc1e-4c3c-ba64-fa7e04a4c18d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "target-path",
+              "name": "target_path",
+              "value": "={{ $json.target_path }}",
+              "type": "string"
+            },
+            {
+              "id": "root-id",
+              "name": "root_folder_id",
+              "value": "={{ $json.root_folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "root-path",
+              "name": "root_path",
+              "value": "={{ $json.root_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "abd14ba4-f315-4b7d-b9b1-9d2538db0946",
+      "name": "Set Input Path"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate all ancestor paths from target to root\nconst targetPath = $json.target_path;\nconst rootPath = $json.root_path;\n\nconst paths = [];\nlet current = targetPath;\n\nwhile (current.length >= rootPath.length) {\n  paths.push(current);\n  if (current === rootPath) break;\n  \n  // Move to parent\n  const lastSlash = current.lastIndexOf('/');\n  if (lastSlash <= 0) break;\n  current = current.substring(0, lastSlash);\n}\n\nreturn paths.map(path => ({\n  path: path,\n  target_path: targetPath,\n  root_folder_id: $json.root_folder_id,\n  root_path: rootPath\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -96
+      ],
+      "id": "c01631e6-0aee-45ba-b711-e410d3c63eab",
+      "name": "Generate Ancestor Paths"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE",
+          "mode": "list",
+          "cachedResultName": "PathToIDLookup",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "path",
+              "lookupValue": "={{ $json.path }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        528,
+        -96
+      ],
+      "id": "38925e89-c515-4127-940d-d7557a407859",
+      "name": "Lookup Each Path",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "found-in-cache",
+              "leftValue": "={{ $json.folder_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        160
+      ],
+      "id": "2b35c254-57c3-4a0c-b8c5-196e7c35b0ea",
+      "name": "Found in Cache?"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "is-exact-match",
+                    "leftValue": "={{ $json.folder_path }}",
+                    "rightValue": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "exactMatch"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "allMatchingOutputs": false
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        192,
+        112
+      ],
+      "id": "8fcc18ff-2041-4044-adf7-cc93c89e9723",
+      "name": "Is Exact Match?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "return-id",
+              "name": "folder_id",
+              "value": "={{ $json.folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "return-path",
+              "name": "folder_path",
+              "value": "={{ $json.folder_path }}",
+              "type": "string"
+            },
+            {
+              "id": "cache-status",
+              "name": "source",
+              "value": "cache_hit",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        96
+      ],
+      "id": "df960834-d55b-453e-b32e-3f2bbb236c40",
+      "name": "Return (Exact Match)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "start-folder-id",
+              "name": "start_folder_id",
+              "value": "={{ $json.folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "start-path",
+              "name": "start_path",
+              "value": "={{ $json.folder_path }}",
+              "type": "string"
+            },
+            {
+              "id": "target-keep",
+              "name": "target_path",
+              "value": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        320
+      ],
+      "id": "8c314dea-bf5e-4c37-bb5c-7edf16e1d3f3",
+      "name": "Prepare for Recursive Search"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VzWAdxUdTKRfcUSh",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/VzWAdxUdTKRfcUSh",
+          "cachedResultName": "Subworkflow - Recursive Folder Tree Walker"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "target_path": "={{ $json.target_path }}",
+            "folder_id": "={{ $('Set Input Path').item.json.root_folder_id }}",
+            "folder_path": "={{ $('Set Input Path').item.json.root_path }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "folder_id",
+              "displayName": "folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "folder_path",
+              "displayName": "folder_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "target_path",
+              "displayName": "target_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        320
+      ],
+      "id": "c66da099-e417-4184-8ea3-1f8307dd0021",
+      "name": "Recursive Search from Ancestor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the target folder from results\nconst targetPath = $('Generate Ancestor Paths').first().json.target_path;\nconst result = $input.first().json;\n\nif (result.all && Array.isArray(result.all)) {\n  const found = result.all.find(f => f.folder_path === targetPath);\n  if (found) {\n    return {\n      folder_id: found.folder_id,\n      folder_path: found.folder_path,\n      source: 'recursive_search'\n    };\n  }\n}\n\nthrow new Error(`Target path not found: ${targetPath}`);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        448
+      ],
+      "id": "f9993ea0-f669-4c8c-9a21-3fdaff184dac",
+      "name": "Extract Target Folder"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fallback-id",
+              "name": "start_folder_id",
+              "value": "={{ $('Generate Ancestor Paths').first().json.root_folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "fallback-path",
+              "name": "start_path",
+              "value": "={{ $('Generate Ancestor Paths').first().json.root_path }}",
+              "type": "string"
+            },
+            {
+              "id": "fallback-target",
+              "name": "target_path",
+              "value": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        320
+      ],
+      "id": "d42b84b4-7986-490a-a146-11d12d3b45eb",
+      "name": "Fallback to Root (Slow Path)"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "target_path"
+            },
+            {
+              "name": "root_folder_id"
+            },
+            {
+              "name": "root_path"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -32,
+        -96
+      ],
+      "id": "e9ef3874-3f88-43fb-8d5e-fa9c55755249",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "target-path",
+              "name": "target_path",
+              "value": "/Accounting/2025/07_July/Expenses",
+              "type": "string"
+            },
+            {
+              "id": "root-id",
+              "name": "root_folder_id",
+              "value": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+              "type": "string"
+            },
+            {
+              "id": "root-path",
+              "name": "root_path",
+              "value": "/Accounting",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        -304
+      ],
+      "id": "b4b0cde6-a5de-4227-ac61-68b39321d998",
+      "name": "test_data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "addd4173-f773-48f9-8aef-67b77874bed4",
+              "name": "folder_id",
+              "value": "={{ $json.folder_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        448
+      ],
+      "id": "35b8ac86-fb86-4b1f-989d-4762f891fa83",
+      "name": "Edit Fields"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "test_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Input Path": {
+      "main": [
+        [
+          {
+            "node": "Generate Ancestor Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Ancestor Paths": {
+      "main": [
+        [
+          {
+            "node": "Lookup Each Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Each Path": {
+      "main": [
+        [
+          {
+            "node": "Found in Cache?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found in Cache?": {
+      "main": [
+        [
+          {
+            "node": "Is Exact Match?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback to Root (Slow Path)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Exact Match?": {
+      "main": [
+        [
+          {
+            "node": "Return (Exact Match)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare for Recursive Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return (Exact Match)": {
+      "main": [
+        []
+      ]
+    },
+    "Prepare for Recursive Search": {
+      "main": [
+        [
+          {
+            "node": "Recursive Search from Ancestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Search from Ancestor": {
+      "main": [
+        []
+      ]
+    },
+    "Extract Target Folder": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback to Root (Slow Path)": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Recursive Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set Input Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "test_data": {
+      "main": [
+        [
+          {
+            "node": "Set Input Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "When clicking ‘Execute workflow’": [
+      {}
+    ]
+  },
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

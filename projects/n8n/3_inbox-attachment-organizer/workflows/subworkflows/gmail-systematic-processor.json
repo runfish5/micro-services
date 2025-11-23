@@ -1,0 +1,582 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "label-input",
+              "name": "processLabel",
+              "value": "=GdriveFiled",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a7533b5-a61b-458a-8465-bea5e2a1908b",
+      "name": "Set Label Variable",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        672,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 500,
+        "filters": {
+          "receivedAfter": "={{ $json.start }}",
+          "receivedBefore": "={{ $json.end }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1088,
+        -32
+      ],
+      "id": "ddbc7771-f755-4236-85b8-6e6446b098f6",
+      "name": "Get many messages",
+      "webhookId": "1af94b15-c787-484c-a985-105961534353",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "create",
+        "name": "={{ $json.processLabel }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        -320
+      ],
+      "id": "4a82448c-e6d2-4b49-b8a9-daa57b007d5a",
+      "name": "Create a label",
+      "webhookId": "2bdeb3c4-fb9d-4c82-8cab-00b60e3f2bb1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "label"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        -320
+      ],
+      "id": "3f13204a-c137-4094-8b99-4b1a2f799746",
+      "name": "Get many labels",
+      "webhookId": "5dd9fd28-6fa1-4094-9f96-c57238f374c8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "99f03dda-f6ac-4bf7-9e50-0fdfd8814215",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "={{ $('Set Label Variable').item.json.processLabel }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        -320
+      ],
+      "id": "0b84646a-9eea-44e0-b658-864ab4234f60",
+      "name": "Filter"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -320
+      ],
+      "id": "343daeee-e552-4016-ae29-70464bc46c41",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration\nconst daysAgo = days => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];\n\nconst startDate = daysAgo(9);\nconst endDate = $today;\nconst intervalDays = 3; // Adjust: 7=weekly, 30=monthly, 90=quarterly\n\n// Generate intervals\nconst intervals = [];\nlet current = new Date(startDate);\nconst end = new Date(endDate);\n\nwhile (current < end) {\n  const intervalEnd = new Date(current);\n  intervalEnd.setDate(intervalEnd.getDate() + intervalDays);\n  \n  intervals.push({\n    json: {\n      start: current.toISOString().split('T')[0],\n      end: intervalEnd > end ? end.toISOString().split('T')[0] : intervalEnd.toISOString().split('T')[0]\n    }\n  });\n  \n  current = intervalEnd;\n}\n\nreturn intervals;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -48
+      ],
+      "id": "7b10a3c1-011c-402a-a089-241b2ac93062",
+      "name": "Set Date-Range to process"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        864,
+        -48
+      ],
+      "id": "c74361f4-1042-4b97-9456-07e57a4df5da",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lRCrJIj1AEsuNxts",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/lRCrJIj1AEsuNxts",
+          "cachedResultName": "9_inbox_classifier_main"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1104,
+        224
+      ],
+      "id": "b99774ee-4df2-4585-9615-b3b19484272c",
+      "name": "Analyze file",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Edit Fields').item.json.id }}",
+        "labelIds": "={{ $('Filter').item.json.id }}"
+      },
+      "id": "63ae3b22-2001-497a-96e2-1d37131cf372",
+      "name": "Mark as Processed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1328,
+        224
+      ],
+      "webhookId": "4e6601d7-b005-492e-9466-50fc56c5929b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Extract Email Data').item.json.emailId }}",
+        "labelIds": "={{ $('Filter').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1552,
+        224
+      ],
+      "id": "7c4fb555-1ae4-473e-854d-7dfb6248b8a0",
+      "name": "Remove label from message",
+      "webhookId": "820e746b-7ddc-4017-baf8-a103673d9584",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1312,
+        -32
+      ],
+      "id": "f9722a44-9b9c-40f0-8112-be1848758f41",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        400
+      ],
+      "id": "9298fa31-43fc-421d-9138-264fa1f9c767",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Create your dictionary/JSON data\noutput_data = {\n  \"accounts\": \n    [\n      \"payments-noreply@google.com\",\n      \"invoice+statements@mail.anthropic.com\",\n      \"uniqued4ve@gmail.com\"\n    ]\n}\n\n# Set it to the first input item's json\nfor item in _input.all():\n    item.json = output_data\n    break  # Only set first item\nreturn _input.all()"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "6142c62d-6029-49d8-b52e-612e9e0bf88d",
+      "name": "Accounting-email-List"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9f0b3eb-8520-414e-8ba9-3bb5a319c09e",
+              "leftValue": "={{ $('Accounting-email-List').item.json.accounts }}",
+              "rightValue": "={{ $('Loop Over Items').item.json.From.match(/<(.+?)>/)[1] }}",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        304
+      ],
+      "id": "cb6e033a-4bcc-4f30-adac-ae87e307a150",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        432,
+        304
+      ],
+      "id": "a49b235e-c8a4-4f98-a169-08af8493af4b",
+      "name": "Gmail",
+      "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9cde5ab0-1774-4855-99e9-999efcba6b12",
+              "name": "id",
+              "value": "={{ $('Loop Over Items').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2a4a8528-47ef-4d35-a522-a0991eabb7af",
+              "name": "from-address",
+              "value": "={{ $json.From.match(/<(.+?)>/)[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        304
+      ],
+      "id": "b9892d9e-648a-4d57-86da-6644db400f55",
+      "name": "Edit Fields"
+    }
+  ],
+  "connections": {
+    "Set Label Variable": {
+      "main": [
+        [
+          {
+            "node": "Create a label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a label": {
+      "main": [
+        [
+          {
+            "node": "Get many labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many labels": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Accounting-email-List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set Label Variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Date-Range to process": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze file": {
+      "main": [
+        [
+          {
+            "node": "Mark as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Processed": {
+      "main": [
+        [
+          {
+            "node": "Remove label from message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accounting-email-List": {
+      "main": [
+        [
+          {
+            "node": "Set Date-Range to process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Analyze file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
