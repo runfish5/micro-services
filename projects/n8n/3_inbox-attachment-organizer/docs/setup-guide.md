@@ -30,7 +30,19 @@ subtotal_amount | recipient_business_name | payment_method | date_paid | payment
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/2505_Invoices`)
 
-### 4. Activate
+### 4. Create PathToIDLookup Google Sheet
+Create a Google Sheet named **"PathToIDLookup"** with these exact column headers:
+```
+path | folder_id | child_ids | last_update
+```
+
+**Purpose:** This sheet acts as a cache for Google Drive folder structure lookups, significantly improving performance by avoiding repeated API calls.
+
+**Location:** Place this sheet at the **root directory** of your Google Drive (not inside Accounting or any subfolder)
+
+**How it works:** The `google-drive-folder-id-lookup` and `google-drive-folder-id-recursion` subworkflows automatically populate this sheet as they traverse and create folders. You don't need to manually add any data.
+
+### 5. Activate
 - Send test email with invoice attachment
 - Check Google Drive for auto-created folders
 - **For existing emails:** Run the `gmail-systematic-processor` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
@@ -45,7 +57,7 @@ Place this sheet at the root of your Google Drive accounting folder (e.g., `/Acc
           └─ Expense/
 ```
 
-### 5. Optional: Pre-create Folder Structure
+### 6. Optional: Pre-create Folder Structure
 
 While the workflow auto-creates folders, you can download a ready-made template structure:
 

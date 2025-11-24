@@ -36,6 +36,7 @@ Perfect for organizing receipts, invoices, or any email attachments without manu
 # Requirements
 
 * Gmail, Google Drive and Google Sheets
+  * Two Google Sheets required: `2505_Invoices` (invoice logging) + `PathToIDLookup` (folder structure cache)
 * LLM provider: Groq (free) or Google Gemini (free tier)
 * Optional: Telegram bot token
 

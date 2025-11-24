@@ -11,8 +11,9 @@ Automatically process email attachments (images, PDFs, documents), understand co
 ## 📦 Requirements
 
 - [subworkflows.md](docs/subworkflows.md) 
-- [credentials-guide.md](config/credentials-guide.md) 
+- [credentials-guide.md](config/credentials-guide.md)
     - Gmail, Google Drive, Google Sheets
+        - **Two Google Sheets required:** `2505_Invoices` (invoice logging) + `PathToIDLookup` (folder structure cache)
     - LLM: Groq (free) or Gemini (free tier)
     - Optional: Telegram bot
 

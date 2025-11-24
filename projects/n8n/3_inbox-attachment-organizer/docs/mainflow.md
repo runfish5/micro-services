@@ -135,9 +135,10 @@ START: Gmail Trigger (Every 1 minute)
 ### 2. google-drive-folder-id-lookup
 - **Called by**: Call 'Google Drive Folder ID Lookup' (Node 32)
 - **Purpose**: Finds or creates Google Drive folder structure
+- **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)
 - **Input**: Path components (year, month, category)
 - **Output**: Folder ID for file upload
-- **Behavior**: Creates folders if they don't exist
+- **Behavior**: Creates folders if they don't exist, caches results in PathToIDLookup sheet for performance
 - **Uses**: google-drive-folder-id-recursion subworkflow for recursive folder creation
 
 💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.

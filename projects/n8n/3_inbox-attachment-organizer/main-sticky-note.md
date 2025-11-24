@@ -17,6 +17,7 @@ Reads email attachment content, extracts key data to determine filing location (
 - [ ] Connect Google OAuth (Gmail + Drive + Sheets)
 - [ ] Add AI provider credentials (Groq or Gemini)
 - [ ] Create Google Sheet named "2505_Invoices" with required columns
+- [ ] Create Google Sheet named "PathToIDLookup" in root directory (columns: path, folder_id, child_ids, last_update)
 - [ ] Download and upload folder structure template to Google Drive
 - [ ] Configure sender whitelist: add your own email address to test
 - [ ] Activate Gmail trigger
