@@ -10,11 +10,11 @@
 
 ### 1. Import Workflows
 Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](n8n.io) :
-1. [inbox-manager-main.json](workflows/inbox-manager-main.json)
-2.  [universal-document-parser.json](workflows/subworkflows/universal-document-parser.json)
-3.  [drive-folder-path-resolver.json](workflows/subworkflows/drive-folder-path-resolver.json)
-4. [auto-create-folder-structure.json](workflows/subworkflows/auto-create-folder-structure.json)
-5. [gmail-systematic-processor.json](workflows/subworkflows/gmail-systematic-processor.json)
+1. [inbox-attachment-organizer.json](../workflows/inbox-attachment-organizer.json) - Main workflow
+2. [any-file2json-converter.json](../workflows/subworkflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
+3. [google-drive-folder-id-lookup.json](../workflows/subworkflows/google-drive-folder-id-lookup.json) - Subworkflow: Locates/creates folders
+4. [google-drive-folder-id-recursion.json](../workflows/subworkflows/google-drive-folder-id-recursion.json) - Recursive subworkflow (used by folder lookup)
+5. [gmail-systematic-processor.json](../workflows/subworkflows/gmail-systematic-processor.json) - Batch processor for existing emails
 
 ### 2. Setup Credentials
 Only one authentication needed: **Google OAuth**

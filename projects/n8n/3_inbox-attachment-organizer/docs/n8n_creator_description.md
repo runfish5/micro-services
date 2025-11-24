@@ -2,7 +2,7 @@
 
 This n8n workflow handles email attachments automatically. It reads any format (images, PDFs, documents) using AI, extracts key information, and files everything to the correct date-based Google Drive folder.
 
-Perfect for organizing receipts, invoices, or any email attachments without manual sorting. The AI determines the category (Expense/Revenue) and filing date (e.g., Accounting/2025/02_February/Expenses/) by reading the actual document content—even from images.
+Perfect for organizing receipts, invoices, or any email attachments without manual sorting. The AI determines the category (Expense/Revenue) and filing date (e.g., Accounting/2025/02_February/Expense/) by reading the actual document content—even from images.
 
 > ### ⚡ Why This Workflow Is Different
 >
@@ -21,10 +21,10 @@ Perfect for organizing receipts, invoices, or any email attachments without manu
 # How it works
 
 * Gmail trigger polls inbox every minute and filters promotional emails.
-* "Any-file2json converter" subworkflow extracts and understands content from all attachments.
+* "any-file2json-converter" subworkflow extracts and understands content from all attachments.
 * Subject Classifier categorizes emails into types: financial, confirmation, appointment, marketing, operational, newsletter, or other.
 * Accountant Concierge extracts year/month from document, and identifies document type (Invoice/Receipt).
-* "Drive Path Resolver" handles the n8n-Google Drive communication workaround to locate correct folders.
+* "google-drive-folder-id-lookup" subworkflow handles the n8n-Google Drive communication workaround to locate correct folders.
 * Files upload to correct location with full metadata logging in Google Sheets.
 * Optional: Telegram notifications.
 

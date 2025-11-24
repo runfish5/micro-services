@@ -1,7 +1,7 @@
 # AI Email Monitoring (I): Auto-File Email Attachments
 Automatically process email attachments (images, PDFs, documents), understand content through AI, and file to structured Google Drive folders.
 
-**Perfect for:** Organizing receipts, invoices, or any attachment into `Accounting/2025/02_February/Expenses/`
+**Perfect for:** Organizing receipts, invoices, or any attachment into `Accounting/2025/02_February/Expense/`
 
 ---
 

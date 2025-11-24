@@ -126,18 +126,19 @@ START: Gmail Trigger (Every 1 minute)
 
 ## 🔗 External Workflows Called
 
-### 1. Any-file2json converter
+### 1. any-file2json-converter
 - **Called by**: Analyze file (Node 12)
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
 - **Output**: Extracted text content from documents
 
-### 2. Google Drive Folder ID Lookup
+### 2. google-drive-folder-id-lookup
 - **Called by**: Call 'Google Drive Folder ID Lookup' (Node 32)
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Input**: Path components (year, month, category)
 - **Output**: Folder ID for file upload
 - **Behavior**: Creates folders if they don't exist
+- **Uses**: google-drive-folder-id-recursion subworkflow for recursive folder creation
 
 💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
 

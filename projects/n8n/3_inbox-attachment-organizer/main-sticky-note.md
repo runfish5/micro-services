@@ -8,12 +8,12 @@ Reads email attachment content, extracts key data to determine filing location (
    - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents
 3. For financial documents, extracts structured data and verifies sender
 4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)
-   - *folder-path-resolver*: Locates or creates correct folder structure
+   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure
 5. Logs invoice details to Google Sheets
 6. Sends notifications via Telegram
 
 ### Setup
-- [ ] Import all 5 workflows (main + 4 subworkflows)
+- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)
 - [ ] Connect Google OAuth (Gmail + Drive + Sheets)
 - [ ] Add AI provider credentials (Groq or Gemini)
 - [ ] Create Google Sheet named "2505_Invoices" with required columns
