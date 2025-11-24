@@ -19,7 +19,12 @@ Reads email attachment content, extracts key data to determine filing location (
 - [ ] Create Google Sheet named "2505_Invoices" with required columns
 - [ ] Download and upload folder structure template to Google Drive
 - [ ] Configure sender whitelist: add your own email address to test
-- [ ] Test: forward an existing invoice email with attachments to yourself
-- [ ] Optional: Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
-- [ ] Optional: Connect Telegram bot for notifications
 - [ ] Activate Gmail trigger
+
+- [ ] Test: forward an existing invoice email with attachments to yourself
+
+---
+#### After First Run
+- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
+- [ ] Connect Telegram bot for notifications
+
