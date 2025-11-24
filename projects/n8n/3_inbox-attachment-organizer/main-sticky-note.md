@@ -29,3 +29,5 @@ Reads email attachment content, extracts key data to determine filing location (
 - [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
 - [ ] Connect Telegram bot for notifications
 
+---
+📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**
