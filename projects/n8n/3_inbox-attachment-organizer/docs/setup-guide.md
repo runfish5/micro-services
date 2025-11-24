@@ -42,6 +42,12 @@ path | folder_id | child_ids | last_update
 
 **How it works:** The `google-drive-folder-id-lookup` and `google-drive-folder-id-recursion` subworkflows automatically populate this sheet as they traverse and create folders. You don't need to manually add any data.
 
+**Example of populated sheet:**
+
+![PathToIDLookup Sheet Structure](../assets/lookup-table-schema-columns-path-folder-id.png)
+
+*The sheet caches folder paths and their corresponding Google Drive IDs, enabling fast lookups without repeated API calls.*
+
 ### 5. Activate
 - Send test email with invoice attachment
 - Check Google Drive for auto-created folders
