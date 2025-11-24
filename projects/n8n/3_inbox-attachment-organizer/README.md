@@ -1,4 +1,4 @@
-# AI Inbox Manager: Auto-File Email Attachments
+# AI Email Monitoring (I): Auto-File Email Attachments
 Automatically process email attachments (images, PDFs, documents), understand content through AI, and file to structured Google Drive folders.
 
 **Perfect for:** Organizing receipts, invoices, or any attachment into `Accounting/2025/02_February/Expenses/`
@@ -20,7 +20,7 @@ Automatically process email attachments (images, PDFs, documents), understand co
 
 **Out-of-the-box:** Financial documents (invoices, receipts)
 
-## 🎯 Features
+## 📋 Features
 
  ✅ Reads images via AI vision (Gemini Flash OCR) andprocesses PDFs and documents.
 

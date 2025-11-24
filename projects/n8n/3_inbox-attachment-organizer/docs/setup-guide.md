@@ -21,7 +21,19 @@ Follow: [credentials-guide.md](config/credentials-guide.md)
 - **For existing emails:** Run the `gmail-systematic-processor` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
 - Activate Gmail trigger ✅
 
-
+```
+Google Sheets: 2505_Invoices
+├── supplier_name
+├── supplier_address
+├── invoice_date
+├── total_amount_due
+├── currency_code
+├── subtotal_amount
+├── recipient_business_name
+├── payment_method
+├── date_paid
+└── payment_reference
+```
 
 
 ## 🌟 Use Cases
