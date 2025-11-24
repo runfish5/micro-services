@@ -1,6 +1,8 @@
 # AI Email Monitoring (I): Auto-File Email Attachments
 
-![Cover Image](assets/cover.png)
+<p align="center">
+  <img src="assets/cover.png" width="150" alt="Cover Image">
+</p>
 
 Automatically process email attachments (images, PDFs, documents), understand content through AI, and file to structured Google Drive folders.
 
@@ -27,6 +29,8 @@ Automatically process email attachments (images, PDFs, documents), understand co
 ## 🌟 Use Cases
 
 **Out-of-the-box:** Financial documents (invoices, receipts)
+
+![Workflow Core](assets/workflow-core.png)
 
 ## 📋 Features
 
