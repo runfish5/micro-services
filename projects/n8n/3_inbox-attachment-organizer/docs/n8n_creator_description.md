@@ -1,4 +1,4 @@
-# Auto-File Email Attachments to Google Drive with AI Document Understanding
+This n8n workflow demonstrates how to use AI to automatically process incoming email attachments, extract invoice data with precision, and organize financial documents into a structured accounting system.
 
 This n8n workflow handles email attachments automatically. It reads any format (images, PDFs, documents) using AI, extracts key information, and files everything to the correct date-based Google Drive folder.
 

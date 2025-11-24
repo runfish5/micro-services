@@ -34,7 +34,15 @@ Google Sheets: 2505_Invoices
 ├── date_paid
 └── payment_reference
 ```
-
+put that file at the root of your financial tree. Recommended:
+```
+  Storage Structure:
+  /Accounting/
+    └─ 2025/
+        └─ 05_May/
+            ├─ Revenue/
+            └─ Expense/
+```
 
 ## 🌟 Use Cases
 

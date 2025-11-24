@@ -8,7 +8,44 @@ This workflow automates the entire invoice processing
 
 ## 🎯 Workflow Flow Summary
 
-Key Workflow Logic
+
+### Phases:
+```
+Email Monitoring (1-5)
+Attachment Processing (6-15)
+AI Classification First Pass (16-18)
+Routing & Filtering (19-23)
+Deep Invoice Extraction (24-28)
+detailed invoice data (29-30)
+Storage & Logging (31-35)
+Notifications (36-38)
+Alternative Entry (39)
+```
+
+### Data Flow
+
+Note: This particular telegram cohnfiguration must still be implemented.
+```
+Email → Text Extraction → AI Classification
+                              ↓
+                         Is Financial?
+                              ↓
+                      Whitelist Check
+                              ↓
+                      AI Deep Extraction
+                              ↓
+                    ┌─────────┴──────────┐
+                    ↓                    ↓
+              Google Drive          Google Sheets
+              (Organized)            (Logged)
+                    │                    │
+                    └─────────┬──────────┘
+                              ↓
+                      Telegram Notification
+```
+
+
+### Key Workflow Logic
 ```
   Flow Summary:
   Gmail → Filter Promotions → Extract Attachments
@@ -23,20 +60,7 @@ Key Workflow Logic
   Organize Folders → Upload to Drive → Log to Sheets →
   Notify Telegram
 ```
-It is comprised of:
-```
-Email Monitoring (1-5)
-Attachment Processing (6-15)
-AI Classification First Pass (16-18)
-Routing & Filtering (19-23)
-Deep Invoice Extraction (24-28)
-detailed invoice data (29-30)
-Storage & Logging (31-35)
-Notifications (36-38)
-Alternative Entry (39)
-```
-
-lineage logging
+### Lineage logging
 ```
 START: Gmail Trigger (Every 1 minute)
   │
@@ -81,54 +105,24 @@ START: Gmail Trigger (Every 1 minute)
                     ├→ Edit Fields5
                     └→ Telegram (final notification)
 ```
-  AI Models Used:
-  - Google Gemini 2.5: Initial classification &
-  summarization
-  - Groq Llama 4: Deep invoice data extraction
 
-  External Workflows Called:
-  1. "Any-file2json converter" - Converts various file
-  formats to text
-  2. "Google Drive Folder ID Lookup" - Creates/finds
-  folder structure
-```
-  Storage Structure:
-  /Accounting/
-    └─ 2025/
-        └─ 05_May/
-            ├─ Revenue/
-            └─ Expense/
-```
+## 🦜 AI Models Nodes
 
-## 🤖 AI Models & Their Roles
-
-### 1. Google Gemini 2.5 (Classification)
+### 1. Classification
 - **Node**: subject-classifier-LM
-- **Purpose**: First-pass document classification
 - **Input**: Email text + attachment content
 - **Output**: Document type, action required, Telegram summary
 - **Classification Types**:
-  - confirmation
-  - financial
-  - newsletter
-  - appointment
-  - marketing
-  - operational
-  - other
+  - confirmation, financial, newsletter, appointment, marketing, operational, other
 
-### 2. Groq Llama 4 Maverick (Extraction)
+### 2. Extraction
 - **Node**: Accountant-concierge
-- **Model**: meta-llama/llama-4-maverick-17b-128e-instruct
-- **Purpose**: Deep invoice data extraction
 - **Input**: Cleaned invoice/receipt text
 - **Output**: Structured invoice data with all fields
 - **Key Capabilities**:
   - Categorization: Revenue vs Expense
   - Type detection: Invoice vs Receipt
   - Field extraction: dates, amounts, parties, line items
-  - Swiss business context awareness
-
----
 
 ## 🔗 External Workflows Called
 
@@ -144,29 +138,6 @@ START: Gmail Trigger (Every 1 minute)
 - **Input**: Path components (year, month, category)
 - **Output**: Folder ID for file upload
 - **Behavior**: Creates folders if they don't exist
-
----
-
-## 📊 Data Flow
-
-```
-Email → Text Extraction → AI Classification
-                              ↓
-                         Is Financial?
-                              ↓
-                      Whitelist Check
-                              ↓
-                      AI Deep Extraction
-                              ↓
-                    ┌─────────┴──────────┐
-                    ↓                    ↓
-              Google Drive          Google Sheets
-              (Organized)            (Logged)
-                    │                    │
-                    └─────────┬──────────┘
-                              ↓
-                      Telegram Notification
-```
 
 ## 📝 Notes
 - Google Sheets provides a queryable database of all processed invoices
