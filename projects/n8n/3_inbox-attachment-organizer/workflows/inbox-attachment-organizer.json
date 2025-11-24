@@ -19,8 +19,8 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -3664,
-        320
+        -4816,
+        736
       ],
       "id": "6c3c43c8-ad2f-499a-9635-72235732aff2",
       "name": "Gmail Trigger",
@@ -44,8 +44,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3344,
-        496
+        -4816,
+        1104
       ],
       "id": "a799331e-fa2e-4e91-b083-6aa0fc64acd4",
       "name": "Gmail",
@@ -66,8 +66,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -3472,
-        1056
+        -4032,
+        992
       ],
       "id": "93f11d26-754d-4618-9c72-7f0dedd80fa8",
       "name": "Loop Over Items"
@@ -92,8 +92,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3472,
-        496
+        -4592,
+        912
       ]
     },
     {
@@ -120,8 +120,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3616,
-        688
+        -4592,
+        1104
       ],
       "id": "543d6d5a-cfcd-4dd8-8903-6644a8c3fb38",
       "name": "Get $('Gmail').item.binary"
@@ -137,8 +137,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1920,
-        704
+        -2032,
+        864
       ],
       "id": "2088e672-f767-427d-9460-9668da9da6d7",
       "name": "Telegram",
@@ -170,8 +170,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2096,
-        704
+        -2224,
+        864
       ],
       "id": "f8efc549-1807-4f55-b199-782f65406111",
       "name": "Edit Fields5"
@@ -179,14 +179,14 @@
     {
       "parameters": {
         "content": "# attachment processer",
-        "height": 512,
-        "width": 720,
-        "color": 6
+        "height": 608,
+        "width": 1200,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3664,
-        864
+        -4304,
+        624
       ],
       "typeVersion": 1,
       "id": "16a62643-10ac-42bf-a3aa-d0491fdf9a90",
@@ -195,14 +195,14 @@
     {
       "parameters": {
         "content": "# E-Mail trigger",
-        "height": 624,
-        "width": 480,
-        "color": 3
+        "height": 864,
+        "width": 528,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3664,
-        240
+        -4880,
+        624
       ],
       "typeVersion": 1,
       "id": "05663fd1-3317-4260-96db-6cc14ded1409",
@@ -236,8 +236,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -3472,
-        320
+        -4592,
+        736
       ],
       "id": "c33339f7-43e6-439c-9899-2bd0067b0a95",
       "name": "Stop promotions"
@@ -276,8 +276,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -2704,
-        560
+        -2672,
+        864
       ],
       "id": "c0385e60-34c4-4ec7-a6b6-db6e5bc82e8a",
       "name": "Switch"
@@ -285,14 +285,14 @@
     {
       "parameters": {
         "content": "# subject classifier",
-        "height": 352,
-        "width": 1024,
-        "color": 4
+        "height": 608,
+        "width": 960,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3184,
-        512
+        -3056,
+        624
       ],
       "typeVersion": 1,
       "id": "6f0c3eb5-40f4-4681-9a83-5bd64287668e",
@@ -304,42 +304,26 @@
       "name": "Replace Me1",
       "typeVersion": 1,
       "position": [
-        -2704,
-        720
+        -2032,
+        704
       ],
       "id": "944a218f-66c3-40a7-9b5a-15716f05b4e6"
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts: \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n- invoicing period > folder (YY/MM)",
-        "height": 528,
-        "width": 928,
-        "color": 5
+        "content": "#  Invoices & Receipts",
+        "height": 608,
+        "width": 2016,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -2928,
-        864
+        -4304,
+        1280
       ],
       "typeVersion": 1,
       "id": "00bfa020-947a-4bfb-994f-39da6439e825",
       "name": "Sticky Note4"
-    },
-    {
-      "parameters": {
-        "content": "README.md\n# inbox_agent\n\n- Alert on Telegram for Emails.\n- n8n Invoice Processing Workflow Summary\n\n### 🔥 Single Auth Advantage\n**ONE Google OAuth = Full System**\n- Gmail + Drive + Sheets = Complete automation\n- Avoids: 3-5 platform authentications\n- Avoids: Self-hosted complexity\n- Setup time: Minutes, not hours\n\nAuthentication is automation's biggest bottleneck. This workflow eliminates it.\n\n## 1. Email Trigger & Processing\n- **Gmail Trigger**: Poll every minute → **Stop promotions** filter → **Set File ID** metadata\n- **Gmail**: Retrieve full email → **Get binary** → **Split Out All Attachments** → **If** check attachments exist\n\n## 2. Attachment Processing Loop\n- **Loop Over Items**: Batch process\n- **Execute Workflow1**: Call \"Any-file2json converter\" sub-workflow\n\n## 3. Document Classification\n- **Edit Fields2**: Extract text\n- **Basic LLM Chain** (Groq Llama 4): Classify via Swiss SME chart of accounts\n  - **Structured Output Parser1**: Validate schema\n- **Switch**: Route by document type (invoice/other)\n\n## 4. Data Extraction & Storage\n- **Replace Me1** → **Basic LLM Chain2** (Google Gemini 2.5): Extract invoice fields\n- **Edit Fields3**: Clean JSON output\n- **Google Sheets1**: Append to \"2505_Invoices\" \n- **Get row(s)** → **If2** → **Execute Workflow2** → **Upload file** to Google Drive\n- **Edit Fields5** → **Telegram**: Send notification",
-        "height": 864,
-        "width": 512,
-        "color": 5
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -4208,
-        512
-      ],
-      "typeVersion": 1,
-      "id": "1ab347e6-5a33-4686-b3df-3e6c143e6c0b",
-      "name": "Sticky Note5"
     },
     {
       "parameters": {
@@ -370,8 +354,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -3296,
-        720
+        -4256,
+        768
       ],
       "id": "7d175608-d04b-41c7-8523-5dbf522e871c",
       "name": "Empty?"
@@ -428,42 +412,12 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -3264,
-        1168
+        -3728,
+        1008
       ],
       "id": "f492e836-2a5e-4c38-b299-93eeb80e8b2b",
       "name": "Analyze file",
       "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "99c26d9b-04e1-41df-a433-47fe400f2f84",
-              "name": "data.text",
-              "value": "={{ $('Get $(\\'Gmail\\').item.binary').item.json.text  }}",
-              "type": "string"
-            },
-            {
-              "id": "fadec21f-011e-4f8c-af73-1db0fd72a6c7",
-              "name": "address",
-              "value": "",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -3472,
-        688
-      ],
-      "id": "bc4a5430-5939-4ddf-b82c-f866b774979b",
-      "name": "Edit Fields"
     },
     {
       "parameters": {
@@ -472,8 +426,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3264,
-        976
+        -3728,
+        832
       ],
       "id": "cf9d6f27-75dc-4387-bb53-a0224ab61fde",
       "name": "Clean Email Text"
@@ -485,8 +439,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3136,
-        592
+        -3728,
+        672
       ],
       "id": "87b90f74-cc40-46e2-881b-6dd24743bf23",
       "name": "Code in JavaScript1"
@@ -526,8 +480,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -2320,
-        704
+        -2448,
+        1072
       ],
       "id": "1a73ad78-8105-4e72-89e7-b06f4791923d",
       "name": "Switch2"
@@ -543,8 +497,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1712,
-        928
+        -2016,
+        1296
       ],
       "id": "119ae2db-647b-4919-924b-231fd7092253",
       "name": "Telegram1",
@@ -600,8 +554,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2608,
-        1200
+        -3056,
+        1536
       ],
       "id": "4e6c2567-9768-4f43-a5ae-f1f5e636663d",
       "name": "Edit Fields1"
@@ -663,8 +617,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -2432,
-        1216
+        -2784,
+        1536
       ],
       "id": "cf227268-b602-41c5-b83d-1990d1f318d5",
       "name": "Call 'Google Drive Folder ID Lookup'"
@@ -681,8 +635,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -3632,
-        1056
+        -4256,
+        992
       ],
       "id": "a8521988-a892-44cd-a2dc-a774d14bde4d",
       "name": "sp"
@@ -695,8 +649,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2512,
-        560
+        -2672,
+        1072
       ],
       "id": "692a931b-7fb7-42b7-96ce-64e4554b42c3",
       "name": "Accounting-email-List"
@@ -709,8 +663,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -2752,
-        1248
+        -3248,
+        1680
       ],
       "id": "705f1ebd-4081-4c66-b4ed-cf0a786a2f21",
       "name": "Structured Output Parser"
@@ -723,8 +677,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -2896,
-        1248
+        -3376,
+        1680
       ],
       "id": "47fad5fd-416f-4bf9-8b64-6c55944d07f6",
       "name": "Groq Chat Model",
@@ -752,8 +706,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -2976,
-        592
+        -3024,
+        704
       ],
       "id": "fab34414-f12a-4e65-80f5-2a8e3d3b719f",
       "name": "subject-classifier-LM",
@@ -777,8 +731,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -2896,
-        1152
+        -3376,
+        1456
       ],
       "id": "2d5dd79d-ff59-45cb-ae47-273d3359a873",
       "name": "Accountant-concierge",
@@ -1106,8 +1060,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -1920,
-        1072
+        -2224,
+        1456
       ],
       "id": "69cce882-82de-465d-b8db-7b342754af13",
       "name": "Google Sheets2",
@@ -1135,8 +1089,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2896,
-        944
+        -3872,
+        1312
       ],
       "id": "9cf3a39d-adfa-4abb-86a0-074eaafe0977",
       "name": "binary_data"
@@ -1178,8 +1132,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2752,
-        944
+        -3872,
+        1472
       ],
       "id": "329c80e3-066f-4af4-97ba-1bdd3c717685",
       "name": "Edit Fields2"
@@ -1193,8 +1147,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -3104,
-        1168
+        -3504,
+        1008
       ],
       "id": "b4d1602f-8096-4de3-a4b0-a3f7018321a6",
       "name": "Merge"
@@ -1208,8 +1162,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -2592,
-        944
+        -3872,
+        1632
       ],
       "id": "7f5ee79c-cacc-48d7-9c42-b87d09a2a94d",
       "name": "Split Out"
@@ -1223,8 +1177,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -2432,
-        944
+        -3584,
+        1312
       ],
       "id": "a3713a9e-d0f1-4f82-a5c4-ad988ef6e01b",
       "name": "Loop Over Items1"
@@ -1236,8 +1190,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -3664,
-        496
+        -4816,
+        912
       ],
       "id": "532b5da4-3900-40da-959c-f7af092c6176",
       "name": "When Executed by Another Workflow"
@@ -1271,8 +1225,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3104,
-        816
+        -3280,
+        832
       ],
       "id": "5794637c-6d29-40d0-836d-6b451e2527e8",
       "name": "attachement_as_text"
@@ -1285,8 +1239,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -2832,
-        688
+        -2880,
+        928
       ],
       "id": "7b6afd76-55a7-4edb-acaa-7aa0164e52b7",
       "name": "SP1"
@@ -1301,8 +1255,8 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        -3104,
-        976
+        -3504,
+        832
       ],
       "id": "c9fb07b8-e2ee-4b09-8f90-1a9f4ee58f49",
       "name": "Aggregate1"
@@ -1314,8 +1268,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -2976,
-        688
+        -3008,
+        928
       ],
       "id": "fdffc0c5-bc0c-4941-8eb4-27f10aceca33",
       "name": "Google Gemini Chat Model2",
@@ -1360,8 +1314,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -2320,
-        560
+        -2448,
+        864
       ],
       "id": "a251b85f-77ed-4a81-9d9f-59de4b7a431a",
       "name": "Switch3"
@@ -1383,8 +1337,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2176,
-        1216
+        -2448,
+        1536
       ],
       "id": "11247066-a048-4977-8c71-f05249c1fa92",
       "name": "binary_data_files"
@@ -1407,8 +1361,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -1920,
-        1216
+        -2208,
+        1696
       ],
       "id": "66656436-76ad-46c6-8751-220e2dafab9c",
       "name": "Upload file",
@@ -1418,6 +1372,130 @@
           "name": "Google Drive Sheets & OAuth"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data and verifies sender\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n",
+        "height": 864,
+        "width": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -5456,
+        624
+      ],
+      "typeVersion": 1,
+      "id": "aba2c868-6a0b-4bea-bd8f-6e95c724dd86",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\nModify your \nemail white-list.",
+        "height": 156,
+        "width": 376,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2880,
+        1056
+      ],
+      "id": "3e7a4a06-006a-4bde-8fa3-3f8f95b34447",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Follow n8n instructions on how to use the telegram node.**",
+        "height": 604,
+        "width": 264,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2080,
+        848
+      ],
+      "id": "a20eeb9d-761c-4099-9399-b10b6c5ea3ef",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Set the id of your preferred root directory.**\nIt should be the one thats called \"Accounting\" in the template. Open it in the browser and take the last section of the URL, for example: `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`, then just copy-paste `1tiI-FHH-yeWju4gS` in this woflow field `'root_folder_id'`",
+        "height": 316,
+        "width": 456,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2944,
+        1520
+      ],
+      "id": "6e3a5dda-8959-45fd-97b1-f471a83cf928",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "content": "Connect to the created google sheet.",
+        "height": 252,
+        "width": 184,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2272,
+        1376
+      ],
+      "id": "967e727a-897e-4c93-bdb5-85b00369d871",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/google-drive-folder-structure.png)",
+        "height": 320,
+        "width": 496
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2256,
+        1840
+      ],
+      "id": "37b67737-6667-4554-bd19-0f5eb24c550e",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "![PathToIDLookup Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/lookup-table-schema-columns-path-folder-id.png)",
+        "height": 272,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2944,
+        1888
+      ],
+      "id": "105d034c-d4ea-425d-8419-c383de008367",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
+        "height": 336,
+        "width": 800
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2080,
+        1488
+      ],
+      "id": "ecc5367c-5d65-4ab7-a972-cb80f59d8919",
+      "name": "Sticky Note21"
     }
   ],
   "connections": {
@@ -1481,7 +1559,7 @@
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Empty?",
             "type": "main",
             "index": 0
           }
@@ -1549,17 +1627,6 @@
         [
           {
             "node": "Merge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "Empty?",
             "type": "main",
             "index": 0
           }
