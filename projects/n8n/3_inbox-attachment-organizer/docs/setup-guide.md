@@ -23,17 +23,22 @@ Follow: [credentials-guide.md](config/credentials-guide.md)
 
 ### 3. Create Google Sheet
 Create a Google Sheet named **"2505_Invoices"** with these exact column headers:
+
+**Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet. The tabs will automatically create separate columns.
+
 ```
-supplier_name | supplier_address | invoice_date | total_amount_due | currency_code |
-subtotal_amount | recipient_business_name | payment_method | date_paid | payment_reference
+invoice_number	supplier_name	invoice_date	total_amount_due	currency_code	subtotal_amount	payment_method	supplier_address	recipient_business_name	payment_reference	date_paid	due_date	invoice_status	purchase_order_number	tax_amount	payment_terms	date_received	supplier_vat_number	supplier_tax_id	discount_amount	approver_id	approver_name	department_id	cost_center_code	supplier_contact_details	supplier_bank_account_details	internal_reference_number	recipient_business_address
 ```
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/2505_Invoices`)
 
 ### 4. Create PathToIDLookup Google Sheet
 Create a Google Sheet named **"PathToIDLookup"** with these exact column headers:
+
+**Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet.
+
 ```
-path | folder_id | child_ids | last_update
+path	folder_id	child_ids	last_update
 ```
 
 **Purpose:** This sheet acts as a cache for Google Drive folder structure lookups, significantly improving performance by avoiding repeated API calls.
