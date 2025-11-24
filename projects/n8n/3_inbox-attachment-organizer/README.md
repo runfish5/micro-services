@@ -16,6 +16,10 @@ Automatically process email attachments (images, PDFs, documents), understand co
     - LLM: Groq (free) or Gemini (free tier)
     - Optional: Telegram bot
 
+    
+> ### Single Authentication Advantage
+>
+> **Authentication is automation's biggest bottleneck.** This workflow operates with **ONE Google OAuth connection** (Gmail + Drive + Sheets) — avoiding the 3-5 platform authentications typical workflows require.
 ## 🌟 Use Cases
 
 **Out-of-the-box:** Financial documents (invoices, receipts)

@@ -1,6 +1,12 @@
 ## ⚡ Quick Start
 
-**Time:** 15 minutes | **Difficulty:** Easy | **Cost:** Free (with Groq)
+**Time:** 60 minutes | **Difficulty:** Easy | **Cost:** Free
+
+> ### ⚡ Setup Advantage
+>
+> **ONE Google OAuth connection** (Gmail + Drive + Sheets) — not 3-5 platforms.
+> **Standard n8n cloud nodes only** — no self-hosted requirements.
+> **Import and run immediately.**
 
 ### 1. Import Workflows
 Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](n8n.io) :
@@ -15,33 +21,28 @@ Only one authentication needed: **Google OAuth**
 
 Follow: [credentials-guide.md](config/credentials-guide.md)
 
-### 3. Activate
+### 3. Create Google Sheet
+Create a Google Sheet named **"2505_Invoices"** with these exact column headers:
+```
+supplier_name | supplier_address | invoice_date | total_amount_due | currency_code |
+subtotal_amount | recipient_business_name | payment_method | date_paid | payment_reference
+```
+
+Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/2505_Invoices`)
+
+### 4. Activate
 - Send test email with invoice attachment
 - Check Google Drive for auto-created folders
 - **For existing emails:** Run the `gmail-systematic-processor` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
 - Activate Gmail trigger ✅
 
+**Note:** Google Drive folders will be auto-created in this structure:
 ```
-Google Sheets: 2505_Invoices
-├── supplier_name
-├── supplier_address
-├── invoice_date
-├── total_amount_due
-├── currency_code
-├── subtotal_amount
-├── recipient_business_name
-├── payment_method
-├── date_paid
-└── payment_reference
-```
-put that file at the root of your financial tree. Recommended:
-```
-  Storage Structure:
-  /Accounting/
-    └─ 2025/
-        └─ 05_May/
-            ├─ Revenue/
-            └─ Expense/
+/Accounting/
+  └─ 2025/
+      └─ 05_May/
+          ├─ Revenue/
+          └─ Expense/
 ```
 
 ## 🌟 Use Cases

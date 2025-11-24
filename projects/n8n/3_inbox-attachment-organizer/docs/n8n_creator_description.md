@@ -1,8 +1,15 @@
-This n8n workflow demonstrates how to use AI to automatically process incoming email attachments, extract invoice data with precision, and organize financial documents into a structured accounting system.
+# This n8n workflow demonstrates how to use AI to automatically process incoming email attachments, extract invoice data with precision, and organize financial documents into a structured accounting system.
 
 This n8n workflow handles email attachments automatically. It reads any format (images, PDFs, documents) using AI, extracts key information, and files everything to the correct date-based Google Drive folder.
 
 Perfect for organizing receipts, invoices, or any email attachments without manual sorting. The AI determines the category (Expense/Revenue) and filing date (e.g., Accounting/2025/02_February/Expenses/) by reading the actual document content—even from images.
+
+> ### ⚡ Why This Workflow Is Different
+>
+> * **ONE Google OAuth connection** (Gmail + Drive + Sheets) — not 3-5 platforms.
+> * **Standard n8n cloud nodes only** — no self-hosted requirements or community node dependencies.
+>
+> --> ⏱ **Setup in minutes** if n8n already connected to google account.
 
 **Good to know**
 

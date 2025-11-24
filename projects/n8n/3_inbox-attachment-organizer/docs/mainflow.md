@@ -139,6 +139,9 @@ START: Gmail Trigger (Every 1 minute)
 - **Output**: Folder ID for file upload
 - **Behavior**: Creates folders if they don't exist
 
+💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
+
+
 ## 📝 Notes
 - Google Sheets provides a queryable database of all processed invoices
 - The folder structure makes manual file browsing intuitive
