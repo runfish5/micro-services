@@ -43,3 +43,7 @@ Perfect for organizing receipts, invoices, or any email attachments without manu
 # Customising this workflow
 
 This workflow solves financial document filing out-of-the-box. To handle non-financial emails (contracts, reports, customer inquiries), simply add new modules by extending the document type categories in the structured output parser schema.
+
+---
+
+📂 **[Full documentation & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**
