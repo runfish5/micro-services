@@ -19,10 +19,10 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -2256,
-        -736
+        -5536,
+        432
       ],
-      "id": "e1a79ac1-a1fb-4e1c-bc81-d979ce91e1fe",
+      "id": "12f5de96-7448-4f61-9972-3cb2ad3db46d",
       "name": "Gmail Trigger",
       "credentials": {
         "gmailOAuth2": {
@@ -44,10 +44,10 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -2256,
-        -368
+        -5536,
+        800
       ],
-      "id": "d756740e-7288-4a40-b38f-e77bf93148c7",
+      "id": "94d5718a-f954-4c26-a6ba-5efb2d8ab533",
       "name": "Gmail",
       "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
       "credentials": {
@@ -72,13 +72,13 @@
         "includeOtherFields": true,
         "options": {}
       },
-      "id": "20a7beb2-e230-406f-a54e-6dd4516c0f63",
+      "id": "88317ede-1315-4625-ad6a-74be84ee5513",
       "name": "Set File ID",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2032,
-        -560
+        -5312,
+        608
       ]
     },
     {
@@ -105,10 +105,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2032,
-        -368
+        -5312,
+        800
       ],
-      "id": "04c618d6-0789-4e90-a5aa-6fcbd8b3fac7",
+      "id": "978606c1-bbe9-41d6-82b2-f96ad04bff6e",
       "name": "Get binary data"
     },
     {
@@ -122,10 +122,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        336,
-        -320
+        -2944,
+        848
       ],
-      "id": "68f6fa3c-f66e-48ce-af39-90dfe0a1ce60",
+      "id": "b93328d6-d6ab-4831-b9eb-31bdb4325c75",
       "name": "Telegram & done",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
@@ -166,10 +166,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2032,
-        -736
+        -5312,
+        432
       ],
-      "id": "86631bb8-5dbd-4b35-be67-5766570b6a32",
+      "id": "6b7058be-a43e-4a2d-8a3e-342a6611cec5",
       "name": "Stop promotions"
     },
     {
@@ -206,10 +206,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -112,
-        -608
+        -3392,
+        560
       ],
-      "id": "71746643-da33-4e9d-8619-88720ee9bf25",
+      "id": "eb86b6a1-000b-45d4-88c8-82eaca73b867",
       "name": "financial doc router"
     },
     {
@@ -241,10 +241,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -1696,
-        -704
+        -4976,
+        464
       ],
-      "id": "33ba17b8-3380-44e3-bed0-80c00da1e8da",
+      "id": "579a7d40-f08d-4dd8-9618-95e7264f14b4",
       "name": "Empty?"
     },
     {
@@ -254,10 +254,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1168,
-        -640
+        -4448,
+        528
       ],
-      "id": "1f68f5d5-0e0f-4383-8c4b-232cd18d72e9",
+      "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
       "name": "Clean Email Text"
     },
     {
@@ -271,10 +271,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        336,
-        -608
+        -2944,
+        560
       ],
-      "id": "4077e4d2-43be-456e-99eb-261c3e2c47e1",
+      "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
       "name": "notify rejection",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
@@ -299,7 +299,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "target_path": "=/Accounting/{{ $('Accountant-concierge-LM').item.json.output.year }}/{{ $json.month }}/{{ $json.accounting_category }}",
+            "target_path": "/Accounting/2025/11_November/Expense",
             "root_folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
             "root_path": "/Accounting"
           },
@@ -344,10 +344,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -224,
-        16
+        -3504,
+        1184
       ],
-      "id": "7ff656ac-ab42-4f53-9f63-a5da695a033b",
+      "id": "6db79504-d105-47b1-854c-0a8096451f40",
       "name": "Call 'Google Drive Folder ID Lookup'"
     },
     {
@@ -362,10 +362,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -1696,
-        -480
+        -4976,
+        688
       ],
-      "id": "47d3ffcc-ab25-4b48-a27a-12a71d07a731",
+      "id": "93d1354e-67e7-4b56-be62-a6e9caccd5f0",
       "name": "sp"
     },
     {
@@ -376,10 +376,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -112,
-        -400
+        -3392,
+        768
       ],
-      "id": "28e4a2f8-1c29-4dff-9b61-044a03e76962",
+      "id": "a5b1dfd9-c6da-486d-beda-c664e88d79bd",
       "name": "user_email_whitelist"
     },
     {
@@ -399,10 +399,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -464,
-        -768
+        -3744,
+        400
       ],
-      "id": "a788299e-5be4-4001-9e2e-9725b1ca99f3",
+      "id": "39d4afb7-c612-49b2-b099-02f819e31812",
       "name": "subject-classifier-LM",
       "retryOnFail": true,
       "maxTries": 2
@@ -424,10 +424,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -816,
-        -64
+        -4096,
+        1104
       ],
-      "id": "e3181277-7558-4b82-b48a-0b25d1566bba",
+      "id": "fe1b17b6-7544-49d1-8237-d4fd3fa5070e",
       "name": "Accountant-concierge-LM",
       "retryOnFail": true,
       "maxTries": 4
@@ -753,10 +753,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        336,
-        -64
+        -2944,
+        1104
       ],
-      "id": "70138196-5826-44cd-919d-6956a6dee303",
+      "id": "21d038a1-2970-455a-be3a-88bcef506917",
       "name": "insert doc record",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -769,18 +769,6 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "dc0d2a51-cf92-4b68-82d2-c1d17a69e627",
-              "name": "all_attachements_text",
-              "value": "={{$('attachement_as_text').item.json.summary_attachments }}",
-              "type": "object"
-            },
-            {
-              "id": "ac5d47fe-4014-46cc-885f-b4fdeee3f74b",
-              "name": "",
-              "value": "={{ $('Clean Email Text').all()[1].json.text }}",
-              "type": "string"
-            },
             {
               "id": "290dd0a6-a92b-48c9-b5de-ae15ea4199fc",
               "name": "processed_attachments.data",
@@ -802,10 +790,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1312,
-        -16
+        -4592,
+        1152
       ],
-      "id": "70ffa046-8b63-4c00-8303-f589213466c7",
+      "id": "d3f0f4d6-eaa3-4256-b63b-5f8716231356",
       "name": "prepare attachment meta"
     },
     {
@@ -817,26 +805,11 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -944,
-        -464
+        -4224,
+        704
       ],
-      "id": "a515b4f5-d180-4688-a170-04b99115cdbc",
+      "id": "3f0df553-6420-4610-b9c3-1b250551b79b",
       "name": "Merge"
-    },
-    {
-      "parameters": {
-        "fieldToSplitOut": "processed_attachments.data",
-        "include": "allOtherFields",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitOut",
-      "typeVersion": 1,
-      "position": [
-        -1312,
-        144
-      ],
-      "id": "a7e90248-417d-4ca6-96dc-1bb0a4e5bee0",
-      "name": "new section"
     },
     {
       "parameters": {
@@ -847,10 +820,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -1024,
-        -176
+        -4304,
+        992
       ],
-      "id": "f6259c5b-442b-440a-847d-23351d847425",
+      "id": "e44f9a41-161f-4ee3-885b-a0fd28b6d236",
       "name": "loop invoices"
     },
     {
@@ -860,10 +833,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -2256,
-        -560
+        -5536,
+        608
       ],
-      "id": "9930b7db-4d43-486b-94e6-dc527ad797e6",
+      "id": "6e8051ea-5137-4bcd-bc9e-572800a93066",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -895,10 +868,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -720,
-        -640
+        -4000,
+        528
       ],
-      "id": "0034466a-9e30-4eff-b2ac-76eaee436f29",
+      "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
       "name": "attachement_as_text"
     },
     {
@@ -919,10 +892,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        336,
-        160
+        -2944,
+        1328
       ],
-      "id": "e5848db1-7747-46d1-90fb-6132c5502e2b",
+      "id": "b1db0433-988a-4d90-b22a-607bef5d8316",
       "name": "save doc to folder",
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -939,11 +912,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -2896,
-        -848
+        -6176,
+        320
       ],
       "typeVersion": 1,
-      "id": "6efb27b9-32e1-43b2-87e3-80a07e700ed9",
+      "id": "1d732fd0-64cf-43fc-bd6c-74142ba1bfe1",
       "name": "Sticky Note13"
     },
     {
@@ -956,10 +929,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -320,
-        -416
+        -3600,
+        752
       ],
-      "id": "1f934d67-883f-44b5-8b91-1496b8c8f331",
+      "id": "1d318047-1492-43d1-b001-5033cc2caf42",
       "name": "Sticky Note17"
     },
     {
@@ -972,26 +945,26 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        288,
-        -640
+        -2992,
+        528
       ],
-      "id": "6808df2e-8ddc-48dc-b922-5291d4aa97c0",
+      "id": "ccb93ee3-2836-4962-ace7-653ed4e6d42b",
       "name": "Sticky Note18"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Set the id of your preferred root directory.**\nIt should be the one thats called \"Accounting\" in the template. Open it in the browser and take the last section of the URL, for example: `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`, then just copy-paste `1tiI-FHH-yeWju4gS` in this woflow field `'root_folder_id'`",
-        "height": 316,
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Set the id of your preferred root directory.**\nIt should be the one thats called \"Accounting\" in the template. Open it in the browser and take the last section of the URL, for example: `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`, then just copy-paste `1tiI-FHH-yeWju4gS` in this woflow field `'root_folder_id'`\n",
+        "height": 588,
         "width": 456,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -384,
-        0
+        -3664,
+        1168
       ],
-      "id": "d52a17f1-82fe-46a6-8b31-5f3e0574fb56",
+      "id": "0b5c7ac9-633a-4e9d-80bc-827e99ce8c97",
       "name": "Sticky Note19"
     },
     {
@@ -1004,10 +977,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        288,
-        -128
+        -2992,
+        1040
       ],
-      "id": "033aab58-c7a3-40b1-88a1-124d23f8104b",
+      "id": "43d6ccf9-14fe-4a32-b8dc-910fd1d8c068",
       "name": "Sticky Note20"
     },
     {
@@ -1019,10 +992,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        144,
-        336
+        -2688,
+        1392
       ],
-      "id": "a165a0e6-fb7b-4c24-a35d-7c8a3b459059",
+      "id": "f32040b1-d196-4d29-bf58-374b758071f0",
       "name": "Sticky Note5"
     },
     {
@@ -1034,10 +1007,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -384,
-        352
+        -3200,
+        1520
       ],
-      "id": "6d084266-c7ab-49df-9a68-1dac90280e88",
+      "id": "edafe183-6880-425a-b8bd-5ff363084f25",
       "name": "Sticky Note9"
     },
     {
@@ -1049,10 +1022,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        496,
-        16
+        -2784,
+        1184
       ],
-      "id": "eee0745c-5c99-463f-80db-3a64f96020a6",
+      "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
       "name": "Sticky Note21"
     },
     {
@@ -1072,75 +1045,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1312,
-        -160
+        -4592,
+        1008
       ],
-      "id": "bc3f67b9-276b-4a24-9a32-9c4ca641e558",
+      "id": "9ae40cf7-077b-4251-bced-48f91a41c7bc",
       "name": "binary_data"
-    },
-    {
-      "parameters": {
-        "content": "# attachment processer\nNodes 7-15",
-        "height": 608,
-        "width": 1200,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1744,
-        -848
-      ],
-      "typeVersion": 1,
-      "id": "6ab8fbef-fbef-458f-8b0e-42fe39ad5773",
-      "name": "Sticky Note2"
-    },
-    {
-      "parameters": {
-        "content": "# E-Mail trigger\nNodes 1-6",
-        "height": 912,
-        "width": 528,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -2304,
-        -848
-      ],
-      "typeVersion": 1,
-      "id": "7b3191eb-26cf-4916-a1a7-aea43f91b490",
-      "name": "Sticky Note6"
-    },
-    {
-      "parameters": {
-        "content": "# subject classifier\nNodes 16-23",
-        "height": 608,
-        "width": 752,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -496,
-        -848
-      ],
-      "typeVersion": 1,
-      "id": "3c380f0f-775a-453f-beee-15ae5e00e339",
-      "name": "Sticky Note7"
-    },
-    {
-      "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 24-34",
-        "height": 544,
-        "width": 2000,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1744,
-        -208
-      ],
-      "typeVersion": 1,
-      "id": "635144de-90cb-4a2d-81c7-00dbd5322e59",
-      "name": "Sticky Note8"
     },
     {
       "parameters": {
@@ -1149,10 +1058,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1168,
-        -800
+        -4448,
+        368
       ],
-      "id": "dae877c2-cb84-4f49-aa04-6f9701e8df92",
+      "id": "e14c0350-b14b-4e0d-a15a-6e4cc6fca46e",
       "name": "Clean Email object"
     },
     {
@@ -1164,10 +1073,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -1472,
-        -480
+        -4752,
+        688
       ],
-      "id": "a56acfb3-2444-418a-ad86-5383d87ce1bb",
+      "id": "26b6b5aa-6bb3-43b1-ad0c-310d3a928b09",
       "name": "Loop Over Attachment Binaries"
     },
     {
@@ -1222,10 +1131,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -1168,
-        -464
+        -4448,
+        704
       ],
-      "id": "2ad30f7e-9cc9-40f7-8910-b80425134001",
+      "id": "1db5d433-e586-44f8-af0e-0163fa91333f",
       "name": "Create Attachment Profile",
       "alwaysOutputData": true
     },
@@ -1236,10 +1145,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -480,
-        -592
+        -3760,
+        576
       ],
-      "id": "b48cfb25-0cbb-4705-ae64-3f82cfc88b0e",
+      "id": "3f038987-3bbf-476d-9934-229e7d7aa1ca",
       "name": "any LM",
       "credentials": {
         "googlePalmApi": {
@@ -1256,10 +1165,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -320,
-        -592
+        -3600,
+        576
       ],
-      "id": "32265a4a-7210-45a6-9a60-7a8be6f7a5b0",
+      "id": "d61cc3b7-cd9a-45c0-a209-707abe7106b8",
       "name": "output profile"
     },
     {
@@ -1268,10 +1177,10 @@
       "name": "Trigger non-spam lineage",
       "typeVersion": 1,
       "position": [
-        -112,
-        -768
+        -3392,
+        400
       ],
-      "id": "fc2dcfbf-26a4-417c-b5a8-0f02498a37c8"
+      "id": "8002d4a6-926f-4357-8b50-d2f813d8aea0"
     },
     {
       "parameters": {
@@ -1308,10 +1217,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        112,
-        -400
+        -3168,
+        768
       ],
-      "id": "ec9a2f3f-2f8a-4682-b6a5-e0811817e31f",
+      "id": "facde472-f1fc-4906-9006-f66d9eeadfec",
       "name": "whitelist validator"
     },
     {
@@ -1331,10 +1240,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        112,
-        -192
+        -3168,
+        976
       ],
-      "id": "7c509a0e-59c3-46ec-82d8-1638ca241e21",
+      "id": "e427a373-9929-4bc4-a560-7c55043e1e0a",
       "name": "craft report note"
     },
     {
@@ -1345,10 +1254,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -816,
-        128
+        -4096,
+        1296
       ],
-      "id": "0905bf9d-fc12-4937-afdd-07dc090a0dc5",
+      "id": "1fa5df01-f254-4b0c-b5f2-c25097d5377a",
       "name": "any LM1",
       "credentials": {
         "groqApi": {
@@ -1365,22 +1274,16 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -672,
-        128
+        -3952,
+        1296
       ],
-      "id": "8730f80b-50fe-4923-a041-84be61044f7a",
+      "id": "25a31f7e-fd4b-48d3-b26e-437deb46e57f",
       "name": "Structured output"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "428fdabf-11e1-4b90-bd4b-ea048380e229",
-              "name": "data",
-              "value": "={{ $('Gmail').first().binary['attachment_0'] || JSON.parse('{\"message\": \"No binary Attachment\"}') }}",
-              "type": "binary"
-            },
             {
               "id": "e489f8d0-446e-464b-9446-ae9b4078b32e",
               "name": "month",
@@ -1400,10 +1303,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -496,
-        16
+        -3776,
+        1184
       ],
-      "id": "7a55ce24-2f2a-4dea-bb55-2032940fb0cd",
+      "id": "52ca50af-d13e-490e-9d18-f1eb79ff1b19",
       "name": "input folder lookup"
     },
     {
@@ -1423,10 +1326,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        112,
-        16
+        -3168,
+        1184
       ],
-      "id": "194c9714-a8a2-445f-83f0-405dea7f5257",
+      "id": "4746f644-6638-40c8-9d61-de801740157c",
       "name": "Get binary data2"
     },
     {
@@ -1439,11 +1342,90 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        -944,
-        -640
+        -4224,
+        528
       ],
-      "id": "4631f7fa-88b3-4291-a146-cf6dcda3c2d7",
+      "id": "0f9cd61f-b869-40fe-88de-f646264ba543",
       "name": "Aggregate Attachment Profiles"
+    },
+    {
+      "parameters": {
+        "content": "# attachment processer\nNodes 7-15",
+        "height": 608,
+        "width": 1200,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -5024,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "8db79f1b-c3b3-45d9-acb3-d1dbf5549478",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# E-Mail trigger\nNodes 1-6",
+        "height": 912,
+        "width": 528,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -5584,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "aba2bb55-a19c-423a-91b7-d6b3b498452f",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "content": "# subject classifier\nNodes 16-23",
+        "height": 608,
+        "width": 752,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3776,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "d7bf3e74-ebba-434b-97e5-5fa4106b62ec",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "content": "#  Invoices & Receipts\nNodes 24-34",
+        "height": 544,
+        "width": 2000,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -5024,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "155a7695-ad4c-4557-b152-b92ebe5d2d68",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "processed_attachments.data",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -4592,
+        1312
+      ],
+      "id": "85e36b85-312c-499c-9ac7-c30fb115b39f",
+      "name": "new section"
     }
   ],
   "connections": {
@@ -1634,17 +1616,6 @@
         ]
       ]
     },
-    "new section": {
-      "main": [
-        [
-          {
-            "node": "loop invoices",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "loop invoices": {
       "main": [
         [
@@ -1689,7 +1660,7 @@
       "main": [
         [
           {
-            "node": "Accountant-concierge-LM",
+            "node": "loop invoices",
             "type": "main",
             "index": 0
           }
@@ -1850,10 +1821,22 @@
           }
         ]
       ]
+    },
+    "new section": {
+      "main": [
+        [
+          {
+            "node": "loop invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
   }
 }

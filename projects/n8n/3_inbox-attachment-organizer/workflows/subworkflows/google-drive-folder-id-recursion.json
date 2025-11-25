@@ -19,8 +19,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -1120,
-        -256
+        -1040,
+        -800
       ],
       "id": "df3dd94f-f7d0-4990-9be8-215f2ff3344b",
       "name": "When Executed by Another Workflow"
@@ -43,11 +43,11 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -928,
-        -240
+        -816,
+        -800
       ],
-      "id": "ea15088e-3016-450c-b7bf-f23dcbd4abdd",
-      "name": "Query Google Drive",
+      "id": "293cf6ac-bf4d-423a-8e87-9348ed7c282b",
+      "name": "Query Google Drive1",
       "alwaysOutputData": true,
       "executeOnce": true,
       "credentials": {
@@ -85,11 +85,11 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -720,
-        -240
+        -592,
+        -800
       ],
-      "id": "eb33b403-f2da-4d38-bb12-ced2921e549f",
-      "name": "Has Children?"
+      "id": "f2a609c1-1d0e-4030-adbb-c8ab7f65b477",
+      "name": "Has Children?1"
     },
     {
       "parameters": {
@@ -98,11 +98,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -528,
-        -352
+        -368,
+        -896
       ],
-      "id": "d72b98cc-09dd-416f-b180-ace4e405fb8c",
-      "name": "Prepare Cache & Recurse"
+      "id": "5f0c4f8e-d5e2-4500-aad3-0f6e2561a0bf",
+      "name": "Prepare Cache & Recurse1"
     },
     {
       "parameters": {
@@ -179,11 +179,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        -320,
-        -400
+        -144,
+        -992
       ],
-      "id": "9a5f382f-5d6d-4544-9692-e50fef90fbba",
-      "name": "Update Cache",
+      "id": "0231b393-c815-431c-aa5e-31b39628894d",
+      "name": "Update Cache1",
       "executeOnce": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -221,11 +221,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -320,
-        -256
+        -144,
+        -800
       ],
-      "id": "e06a8574-a73a-458b-bef2-6354033339be",
-      "name": "Filter for Recursion"
+      "id": "244974fa-ee68-46d4-ac3f-b61a039b8554",
+      "name": "Filter for Recursion1"
     },
     {
       "parameters": {
@@ -284,11 +284,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -128,
-        -256
+        80,
+        -800
       ],
-      "id": "e11123e3-f11d-486c-8896-fd4c07325bea",
-      "name": "Recurse"
+      "id": "5ad34d87-dda9-4f3f-9fb8-8b212051e813",
+      "name": "Recurse1"
     },
     {
       "parameters": {
@@ -313,25 +313,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -128,
-        -128
+        -368,
+        -704
       ],
-      "id": "acee7fbe-5aaa-4bfd-9416-df493ca56ed5",
-      "name": "Leaf Node"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Collect all discovered folders\nconst currentFolder = $('When Executed by Another Workflow').first().json;\n\nfunction deepCollectFolders(input) {\n  if (Array.isArray(input)) {\n    return input.flatMap(deepCollectFolders);\n  }\n  if (input && typeof input === 'object') {\n    if (Array.isArray(input.all)) {\n      return deepCollectFolders(input.all);\n    }\n    if ('folder_id' in input && 'folder_path' in input) {\n      return [{ folder_id: input.folder_id, folder_path: input.folder_path }];\n    }\n    return [];\n  }\n  return [];\n}\n\nconst items = $input.all().map(item => item.json);\nconst descendants = deepCollectFolders(items);\n\nconst all = [\n  { folder_id: currentFolder.folder_id, folder_path: currentFolder.folder_path },\n  ...descendants\n];\n\nreturn { all };"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        96,
-        -384
-      ],
-      "id": "2c1a1ba1-ec28-40b8-9d4f-1ccff9273c27",
-      "name": "Collect All",
-      "disabled": true
+      "id": "394df490-6728-4776-bc50-c94f9b182d55",
+      "name": "Leaf Node1"
     }
   ],
   "connections": {
@@ -339,122 +325,86 @@
       "main": [
         [
           {
-            "node": "Query Google Drive",
+            "node": "Query Google Drive1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query Google Drive": {
+    "Query Google Drive1": {
       "main": [
         [
           {
-            "node": "Has Children?",
+            "node": "Has Children?1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Has Children?": {
+    "Has Children?1": {
       "main": [
         [
           {
-            "node": "Prepare Cache & Recurse",
+            "node": "Prepare Cache & Recurse1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Leaf Node",
+            "node": "Leaf Node1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Cache & Recurse": {
+    "Prepare Cache & Recurse1": {
       "main": [
         [
           {
-            "node": "Update Cache",
+            "node": "Update Cache1",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Filter for Recursion",
+            "node": "Filter for Recursion1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Update Cache": {
+    "Update Cache1": {
+      "main": [
+        []
+      ]
+    },
+    "Filter for Recursion1": {
       "main": [
         [
           {
-            "node": "Collect All",
+            "node": "Recurse1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter for Recursion": {
+    "Recurse1": {
       "main": [
-        [
-          {
-            "node": "Recurse",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
-    "Recurse": {
+    "Leaf Node1": {
       "main": [
-        [
-          {
-            "node": "Collect All",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Leaf Node": {
-      "main": [
-        [
-          {
-            "node": "Collect All",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   },
-  "pinData": {
-    "When Executed by Another Workflow": [
-      {
-        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
-        "folder_path": "/Accounting",
-        "target_path": "/Accounting/2025/11_November/Expense"
-      },
-      {
-        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
-        "folder_path": "/Accounting",
-        "target_path": "/Accounting/2025/11_November/Expense"
-      },
-      {
-        "folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
-        "folder_path": "/Accounting",
-        "target_path": "/Accounting/2025/11_November/Expense"
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"

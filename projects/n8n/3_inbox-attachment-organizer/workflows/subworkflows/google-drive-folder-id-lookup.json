@@ -159,13 +159,14 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "strict",
+                  "version": 2
                 },
                 "conditions": [
                   {
                     "id": "is-exact-match",
-                    "leftValue": "={{ $json.folder_path }}",
-                    "rightValue": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
+                    "leftValue": "={{ $('Set Input Path').item.json.target_path.substring(0, $('Set Input Path').item.json.target_path.lastIndexOf('/')) }}",
+                    "rightValue": "={{ $json.path }}",
                     "operator": {
                       "type": "string",
                       "operation": "equals",
@@ -328,19 +329,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract the target folder from results\nconst targetPath = $('Generate Ancestor Paths').first().json.target_path;\nconst result = $input.first().json;\n\nif (result.all && Array.isArray(result.all)) {\n  const found = result.all.find(f => f.folder_path === targetPath);\n  if (found) {\n    return {\n      folder_id: found.folder_id,\n      folder_path: found.folder_path,\n      source: 'recursive_search'\n    };\n  }\n}\n\nthrow new Error(`Target path not found: ${targetPath}`);"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        816,
-        448
-      ],
-      "id": "f9993ea0-f669-4c8c-9a21-3fdaff184dac",
-      "name": "Extract Target Folder"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
@@ -433,29 +421,6 @@
       ],
       "id": "b4b0cde6-a5de-4227-ac61-68b39321d998",
       "name": "test_data"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "addd4173-f773-48f9-8aef-67b77874bed4",
-              "name": "folder_id",
-              "value": "={{ $json.folder_id }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        960,
-        448
-      ],
-      "id": "35b8ac86-fb86-4b1f-989d-4762f891fa83",
-      "name": "Edit Fields"
     }
   ],
   "connections": {
@@ -558,17 +523,6 @@
     "Recursive Search from Ancestor": {
       "main": [
         []
-      ]
-    },
-    "Extract Target Folder": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
       ]
     },
     "Fallback to Root (Slow Path)": {
