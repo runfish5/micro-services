@@ -1,7 +1,7 @@
 # AI Email Monitoring (I): Auto-File Email Attachments
 
 <p align="center">
-  <img src="assets/cover.png" width="370" alt="Cover Image">
+  <img src="assets/cover.png" alt="Cover Image">
 </p>
 
 Automatically process email attachments (images, PDFs, documents), understand content through AI, and file to structured Google Drive folders.
