@@ -13,7 +13,7 @@ Reads email attachment content, extracts key data to determine filing location (
 6. Sends notifications via Telegram
 
 ### Setup
-- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)
+- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor) · [with triggers on github](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer/workflows/subworkflows)
 - [ ] Connect Google OAuth (Gmail + Drive + Sheets)
 - [ ] Add AI provider credentials (Groq or Gemini)
 - [ ] Create Google Sheet named "2505_Invoices" with required columns

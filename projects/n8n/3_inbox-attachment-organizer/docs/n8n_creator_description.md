@@ -21,11 +21,10 @@ Perfect for organizing receipts, invoices, or any email attachments without manu
 # How it works
 
 * Gmail trigger polls inbox every minute and filters promotional emails.
-* "any-file2json-converter" subworkflow extracts and understands content from all attachments.
-* Subject Classifier categorizes emails into types: financial, confirmation, appointment, marketing, operational, newsletter, or other.
+* "any-file2json-converter" subworkflow extracts and understands content from attachments (subworkflows [with triggers on github](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer/workflows/subworkflows)).
+* Subject Classifier categorizes emails into types: financial,  appointment, newsletter, or other.
 * Accountant Concierge extracts year/month from document, and identifies document type (Invoice/Receipt).
-* "google-drive-folder-id-lookup" subworkflow handles the n8n-Google Drive communication workaround to locate correct folders.
-* Files upload to correct location with full metadata logging in Google Sheets.
+* Files upload and full metadata logging in Google Sheets.
 * Optional: Telegram notifications.
 
 # How to use
@@ -46,4 +45,4 @@ This workflow solves financial document filing out-of-the-box. To handle non-fin
 
 ---
 
-📂 **[Full documentation & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**
+📂 **[Full documentation & source code](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**
