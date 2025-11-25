@@ -124,7 +124,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "path": "={{ $json.cache_entry.folder_path }}/{{ $json.recursion_targets[0].child_name }}",
+            "path": "={{ $json.cache_entry.folder_path }}",
             "child_ids": "={{ $json.cache_entry.children.toJsonString() }}",
             "folder_id": "={{ $json.cache_entry.folder_id }}",
             "last_update": "={{ $json.cache_entry.last_updated }}"
