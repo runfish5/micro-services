@@ -30,8 +30,6 @@ Automatically process email attachments (images, PDFs, documents), understand co
 
 **Out-of-the-box:** Financial documents (invoices, receipts)
 
-![Workflow Core](assets/workflow-core.png)
-
 ## 📋 Features
 
  ✅ Reads images via AI vision (Gemini Flash OCR) andprocesses PDFs and documents.
