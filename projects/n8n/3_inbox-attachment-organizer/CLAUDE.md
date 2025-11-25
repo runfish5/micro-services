@@ -41,7 +41,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 Nodes 1-5: Email Monitoring (Gmail Trigger polls every 1 min, filters promotions)
 Nodes 6-15: Attachment Processing (splits attachments, loops to call any-file2json-converter per file, aggregates text)
 Nodes 16-18: AI Classification First Pass (subject-classifier-LM outputs: confirmation, financial, newsletter, appointment, marketing, operational, other)
-Nodes 19-23: Routing & Filtering (Switch on type, Accounting-email-List whitelist check)
+Nodes 19-23: Routing & Filtering (financial doc router on type, user_email_whitelist whitelist check)
 Nodes 24-28: Deep Invoice Extraction (Accountant-concierge-LM extracts 28 fields: Revenue/Expense, Invoice/Receipt, dates, amounts, parties)
 Nodes 31-35: Storage & Logging (google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet)
 Nodes 36-38: Notifications (Telegram - note: configuration not yet implemented per mainflow.md)

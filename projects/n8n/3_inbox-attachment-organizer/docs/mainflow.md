@@ -90,7 +90,7 @@ START: Gmail Trigger
            └→ financial doc router
               │
               └─ IF FINANCIAL:
-                 ├→ user_email__whitelist
+                 ├→ user_email_whitelist
                  ├→ whitelist validator
                  │  ├→ format rejection
                  │  └→ notify rejection
@@ -102,7 +102,7 @@ START: Gmail Trigger
                  └→ loop invoices
                     ├→ Accountant-concierge-LM (deep AI extraction)
                     ├→ prepare folder lookup
-                    ├→ Call 'Google Drive Folder Lookup'
+                    ├→ Call 'Google Drive Folder ID Lookup'
                     ├→ get file binary
                     ├→ save doc to folder
                     ├→ insert doc record
@@ -120,7 +120,7 @@ START: Gmail Trigger
   - confirmation, financial, newsletter, appointment, marketing, operational, other
 
 ### 2. Extraction
-- **Node**: Accountant-concierge
+- **Node**: Accountant-concierge-LM
 - **Input**: Cleaned invoice/receipt text
 - **Output**: Structured invoice data with all fields
 - **Key Capabilities**:

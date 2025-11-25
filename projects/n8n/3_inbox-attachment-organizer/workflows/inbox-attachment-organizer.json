@@ -124,7 +124,7 @@
         1104
       ],
       "id": "543d6d5a-cfcd-4dd8-8903-6644a8c3fb38",
-      "name": "Get $('Gmail').item.binary"
+      "name": "Get binary data"
     },
     {
       "parameters": {
@@ -141,7 +141,7 @@
         864
       ],
       "id": "2088e672-f767-427d-9460-9668da9da6d7",
-      "name": "Telegram",
+      "name": "Telegram & done",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -174,7 +174,7 @@
         864
       ],
       "id": "f8efc549-1807-4f55-b199-782f65406111",
-      "name": "Edit Fields5"
+      "name": "extract attachments"
     },
     {
       "parameters": {
@@ -280,7 +280,7 @@
         864
       ],
       "id": "c0385e60-34c4-4ec7-a6b6-db6e5bc82e8a",
-      "name": "Switch"
+      "name": "financial doc router"
     },
     {
       "parameters": {
@@ -301,7 +301,7 @@
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
-      "name": "Replace Me1",
+      "name": "verify sender",
       "typeVersion": 1,
       "position": [
         -2032,
@@ -484,7 +484,7 @@
         1072
       ],
       "id": "1a73ad78-8105-4e72-89e7-b06f4791923d",
-      "name": "Switch2"
+      "name": "non-spam lineage"
     },
     {
       "parameters": {
@@ -501,7 +501,7 @@
         1296
       ],
       "id": "119ae2db-647b-4919-924b-231fd7092253",
-      "name": "Telegram1",
+      "name": "notify rejection",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -558,7 +558,7 @@
         1536
       ],
       "id": "4e6c2567-9768-4f43-a5ae-f1f5e636663d",
-      "name": "Edit Fields1"
+      "name": "prepare folder lookup"
     },
     {
       "parameters": {
@@ -653,7 +653,7 @@
         1072
       ],
       "id": "692a931b-7fb7-42b7-96ce-64e4554b42c3",
-      "name": "Accounting-email-List"
+      "name": "user_email_whitelist"
     },
     {
       "parameters": {
@@ -735,7 +735,7 @@
         1456
       ],
       "id": "2d5dd79d-ff59-45cb-ae47-273d3359a873",
-      "name": "Accountant-concierge",
+      "name": "Accountant-concierge-LM",
       "retryOnFail": true,
       "maxTries": 2
     },
@@ -1064,7 +1064,7 @@
         1456
       ],
       "id": "69cce882-82de-465d-b8db-7b342754af13",
-      "name": "Google Sheets2",
+      "name": "insert doc record",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "O03W9YZyCWUacxnv",
@@ -1093,7 +1093,7 @@
         1312
       ],
       "id": "9cf3a39d-adfa-4abb-86a0-074eaafe0977",
-      "name": "binary_data"
+      "name": "get file binary"
     },
     {
       "parameters": {
@@ -1136,7 +1136,7 @@
         1472
       ],
       "id": "329c80e3-066f-4af4-97ba-1bdd3c717685",
-      "name": "Edit Fields2"
+      "name": "prepare attachment meta"
     },
     {
       "parameters": {
@@ -1166,7 +1166,7 @@
         1632
       ],
       "id": "7f5ee79c-cacc-48d7-9c42-b87d09a2a94d",
-      "name": "Split Out"
+      "name": "new section"
     },
     {
       "parameters": {
@@ -1181,7 +1181,7 @@
         1312
       ],
       "id": "a3713a9e-d0f1-4f82-a5c4-ad988ef6e01b",
-      "name": "Loop Over Items1"
+      "name": "loop invoices"
     },
     {
       "parameters": {
@@ -1243,7 +1243,7 @@
         928
       ],
       "id": "7b6afd76-55a7-4edb-acaa-7aa0164e52b7",
-      "name": "SP1"
+      "name": "split attachments"
     },
     {
       "parameters": {
@@ -1318,7 +1318,7 @@
         864
       ],
       "id": "a251b85f-77ed-4a81-9d9f-59de4b7a431a",
-      "name": "Switch3"
+      "name": "whitelist validator"
     },
     {
       "parameters": {
@@ -1341,7 +1341,7 @@
         1536
       ],
       "id": "11247066-a048-4977-8c71-f05249c1fa92",
-      "name": "binary_data_files"
+      "name": "get file binary"
     },
     {
       "parameters": {
@@ -1365,7 +1365,7 @@
         1696
       ],
       "id": "66656436-76ad-46c6-8751-220e2dafab9c",
-      "name": "Upload file",
+      "name": "save doc to folder",
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "HwaWjD4xhGV5dH9Q",
