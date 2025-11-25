@@ -11,15 +11,15 @@ This workflow automates the entire invoice processing
 
 ### Phases:
 ```
-Email Monitoring (1-5)
-Attachment Processing (6-15)
-AI Classification First Pass (16-18)
-Routing & Filtering (19-23)
-Deep Invoice Extraction (24-28)
-detailed invoice data (29-30)
-Storage & Logging (31-35)
-Notifications (36-38)
-Alternative Entry (39)
+Email Monitoring (1-6)
+Attachment Processing (7-15)
+LM1: AI Classification (16)
+Routing & Filtering (17-23)
+Deep Invoice Extraction (24-34)
+LM2: detailed invoice data (28)
+Storage & Logging (29, 31, 33)
+Notifications (23, 34)
+Alternative Entry (2)
 ```
 
 ### Data Flow
@@ -53,27 +53,28 @@ Email → Text Extraction → AI Classification
     ├─ No Attachments → Clean Text
     └─ Has Attachments → Convert to Text → Aggregate
     ↓
-  AI Classify (Gemini) → Determine Document Type
+  LM1: AI Classify → Determine Document Type
     ↓
   Is Financial? → Check Whitelist → Deep Extract (Llama 4)
     ↓
-  Organize Folders → Upload to Drive → Log to Sheets →
+  LM2: Accountant Info Extraction → Upload to Drive → Log to Sheets →
   Notify Telegram
 ```
+
 ### Lineage logging
 ```
-START: Gmail Trigger (Every 1 minute)
+START: Gmail Trigger
   │
   ├→ Stop promotions (filter)
   ├→ Set File ID
   ├→ Gmail (get full email + attachments)
   ├→ Get binary data
-  ├→ Edit Fields
   └→ Empty? (check attachments)
      │
      ├─ NO ATTACHMENTS:
      │  ├→ Code in JavaScript1 (clean text)
-     │  └→ subject-classifier-LM (AI classify)
+     │  └→ new section *16
+     │     (subject-classifier-LM)
      │
      └─ HAS ATTACHMENTS:
         ├→ sp (split attachments)
@@ -83,27 +84,30 @@ START: Gmail Trigger (Every 1 minute)
         │  └→ Merge
         ├→ Aggregate1 (combine all)
         ├→ attachement_as_text
-        └→ subject-classifier-LM (AI classify)
+    *16 └→ subject-classifier-LM
            │
-           └→ Switch (check if financial)
+           ├→ non-spam lineage
+           └→ financial doc router
               │
               └─ IF FINANCIAL:
-                 ├→ Accounting-email-List (whitelist check)
-                 ├→ Switch2 (verify sender)
-                 ├→ binary_data
-                 ├→ Edit Fields2
-                 ├→ Split Out
-                 └→ Loop Over Items1
-                    ├→ Accountant-concierge (deep AI extraction)
-                    ├→ Edit Fields1
-                    ├→ Google Drive Folder Lookup
-                    ├→ binary_data_files
-                    ├→ Upload file to Drive
-                    ├→ Google Sheets2 (log data)
-                    ├→ Telegram1 (notify type)
-                    ├→ Switch3
-                    ├→ Edit Fields5
-                    └→ Telegram (final notification)
+                 ├→ user_email__whitelist
+                 ├→ whitelist validator
+                 │  ├→ format rejection
+                 │  └→ notify rejection
+                 ├→ verify sender
+
+    *24          ├→ extract attachments
+                 ├→ prepare attachment meta
+                 ├→ split attachments
+                 └→ loop invoices
+                    ├→ Accountant-concierge-LM (deep AI extraction)
+                    ├→ prepare folder lookup
+                    ├→ Call 'Google Drive Folder Lookup'
+                    ├→ get file binary
+                    ├→ save doc to folder
+                    ├→ insert doc record
+                    └→ Telegram & done
+
 ```
 
 ## 🦜 AI Models Nodes
