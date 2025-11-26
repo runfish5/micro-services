@@ -123,7 +123,7 @@
       "typeVersion": 1.2,
       "position": [
         -2944,
-        848
+        896
       ],
       "id": "b93328d6-d6ab-4831-b9eb-31bdb4325c75",
       "name": "Telegram & done",
@@ -206,7 +206,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3392,
+        -3424,
         560
       ],
       "id": "eb86b6a1-000b-45d4-88c8-82eaca73b867",
@@ -272,7 +272,7 @@
       "typeVersion": 1.2,
       "position": [
         -2944,
-        560
+        624
       ],
       "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
       "name": "notify rejection",
@@ -299,7 +299,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "target_path": "/Accounting/2025/11_November/Expense",
+            "target_path": "=/Accounting/{{ $('Accountant-concierge-LM').item.json.output.year }}/{{ $json.month }}/{{ $json.accounting_category }}",
             "root_folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
             "root_path": "/Accounting"
           },
@@ -344,11 +344,12 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3504,
-        1184
+        -3472,
+        1232
       ],
       "id": "6db79504-d105-47b1-854c-0a8096451f40",
-      "name": "Call 'Google Drive Folder ID Lookup'"
+      "name": "Call 'Google Drive Folder ID Lookup'",
+      "notes": "Set this as debugging folder destination: `\"/Accounting/2025/11_November/Expense\"`"
     },
     {
       "parameters": {
@@ -376,7 +377,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3392,
+        -3424,
         768
       ],
       "id": "a5b1dfd9-c6da-486d-beda-c664e88d79bd",
@@ -399,8 +400,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -3744,
-        400
+        -3776,
+        448
       ],
       "id": "39d4afb7-c612-49b2-b099-02f819e31812",
       "name": "subject-classifier-LM",
@@ -424,8 +425,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -4096,
-        1104
+        -4064,
+        1152
       ],
       "id": "fe1b17b6-7544-49d1-8237-d4fd3fa5070e",
       "name": "Accountant-concierge-LM",
@@ -754,7 +755,7 @@
       "typeVersion": 4.6,
       "position": [
         -2944,
-        1104
+        1152
       ],
       "id": "21d038a1-2970-455a-be3a-88bcef506917",
       "name": "insert doc record",
@@ -790,7 +791,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4592,
+        -4560,
         1152
       ],
       "id": "d3f0f4d6-eaa3-4256-b63b-5f8716231356",
@@ -820,7 +821,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -4304,
+        -4272,
         992
       ],
       "id": "e44f9a41-161f-4ee3-885b-a0fd28b6d236",
@@ -906,13 +907,13 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data and verifies sender\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor) · [with triggers on github](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer/workflows/subworkflows)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
-        "height": 864,
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data and verifies sender\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
+        "height": 896,
         "width": 544
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -6176,
+        -6144,
         320
       ],
       "typeVersion": 1,
@@ -929,7 +930,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3600,
+        -3632,
         752
       ],
       "id": "1d318047-1492-43d1-b001-5033cc2caf42",
@@ -938,31 +939,31 @@
     {
       "parameters": {
         "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.telegram)",
-        "height": 476,
-        "width": 264,
+        "height": 460,
+        "width": 328,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -2992,
-        528
+        592
       ],
       "id": "ccb93ee3-2836-4962-ace7-653ed4e6d42b",
       "name": "Sticky Note18"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Set the id of your preferred root directory.**\nIt should be the one thats called \"Accounting\" in the template. Open it in the browser and take the last section of the URL, for example: `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`, then just copy-paste `1tiI-FHH-yeWju4gS` in this woflow field `'root_folder_id'`\n",
-        "height": 588,
-        "width": 456,
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
+        "height": 412,
+        "width": 344,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3664,
-        1168
+        -3584,
+        1216
       ],
       "id": "0b5c7ac9-633a-4e9d-80bc-827e99ce8c97",
       "name": "Sticky Note19"
@@ -971,14 +972,14 @@
       "parameters": {
         "content": "Connect to the created google sheet.",
         "height": 220,
-        "width": 184,
+        "width": 296,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -2992,
-        1040
+        1088
       ],
       "id": "43d6ccf9-14fe-4a32-b8dc-910fd1d8c068",
       "name": "Sticky Note20"
@@ -992,8 +993,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2688,
-        1392
+        -2704,
+        1328
       ],
       "id": "f32040b1-d196-4d29-bf58-374b758071f0",
       "name": "Sticky Note5"
@@ -1001,8 +1002,8 @@
     {
       "parameters": {
         "content": "![PathToIDLookup Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/lookup-table-schema-columns-path-folder-id.png)",
-        "height": 224,
-        "width": 512
+        "height": 128,
+        "width": 368
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1022,8 +1023,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2784,
-        1184
+        -2672,
+        1088
       ],
       "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
       "name": "Sticky Note21"
@@ -1045,7 +1046,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4592,
+        -4560,
         1008
       ],
       "id": "9ae40cf7-077b-4251-bced-48f91a41c7bc",
@@ -1140,33 +1141,14 @@
     },
     {
       "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
-      "position": [
-        -3760,
-        576
-      ],
-      "id": "3f038987-3bbf-476d-9934-229e7d7aa1ca",
-      "name": "any LM",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
-          "name": "Google Gemini(PaLM) Api account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "schemaType": "manual",
         "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        }\n      \n\t},\n\t\"required\": [\n      \"classification_rationale\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3600,
-        576
+        -3632,
+        624
       ],
       "id": "d61cc3b7-cd9a-45c0-a209-707abe7106b8",
       "name": "output profile"
@@ -1177,8 +1159,8 @@
       "name": "Trigger non-spam lineage",
       "typeVersion": 1,
       "position": [
-        -3392,
-        400
+        -2944,
+        448
       ],
       "id": "8002d4a6-926f-4357-8b50-d2f813d8aea0"
     },
@@ -1217,7 +1199,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3168,
+        -3200,
         768
       ],
       "id": "facde472-f1fc-4906-9006-f66d9eeadfec",
@@ -1230,7 +1212,7 @@
             {
               "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
               "name": "Message",
-              "value": "=EMAIL: completed\n---\nTitle ✍: {{ $('Set File ID').first().json.subject }}\nSender 📤: {{ $('Set File ID').all()[0].json.from.value[0].address }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>",
+              "value": "=EMAIL: completed\n---\nTitle ✍: {{ $('Set File ID').first().json.subject }}\nSender 📤: {{ $('Set File ID').all()[0].json.from.value[0].address }}\nFinished 🗄️: {{ $json.doc_type }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>",
               "type": "string"
             }
           ]
@@ -1240,7 +1222,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3168,
+        -3200,
         976
       ],
       "id": "e427a373-9929-4bc4-a560-7c55043e1e0a",
@@ -1255,7 +1237,7 @@
       "typeVersion": 1,
       "position": [
         -4096,
-        1296
+        1344
       ],
       "id": "1fa5df01-f254-4b0c-b5f2-c25097d5377a",
       "name": "any LM1",
@@ -1274,8 +1256,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3952,
-        1296
+        -3888,
+        1344
       ],
       "id": "25a31f7e-fd4b-48d3-b26e-437deb46e57f",
       "name": "Structured output"
@@ -1295,6 +1277,12 @@
               "name": "accounting_category",
               "value": "={{ $json.output.accounting_category }}",
               "type": "string"
+            },
+            {
+              "id": "088d52d1-02c6-4acf-bef6-f37a002d24c7",
+              "name": "doc_type",
+              "value": "={{ $json.output.document_type }}",
+              "type": "string"
             }
           ]
         },
@@ -1303,8 +1291,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3776,
-        1184
+        -3744,
+        1232
       ],
       "id": "52ca50af-d13e-490e-9d18-f1eb79ff1b19",
       "name": "input folder lookup"
@@ -1326,8 +1314,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3168,
-        1184
+        -3200,
+        1232
       ],
       "id": "4746f644-6638-40c8-9d61-de801740157c",
       "name": "Get binary data2"
@@ -1352,7 +1340,7 @@
       "parameters": {
         "content": "# attachment processer\nNodes 7-15",
         "height": 608,
-        "width": 1200,
+        "width": 1184,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -1367,7 +1355,7 @@
     {
       "parameters": {
         "content": "# E-Mail trigger\nNodes 1-6",
-        "height": 912,
+        "height": 896,
         "width": 528,
         "color": 7
       },
@@ -1382,14 +1370,14 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 16-23",
+        "content": "# subject classifier\nNodes 16-21",
         "height": 608,
-        "width": 752,
+        "width": 720,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3776,
+        -3808,
         320
       ],
       "typeVersion": 1,
@@ -1398,9 +1386,9 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 24-34",
-        "height": 544,
-        "width": 2000,
+        "content": "#  Invoices & Receipts\nNodes 22-33",
+        "height": 496,
+        "width": 1952,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -1421,11 +1409,30 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4592,
+        -4560,
         1312
       ],
       "id": "85e36b85-312c-499c-9ac7-c30fb115b39f",
       "name": "new section"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3744,
+        656
+      ],
+      "id": "3f038987-3bbf-476d-9934-229e7d7aa1ca",
+      "name": "any LM",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kmqRSsOartR5rGAD",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
     }
   ],
   "connections": {
@@ -1489,11 +1496,6 @@
         [
           {
             "node": "user_email_whitelist",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "notify rejection",
             "type": "main",
             "index": 0
           }
@@ -1572,6 +1574,11 @@
           },
           {
             "node": "financial doc router",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "notify rejection",
             "type": "main",
             "index": 0
           }
@@ -1658,13 +1665,7 @@
     },
     "save doc to folder": {
       "main": [
-        [
-          {
-            "node": "loop invoices",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "binary_data": {
@@ -1718,17 +1719,6 @@
           {
             "node": "Merge",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "any LM": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "subject-classifier-LM",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -1796,6 +1786,11 @@
             "node": "Call 'Google Drive Folder ID Lookup'",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "loop invoices",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1828,6 +1823,17 @@
           {
             "node": "loop invoices",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "any LM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "subject-classifier-LM",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
