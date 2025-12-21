@@ -19,8 +19,8 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -5536,
-        432
+        -5424,
+        400
       ],
       "id": "12f5de96-7448-4f61-9972-3cb2ad3db46d",
       "name": "Gmail Trigger",
@@ -44,8 +44,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -5536,
-        800
+        -5424,
+        768
       ],
       "id": "94d5718a-f954-4c26-a6ba-5efb2d8ab533",
       "name": "Gmail",
@@ -77,8 +77,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5312,
-        608
+        -5200,
+        576
       ]
     },
     {
@@ -105,8 +105,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5312,
-        800
+        -5200,
+        768
       ],
       "id": "978606c1-bbe9-41d6-82b2-f96ad04bff6e",
       "name": "Get binary data"
@@ -122,8 +122,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2944,
-        896
+        -2992,
+        880
       ],
       "id": "b93328d6-d6ab-4831-b9eb-31bdb4325c75",
       "name": "Telegram & done",
@@ -166,8 +166,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -5312,
-        432
+        -5200,
+        400
       ],
       "id": "6b7058be-a43e-4a2d-8a3e-342a6611cec5",
       "name": "Stop promotions"
@@ -241,8 +241,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -4976,
-        464
+        -4928,
+        448
       ],
       "id": "579a7d40-f08d-4dd8-9618-95e7264f14b4",
       "name": "Empty?"
@@ -255,7 +255,7 @@
       "typeVersion": 2,
       "position": [
         -4448,
-        528
+        496
       ],
       "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
       "name": "Clean Email Text"
@@ -271,8 +271,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2944,
-        624
+        -2992,
+        496
       ],
       "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
       "name": "notify rejection",
@@ -344,8 +344,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3472,
-        1232
+        -3264,
+        1168
       ],
       "id": "6db79504-d105-47b1-854c-0a8096451f40",
       "name": "Call 'Google Drive Folder ID Lookup'",
@@ -363,8 +363,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4976,
-        688
+        -4928,
+        672
       ],
       "id": "93d1354e-67e7-4b56-be62-a6e9caccd5f0",
       "name": "sp"
@@ -372,13 +372,13 @@
     {
       "parameters": {
         "language": "python",
-        "pythonCode": "# Create your dictionary/JSON data\noutput_data = {\n  \"accounts\": \n    [\n      \"payments-noreply@google.com\",\n      \"invoice+statements@mail.anthropic.com\",\n      \"uniqued4ve@gmail.com\"\n    ]\n}\n\n# Set it to the first input item's json\nfor item in _input.all():\n    item.json = output_data\n    break  # Only set first item\n\nreturn _input.all()"
+        "pythonCode": "# Create your dictionary/JSON data\noutput_data = {\n  \"accounts\": \n    [\n      \"payments-noreply@google.com\",\n      \"noreply@notifications.digitec.ch\",\n      \"invoice+statements@mail.anthropic.com\",\n      \"uniqued4ve@gmail.com\"\n    ]\n}\n\n# Set it to the first input item's json\nfor item in _input.all():\n    item.json = output_data\n    break  # Only set first item\n\nreturn _input.all()"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -3424,
-        768
+        752
       ],
       "id": "a5b1dfd9-c6da-486d-beda-c664e88d79bd",
       "name": "user_email_whitelist"
@@ -386,7 +386,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').item.json.text }}\n---\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
+        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').first().json.text }}\n---\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -401,7 +401,7 @@
       "typeVersion": 1.7,
       "position": [
         -3776,
-        448
+        496
       ],
       "id": "39d4afb7-c612-49b2-b099-02f819e31812",
       "name": "subject-classifier-LM",
@@ -425,8 +425,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -4064,
-        1152
+        -3936,
+        1024
       ],
       "id": "fe1b17b6-7544-49d1-8237-d4fd3fa5070e",
       "name": "Accountant-concierge-LM",
@@ -754,8 +754,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -2944,
-        1152
+        -2992,
+        1104
       ],
       "id": "21d038a1-2970-455a-be3a-88bcef506917",
       "name": "insert doc record",
@@ -791,8 +791,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4560,
-        1152
+        -4448,
+        1104
       ],
       "id": "d3f0f4d6-eaa3-4256-b63b-5f8716231356",
       "name": "prepare attachment meta"
@@ -807,7 +807,7 @@
       "typeVersion": 3.2,
       "position": [
         -4224,
-        704
+        672
       ],
       "id": "3f0df553-6420-4610-b9c3-1b250551b79b",
       "name": "Merge"
@@ -821,8 +821,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -4272,
-        992
+        -4160,
+        944
       ],
       "id": "e44f9a41-161f-4ee3-885b-a0fd28b6d236",
       "name": "loop invoices"
@@ -834,8 +834,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -5536,
-        608
+        -5424,
+        576
       ],
       "id": "6e8051ea-5137-4bcd-bc9e-572800a93066",
       "name": "When Executed by Another Workflow"
@@ -870,7 +870,7 @@
       "typeVersion": 3.4,
       "position": [
         -4000,
-        528
+        496
       ],
       "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
       "name": "attachement_as_text"
@@ -893,8 +893,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -2944,
-        1328
+        -2832,
+        1296
       ],
       "id": "b1db0433-988a-4d90-b22a-607bef5d8316",
       "name": "save doc to folder",
@@ -907,14 +907,14 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data and verifies sender\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -6144,
-        320
+        -6032,
+        288
       ],
       "typeVersion": 1,
       "id": "1d732fd0-64cf-43fc-bd6c-74142ba1bfe1",
@@ -923,7 +923,7 @@
     {
       "parameters": {
         "content": "\n\n\n\nModify your \nemail white-list.",
-        "height": 156,
+        "height": 140,
         "width": 376,
         "color": 2
       },
@@ -938,16 +938,16 @@
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.telegram)",
-        "height": 460,
-        "width": 328,
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.telegram)",
+        "height": 556,
+        "width": 280,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2992,
-        592
+        -3040,
+        480
       ],
       "id": "ccb93ee3-2836-4962-ace7-653ed4e6d42b",
       "name": "Sticky Note18"
@@ -962,8 +962,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3584,
-        1216
+        -3648,
+        1168
       ],
       "id": "0b5c7ac9-633a-4e9d-80bc-827e99ce8c97",
       "name": "Sticky Note19"
@@ -972,14 +972,14 @@
       "parameters": {
         "content": "Connect to the created google sheet.",
         "height": 220,
-        "width": 296,
+        "width": 280,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2992,
-        1088
+        -3040,
+        1056
       ],
       "id": "43d6ccf9-14fe-4a32-b8dc-910fd1d8c068",
       "name": "Sticky Note20"
@@ -987,14 +987,14 @@
     {
       "parameters": {
         "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/google-drive-folder-structure.png)",
-        "height": 320,
-        "width": 496
+        "height": 256,
+        "width": 432
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2704,
-        1328
+        -2672,
+        1280
       ],
       "id": "f32040b1-d196-4d29-bf58-374b758071f0",
       "name": "Sticky Note5"
@@ -1002,14 +1002,13 @@
     {
       "parameters": {
         "content": "![PathToIDLookup Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/lookup-table-schema-columns-path-folder-id.png)",
-        "height": 128,
         "width": 368
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3200,
-        1520
+        -3280,
+        1456
       ],
       "id": "edafe183-6880-425a-b8bd-5ff363084f25",
       "name": "Sticky Note9"
@@ -1018,13 +1017,13 @@
       "parameters": {
         "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
         "height": 192,
-        "width": 592
+        "width": 432
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -2672,
-        1088
+        1056
       ],
       "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
       "name": "Sticky Note21"
@@ -1046,21 +1045,21 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4560,
-        1008
+        -4448,
+        960
       ],
       "id": "9ae40cf7-077b-4251-bced-48f91a41c7bc",
       "name": "binary_data"
     },
     {
       "parameters": {
-        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Get the raw text from various possible locations\nlet rawText = '';\n\n// Try different paths to find the text\nif ($json.text) {\n  rawText = $json.text;\n} else if ($json.data && $json.data.text) {\n  rawText = $json.data.text;\n} else if ($json['data.text']) {\n  rawText = $json['data.text'];\n} else if ($input.item.json.text) {\n  rawText = $input.item.json.text;\n} else if ($input.item.json.data && $input.item.json.data.text) {\n  rawText = $input.item.json.data.text;\n}\n\n// If still no text, return error\nif (!rawText || rawText.trim().length === 0) {\n  return {\n    error: 'No text content found',\n    paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\nlet text = rawText\n  // Convert to standard ASCII where possible\n  .normalize('NFD')\n  // Remove ALL control and invisible characters\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n  // Remove zero-width characters\n  .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n  // Remove other invisibles\n  .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n  // Remove soft hyphens and special spaces\n  .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n  // Remove the specific problematic characters from your email\n  .replace(/[­͏‌]/g, ' ')\n  // Replace ALL multiple spaces with single space\n  .replace(/\\s+/g, ' ')\n  // Trim each line\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// STEP 2: Extract URLs and create a clean mapping\nconst urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\nconst imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n// First remove image URLs completely\ntext = text.replace(imageRegex, ' ');\n\n// Then handle other URLs\nconst urls = text.match(urlRegex) || [];\nconst uniqueUrls = [...new Set(urls)];\nconst urlMap = {};\n\nuniqueUrls.forEach((url, i) => {\n  const linkId = `[Link${i + 1}]`;\n  urlMap[linkId] = url;\n  // Replace URL with placeholder\n  text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n});\n\n// STEP 3: Fix spacing issues caused by removed content\ntext = text\n  // Fix spaces around punctuation\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n  // Remove multiple spaces again\n  .replace(/\\s+/g, ' ')\n  // Fix line breaks - ensure proper spacing\n  .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n  .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n  ;\n\n// STEP 4: Clean up brackets and special formatting\ntext = text\n  .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n  .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n  .replace(/\\s*\\]\\s*/g, '] ')\n  .replace(/\\s+/g, ' '); // Final space cleanup\n\n// STEP 5: Smart paragraph detection and formatting\nconst lines = text.split('\\n');\nconst formattedLines = [];\nlet currentParagraph = '';\n\nfor (const line of lines) {\n  const trimmed = line.trim();\n  if (trimmed.length === 0) continue;\n  \n  // Check if this looks like a new section/paragraph\n  if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n      trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n    // Save current paragraph if exists\n    if (currentParagraph) {\n      formattedLines.push(currentParagraph.trim());\n    }\n    currentParagraph = trimmed;\n  } else {\n    // Continue current paragraph\n    currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n  }\n}\n// Don't forget the last paragraph\nif (currentParagraph) {\n  formattedLines.push(currentParagraph.trim());\n}\n\ntext = formattedLines.join('\\n\\n');\n\n// STEP 6: Extract key information\nconst extractedInfo = {\n  orderNumber: null,\n  trackingNumber: null,\n  product: null,\n  deliveryAddress: null,\n  amounts: [],\n  dates: []\n};\n\n// Extract order number\nconst orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\nif (orderMatch) {\n  extractedInfo.orderNumber = orderMatch[1];\n}\n\n// Extract tracking number (long number that's not the order)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// Extract product name (stop at quantity indicator or duplicate)\nconst productMatch = text.match(/tomtoc[^-\\n]*?(?:\\([^)]+\\))?/i);\nif (productMatch) {\n  extractedInfo.product = productMatch[0].trim()\n    .replace(/\\s*-\\s*$/, '') // Remove trailing dash\n    .replace(/\\s+/g, ' '); // Normalize spaces\n}\n\n// Extract delivery address\nconst addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\nif (addressMatch) {\n  extractedInfo.deliveryAddress = addressMatch[1].trim();\n}\n\n// Extract dates\nconst dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\nif (dateMatches) {\n  extractedInfo.dates = dateMatches;\n}\n\n// STEP 7: Create super-clean version for LLM\nconst textForLLM = text\n  .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n  .replace(/\\[\\]/g, '') // Remove empty brackets\n  .replace(/\\s+/g, ' ') // Normalize spaces\n  .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n  .trim();\n\n// STEP 8: Create a structured summary for LLM\nconst structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n// STEP 9: Get metadata safely\nconst metadata = {\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString()\n};\n\n// Return comprehensive cleaned data\nreturn {\n  // Ultra-clean version for LLM\n  textForLLM: textForLLM,\n  \n  // Structured summary for better LLM understanding\n  structuredSummary: structuredSummary,\n  \n  // Main cleaned text with placeholders\n  text: text,\n  \n  // Keep the data structure for compatibility\n  data: {\n    text: textForLLM\n  },\n  \n  // Metadata\n  ...metadata,\n  \n  // Extracted information\n  extracted: extractedInfo,\n  \n  // URL mapping (if you need references)\n  linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n  \n  // Statistics\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: Object.keys(urlMap).length\n  }\n};"
+        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Get the raw text from various possible locations\nlet rawText = '';\n\n// Try different paths to find the text\nif ($json.text) {\n  rawText = $json.text;\n} else if ($json.data && $json.data.text) {\n  rawText = $json.data.text;\n} else if ($json['data.text']) {\n  rawText = $json['data.text'];\n} else if ($input.item.json.text) {\n  rawText = $input.item.json.text;\n} else if ($input.item.json.data && $input.item.json.data.text) {\n  rawText = $input.item.json.data.text;\n}\n\n// If still no text, return error\nif (!rawText || rawText.trim().length === 0) {\n  return {\n    error: 'No text content found',\n    paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\nlet text = rawText\n  // Convert to standard ASCII where possible\n  .normalize('NFD')\n  // Remove ALL control and invisible characters\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n  // Remove zero-width characters\n  .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n  // Remove other invisibles\n  .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n  // Remove soft hyphens and special spaces\n  .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n  // Remove the specific problematic characters from your email\n  .replace(/[­͏‌]/g, ' ')\n  // Replace ALL multiple spaces with single space\n  .replace(/\\s+/g, ' ')\n  // Trim each line\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// STEP 2: Extract URLs and create a clean mapping\nconst urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\nconst imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n// First remove image URLs completely\ntext = text.replace(imageRegex, ' ');\n\n// Then handle other URLs\nconst urls = text.match(urlRegex) || [];\nconst uniqueUrls = [...new Set(urls)];\nconst urlMap = {};\n\nuniqueUrls.forEach((url, i) => {\n  const linkId = `[Link${i + 1}]`;\n  urlMap[linkId] = url;\n  // Replace URL with placeholder\n  text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n});\n\n// STEP 3: Fix spacing issues caused by removed content\ntext = text\n  // Fix spaces around punctuation\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n  // Remove multiple spaces again\n  .replace(/\\s+/g, ' ')\n  // Fix line breaks - ensure proper spacing\n  .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n  .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n  ;\n\n// STEP 4: Clean up brackets and special formatting\ntext = text\n  .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n  .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n  .replace(/\\s*\\]\\s*/g, '] ')\n  .replace(/\\s+/g, ' '); // Final space cleanup\n\n// STEP 5: Smart paragraph detection and formatting\nconst lines = text.split('\\n');\nconst formattedLines = [];\nlet currentParagraph = '';\n\nfor (const line of lines) {\n  const trimmed = line.trim();\n  if (trimmed.length === 0) continue;\n  \n  // Check if this looks like a new section/paragraph\n  if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n      trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n    // Save current paragraph if exists\n    if (currentParagraph) {\n      formattedLines.push(currentParagraph.trim());\n    }\n    currentParagraph = trimmed;\n  } else {\n    // Continue current paragraph\n    currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n  }\n}\n// Don't forget the last paragraph\nif (currentParagraph) {\n  formattedLines.push(currentParagraph.trim());\n}\n\ntext = formattedLines.join('\\n\\n');\n\n// STEP 6: Extract key information\nconst extractedInfo = {\n  orderNumber: null,\n  trackingNumber: null,\n  product: null,\n  deliveryAddress: null,\n  amounts: [],\n  dates: []\n};\n\n// Extract order number\nconst orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\nif (orderMatch) {\n  extractedInfo.orderNumber = orderMatch[1];\n}\n\n// Extract tracking number (long number that's not the order)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// Extract product name (stop at quantity indicator or duplicate)\nconst productMatch = text.match(/tomtoc[^-\\n]*?(?:\\([^)]+\\))?/i);\nif (productMatch) {\n  extractedInfo.product = productMatch[0].trim()\n    .replace(/\\s*-\\s*$/, '') // Remove trailing dash\n    .replace(/\\s+/g, ' '); // Normalize spaces\n}\n\n// Extract delivery address\nconst addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\nif (addressMatch) {\n  extractedInfo.deliveryAddress = addressMatch[1].trim();\n}\n\n// Extract dates\nconst dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\nif (dateMatches) {\n  extractedInfo.dates = dateMatches;\n}\n\n// STEP 7: Create super-clean version for LLM\nconst textForLLM = text\n  .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n  .replace(/\\[\\]/g, '') // Remove empty brackets\n  .replace(/\\s+/g, ' ') // Normalize spaces\n  .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n  .trim();\n\n// STEP 8: Create a structured summary for LLM\nconst structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n// STEP 9: Get metadata safely\nconst metadata = {\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString()\n};\n\n// Return comprehensive cleaned data\nreturn {\n  // Ultra-clean version for LLM\n  textForLLM: textForLLM,\n  \n  // Structured summary for better LLM understanding\n  structuredSummary: structuredSummary,\n  \n  // Main cleaned text with placeholders\n  text: text,\n  \n  // Keep the data structure for compatibility\n  data: {\n    text: textForLLM\n  },\n  \n  // Metadata\n  ...metadata,\n  \n  // Extracted information\n  extracted: extractedInfo,\n  \n  // URL mapping (if you need references)\n  linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n\n  // Attachments placeholder for no-attachment branch\n  summary_attachments: \"No attachments for this email\",\n\n  // Statistics\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: Object.keys(urlMap).length\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -4448,
-        368
+        336
       ],
       "id": "e14c0350-b14b-4e0d-a15a-6e4cc6fca46e",
       "name": "Clean Email object"
@@ -1074,8 +1073,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -4752,
-        688
+        -4704,
+        672
       ],
       "id": "26b6b5aa-6bb3-43b1-ad0c-310d3a928b09",
       "name": "Loop Over Attachment Binaries"
@@ -1133,7 +1132,7 @@
       "typeVersion": 1.2,
       "position": [
         -4448,
-        704
+        672
       ],
       "id": "1db5d433-e586-44f8-af0e-0163fa91333f",
       "name": "Create Attachment Profile",
@@ -1148,7 +1147,7 @@
       "typeVersion": 1.3,
       "position": [
         -3632,
-        624
+        608
       ],
       "id": "d61cc3b7-cd9a-45c0-a209-707abe7106b8",
       "name": "output profile"
@@ -1159,8 +1158,8 @@
       "name": "Trigger non-spam lineage",
       "typeVersion": 1,
       "position": [
-        -2944,
-        448
+        -3216,
+        336
       ],
       "id": "8002d4a6-926f-4357-8b50-d2f813d8aea0"
     },
@@ -1199,8 +1198,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3200,
-        768
+        -3216,
+        736
       ],
       "id": "facde472-f1fc-4906-9006-f66d9eeadfec",
       "name": "whitelist validator"
@@ -1222,8 +1221,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3200,
-        976
+        -3600,
+        928
       ],
       "id": "e427a373-9929-4bc4-a560-7c55043e1e0a",
       "name": "craft report note"
@@ -1236,8 +1235,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -4096,
-        1344
+        -3936,
+        1184
       ],
       "id": "1fa5df01-f254-4b0c-b5f2-c25097d5377a",
       "name": "any LM1",
@@ -1256,8 +1255,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3888,
-        1344
+        -3792,
+        1184
       ],
       "id": "25a31f7e-fd4b-48d3-b26e-437deb46e57f",
       "name": "Structured output"
@@ -1291,8 +1290,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3744,
-        1232
+        -3536,
+        1168
       ],
       "id": "52ca50af-d13e-490e-9d18-f1eb79ff1b19",
       "name": "input folder lookup"
@@ -1314,8 +1313,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3200,
-        1232
+        -2992,
+        1296
       ],
       "id": "4746f644-6638-40c8-9d61-de801740157c",
       "name": "Get binary data2"
@@ -1331,7 +1330,7 @@
       "typeVersion": 1,
       "position": [
         -4224,
-        528
+        496
       ],
       "id": "0f9cd61f-b869-40fe-88de-f646264ba543",
       "name": "Aggregate Attachment Profiles"
@@ -1340,13 +1339,13 @@
       "parameters": {
         "content": "# attachment processer\nNodes 7-15",
         "height": 608,
-        "width": 1184,
+        "width": 1152,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5024,
-        320
+        -4992,
+        288
       ],
       "typeVersion": 1,
       "id": "8db79f1b-c3b3-45d9-acb3-d1dbf5549478",
@@ -1356,13 +1355,13 @@
       "parameters": {
         "content": "# E-Mail trigger\nNodes 1-6",
         "height": 896,
-        "width": 528,
+        "width": 448,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5584,
-        320
+        -5472,
+        288
       ],
       "typeVersion": 1,
       "id": "aba2bb55-a19c-423a-91b7-d6b3b498452f",
@@ -1370,7 +1369,7 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 16-21",
+        "content": "# subject classifier\nNodes 16-23",
         "height": 608,
         "width": 720,
         "color": 7
@@ -1378,7 +1377,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         -3808,
-        320
+        288
       ],
       "typeVersion": 1,
       "id": "d7bf3e74-ebba-434b-97e5-5fa4106b62ec",
@@ -1386,15 +1385,15 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 22-33",
-        "height": 496,
-        "width": 1952,
+        "content": "#  Invoices & Receipts\nNodes 24-35",
+        "height": 464,
+        "width": 1920,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5024,
-        960
+        -4992,
+        928
       ],
       "typeVersion": 1,
       "id": "155a7695-ad4c-4557-b152-b92ebe5d2d68",
@@ -1409,28 +1408,117 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4560,
-        1312
+        -4448,
+        1264
       ],
       "id": "85e36b85-312c-499c-9ac7-c30fb115b39f",
       "name": "new section"
     },
     {
       "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail').item.json.id }}",
+        "labelIds": [
+          "Label_83"
+        ]
+      },
+      "id": "92b1d54d-487b-4a24-bd96-24d0f7eaf145",
+      "name": "Mark as Processed1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3264,
+        976
+      ],
+      "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{[\"appointment\"]}}",
+                    "rightValue": "={{ $json.output.type_of_document }}",
+                    "operator": {
+                      "type": "array",
+                      "operation": "contains",
+                      "rightType": "any"
+                    },
+                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -3424,
+        336
+      ],
+      "id": "71ce604f-05ed-449d-b2df-026214ff69fa",
+      "name": "appointment router"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail').first().json.id }}",
+        "labelIds": [
+          "Label_82"
+        ]
+      },
+      "id": "2962de2b-4c57-4936-add7-786a561d71ac",
+      "name": "Tag Mail with 'n8n'",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3216,
+        496
+      ],
+      "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "moonshotai/kimi-k2-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -3744,
-        656
+        -3776,
+        608
       ],
-      "id": "3f038987-3bbf-476d-9934-229e7d7aa1ca",
-      "name": "any LM",
+      "id": "5ba47fe9-262a-48a5-b7ea-f32c374f2dc6",
+      "name": "Any LM",
       "credentials": {
-        "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
-          "name": "Google Gemini(PaLM) Api account"
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
         }
       }
     }
@@ -1568,17 +1656,17 @@
       "main": [
         [
           {
-            "node": "Trigger non-spam lineage",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "financial doc router",
             "type": "main",
             "index": 0
           },
           {
-            "node": "notify rejection",
+            "node": "Tag Mail with 'n8n'",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "appointment router",
             "type": "main",
             "index": 0
           }
@@ -1753,6 +1841,11 @@
             "node": "Telegram & done",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Mark as Processed1",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1828,7 +1921,29 @@
         ]
       ]
     },
-    "any LM": {
+    "appointment router": {
+      "main": [
+        [
+          {
+            "node": "Trigger non-spam lineage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Mail with 'n8n'": {
+      "main": [
+        [
+          {
+            "node": "notify rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any LM": {
       "ai_languageModel": [
         [
           {
