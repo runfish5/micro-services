@@ -26,6 +26,8 @@ Projects 2 and 3 have their own CLAUDE.md files with detailed workflow documenta
 
 **mainflow.md Convention:** Always read `docs/mainflow.md` before examining workflow JSON files. Keep it updated when workflows change. If you discover discrepancies between mainflow.md and the actual JSON, notify the user.
 
-**LLM Integration:** Most workflows use Groq (free) or Gemini for AI processing.
+Structure: 🔄 **Main Flow** title (with node count) → 📋 **Overview** one-liner → 🎯 **Flow Summary** (phases, data flow diagram, lineage tree) → 🦜 **AI Model Nodes** (input/output/purpose per LLM) → 🔗 **External Workflows** (if applicable) → 📝 **Notes**.
 
-**Structured Output:** `.st.json` files contain JSON Schema examples for LLM structured output (see project 1).
+**LLM Integration:** Most workflows use Groq (free) or Gemini for AI processing. LLM nodes are documented in mainflow.md under 🦜 **AI Model Nodes**.
+
+**Structured Output:** `.st.json` files contain JSON Schema examples for LLM structured output (see project 1). These schemas define the extraction format for AI responses.

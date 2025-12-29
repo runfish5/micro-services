@@ -10,6 +10,17 @@
 
 Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
 
+---
+
+## ⚡ Quick Start
+- [setup-guide.md](docs/setup-guide.md)
+
+## 📦 Requirements
+
+- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
+- Data source (Google Sheets, CSV, etc.)
+- LLM access (Groq free tier, OpenAI, Claude, etc.)
+
 ## What it does
 
 🔄 Batch process rows
@@ -26,21 +37,6 @@ Anyone doing repetitive data tasks: content managers, analysts, marketers proces
 <p align="center">
   <img src="assets/cover.png" alt="Workflow Preview" width="500">
 </p>
-
-
-
-
-## Requirements
-
-- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
-- Data source (Google Sheets, CSV, etc.)
-- LLM access (OpenAI, Groq, Claude, etc.)
-
-## Setup
-
-1. Copy the JSON workflow into n8n (`Ctrl+V` on canvas)
-2. Connect your data source and LLM
-3. Run
 
 ## Structured Output
 
