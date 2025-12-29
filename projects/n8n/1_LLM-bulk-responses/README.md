@@ -1,5 +1,9 @@
 # Bulk Data Processing Workflow
 
+<p align="center">
+  <img src="assets/cover.png" alt="Cover Image">
+</p>
+
 Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
 
 ## Who it's for
