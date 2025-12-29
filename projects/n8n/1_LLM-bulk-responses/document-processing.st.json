@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "description": "Category of document"
+    },
+    "key_date": {
+      "type": "string",
+      "description": "Important date mentioned"
+    }
+  },
+  "required": ["document_type"]
+}

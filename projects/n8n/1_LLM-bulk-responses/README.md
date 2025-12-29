@@ -8,68 +8,23 @@ Anyone doing repetitive data tasks: content managers, analysts, marketers proces
 
 ## What it does
 
-**🔄 Batch Queries** → Process hundreds of rows at once instead of individual copy-paste  
-**📂 Categorize Documents** → Automatically sort and classify content  
-**🔍 Extract Data** → Pull specific information from any text source  
-**🔗 Combine Sources** → Link multiple data streams for insights  
+**🔄 Batch Queries** → Process hundreds of rows at once instead of individual copy-paste
+**📂 Categorize Documents** → Automatically sort and classify content
+**🔍 Extract Data** → Pull specific information from any text source
+**🔗 Combine Sources** → Link multiple data streams for insights
 
-## You need
+## Requirements
 
-- **n8n** access
-- **Data source** (Google Sheets, CSV, etc.)
-- **Access to an LLM** (OpenAI, Groq, Claude, etc.)
+- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
+- Data source (Google Sheets, CSV, etc.)
+- LLM access (OpenAI, Groq, Claude, etc.)
 
-## How to use
+## Setup
 
-1. **Get n8n**: Use directly on [n8n.cloud](https://n8n.cloud) or [self-host](https://youtu.be/kq5bmrjPPAY)
-2. **Import**: Copy the JSON workflow into n8n (literally `Ctrl+V` into the canvas)
-3. **Connect**: Link your data source and LLM
-4. **Run**: Click trigger and watch it process hundreds of rows automatically
+1. Copy the JSON workflow into n8n (`Ctrl+V` on canvas)
+2. Connect your data source and LLM
+3. Run
 
----
+## Structured Output
 
-That's it! The workflow handles everything automatically. If you need help customizing the data extraction, check the troubleshooting section below.
-
-## Troubleshooting
-
-### Structured Output
-
-The workflow uses JSON Schema to define what data to extract. Here are two simple examples:
-
-**Content Analysis:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "target_audience": {
-      "type": "string",
-      "description": "Who this content is for"
-    },
-    "main_topic": {
-      "type": "string", 
-      "description": "Primary subject discussed"
-    }
-  },
-  "required": ["target_audience", "main_topic"]
-}
-```
-
-**Document Processing:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "document_type": {
-      "type": "string",
-      "description": "Category of document"
-    },
-    "key_date": {
-      "type": "string",
-      "description": "Important date mentioned"
-    }
-  },
-  "required": ["document_type"]
-}
-```
-
-Match the property names to your Excel column headers for automatic data population.
+See `.st.json` files for JSON Schema examples.

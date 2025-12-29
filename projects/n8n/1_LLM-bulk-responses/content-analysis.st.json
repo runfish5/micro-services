@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "target_audience": {
+      "type": "string",
+      "description": "Who this content is for"
+    },
+    "main_topic": {
+      "type": "string",
+      "description": "Primary subject discussed"
+    }
+  },
+  "required": ["target_audience", "main_topic"]
+}
