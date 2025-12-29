@@ -1,21 +1,34 @@
 # Bulk Data Processing Workflow
 
+**Video Tutorial:** [Watch](https://www.youtube.com/watch?v=qR_nJLv_Z9g) ![views](https://img.shields.io/youtube/views/qR_nJLv_Z9g?style=flat&label=)
+
 <p align="center">
-  <img src="assets/cover.png" alt="Cover Image">
+  <a href="https://www.youtube.com/watch?v=qR_nJLv_Z9g">
+    <img src="https://img.youtube.com/vi/qR_nJLv_Z9g/maxresdefault.jpg" alt="Watch the tutorial" width="400">
+  </a>
 </p>
 
 Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
+
+## What it does
+
+🔄 Batch process rows
+📂 Categorize content
+🔍 Extract data
+🔗 Combine sources
 
 ## Who it's for
 
 Anyone doing repetitive data tasks: content managers, analysts, marketers processing large datasets for categorization, extraction, or analysis.
 
-## What it does
+## Workflow Preview
 
-**🔄 Batch Queries** → Process hundreds of rows at once instead of individual copy-paste
-**📂 Categorize Documents** → Automatically sort and classify content
-**🔍 Extract Data** → Pull specific information from any text source
-**🔗 Combine Sources** → Link multiple data streams for insights
+<p align="center">
+  <img src="assets/cover.png" alt="Workflow Preview" width="500">
+</p>
+
+
+
 
 ## Requirements
 
