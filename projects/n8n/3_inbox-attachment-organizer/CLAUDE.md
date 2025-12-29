@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ IMPORTANT: Read This First
+
+**ALWAYS read `docs/mainflow.md` BEFORE looking at the workflow JSON files.** The mainflow.md is the authoritative representation of the workflow structure and logic. The JSON files are machine-readable exports that are difficult to understand without the context from mainflow.md. Do NOT attempt to reverse-engineer the JSON - read the documentation first.
+
 ## What This Is
 
 n8n workflow that auto-files email attachments to Google Drive using AI classification. Author's priority: single Google OAuth (vs typical 3-5 platform auths) + two-stage AI to cut costs (cheap classifier → expensive extractor only for financial docs).

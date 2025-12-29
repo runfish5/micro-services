@@ -761,7 +761,7 @@
             {
               "id": "290dd0a6-a92b-48c9-b5de-ae15ea4199fc",
               "name": "processed_attachments.data",
-              "value": "={{ $if($('attachement_as_text').isExecuted, $('attachement_as_text').item.json.processed_attachments.data, []) }}",
+              "value": "={{ $if($('email-info-hub').isExecuted, $('email-info-hub').item.json.processed_attachments.data, []) }}",
               "type": "array"
             },
             {
@@ -833,41 +833,6 @@
       ],
       "id": "6e8051ea-5137-4bcd-bc9e-572800a93066",
       "name": "When Executed by Another Workflow"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "b42ef4b6-3228-4fca-87ea-ad1ebe176a1e",
-              "name": "processed_attachments",
-              "value": "={{ $json }}",
-              "type": "object"
-            },
-            {
-              "id": "897e3bce-eacf-4fe3-9b96-652edd2186c3",
-              "name": "summary_attachments",
-              "value": "={{ $json.data.map(item => item.text).join('\\n---\\n') }}",
-              "type": "string"
-            },
-            {
-              "id": "d6bbbe24-bfb6-4d2e-a17f-2afcd018ddc9",
-              "name": "attachement_names",
-              "value": "={{ Object.keys($('Gmail').first().binary) }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -4000,
-        496
-      ],
-      "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
-      "name": "attachement_as_text"
     },
     {
       "parameters": {
@@ -1010,7 +975,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text \n  || $json.data?.text \n  || $json['data.text'] \n  || $input.item?.json?.text \n  || $input.item?.json?.data?.text \n  || '';\n\nif (!rawText.trim()) {\n  return {\n    error: 'No text content found',\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  // Remove image URLs entirely\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  // Replace remaining URLs with placeholders in ONE pass\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    // Dedupe: check if we've seen this URL\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup (single chain)\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info (fast, non-greedy patterns)\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,\n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,\n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\n// Find tracking (long number ≠ order number)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}`;\n\n// 9. Return (same structure as before)\nreturn {\n  textForLLM,\n  structuredSummary,\n  text,\n  data: { text: textForLLM },\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n  extracted: extractedInfo,\n  linkMapping: linkCounter > 0 ? urlMap : null,\n  summary_attachments: \"No attachments for this email\",\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: linkCounter\n  }\n};"
+        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n// Returns same structure as Build Attachment Profiles for compatibility\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text\n  || $json.data?.text\n  || $json['data.text']\n  || $input.item?.json?.text\n  || $input.item?.json?.data?.text\n  || '';\n\nif (!rawText.trim()) {\n  return [{\n    json: {\n      data: [{\n        error: 'No text content found',\n        text: '',\n        textForLLM: '',\n        attachmentNames: [],\n        available_keys: Object.keys($json || {})\n      }]\n    }\n  }];\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,\n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,\n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\\n- Product: ${extractedInfo.product || 'Not found'}\\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\\n\\nORIGINAL MESSAGE:\\n${textForLLM}`;\n\n// 9. Return same structure as Build Attachment Profiles\nreturn [{\n  json: {\n    data: [{\n      attachmentNames: [],\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: { text: textForLLM },\n      subject: $json.subject || $input.item?.json?.subject || 'No subject',\n      from: $json.from || $input.item?.json?.from || 'Unknown',\n      to: $json.to || $input.item?.json?.to || 'Unknown',\n      date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n      extracted: extractedInfo,\n      linkMapping: linkCounter > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: linkCounter\n      }\n    }]\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1478,6 +1443,35 @@
       ],
       "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
       "name": "Build Attachment Profiles"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b42ef4b6-3228-4fca-87ea-ad1ebe176a1e",
+              "name": "processed_attachments",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "897e3bce-eacf-4fe3-9b96-652edd2186c3",
+              "name": "summary_attachments",
+              "value": "={{ $json.data.map(item => item.text).join('\\n---\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4000,
+        496
+      ],
+      "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
+      "name": "email-info-hub"
     }
   ],
   "connections": {
@@ -1686,17 +1680,6 @@
         ]
       ]
     },
-    "attachement_as_text": {
-      "main": [
-        [
-          {
-            "node": "subject-classifier-LM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "save doc to folder": {
       "main": [
         []
@@ -1706,7 +1689,7 @@
       "main": [
         [
           {
-            "node": "subject-classifier-LM",
+            "node": "email-info-hub",
             "type": "main",
             "index": 0
           }
@@ -1882,7 +1865,18 @@
       "main": [
         [
           {
-            "node": "attachement_as_text",
+            "node": "email-info-hub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-info-hub": {
+      "main": [
+        [
+          {
+            "node": "subject-classifier-LM",
             "type": "main",
             "index": 0
           }
