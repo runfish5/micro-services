@@ -12,15 +12,6 @@ Eliminates copy-pasting data rows for analysis one by one. Process hundreds of r
 
 ---
 
-## ⚡ Quick Start
-- [setup-guide.md](docs/setup-guide.md)
-
-## 📦 Requirements
-
-- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
-- Data source (Google Sheets, CSV, etc.)
-- LLM access (Groq free tier, OpenAI, Claude, etc.)
-
 ## What it does
 
 🔄 Batch process rows
@@ -41,3 +32,12 @@ Anyone doing repetitive data tasks: content managers, analysts, marketers proces
 ## Structured Output
 
 See `.st.json` files for JSON Schema examples.
+
+## ⚡ Quick Start
+- [setup-guide.md](docs/setup-guide.md)
+
+## 📦 Requirements
+
+- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
+- Data source (Google Sheets, CSV, etc.)
+- LLM access (Groq free tier, OpenAI, Claude, etc.)

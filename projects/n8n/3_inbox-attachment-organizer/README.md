@@ -10,22 +10,10 @@ Automatically process email attachments (images, PDFs, documents), understand co
 
 ---
 
-## ⚡ Quick Start
-- [setup-guide.md](docs/setup-guide.md)
-
-## 📦 Requirements
-
-- [subworkflows.md](docs/subworkflows.md) 
-- [credentials-guide.md](config/credentials-guide.md)
-    - Gmail, Google Drive, Google Sheets
-        - **Two Google Sheets required:** `2505_Invoices` (invoice logging) + `PathToIDLookup` (folder structure cache)
-    - LLM: Groq (free) or Gemini (free tier)
-    - Optional: Telegram bot
-
-    
 > ### Single Authentication Advantage
 >
 > **Authentication is automation's biggest bottleneck.** This workflow operates with **ONE Google OAuth connection** (Gmail + Drive + Sheets) — avoiding the 3-5 platform authentications typical workflows require.
+
 ## 🌟 Use Cases
 
 **Out-of-the-box:** Financial documents (invoices, receipts)
@@ -51,4 +39,14 @@ Automatically process email attachments (images, PDFs, documents), understand co
 - [Video Tutorial](#) (planned)
 - [fefd](sdf)
 
----
+## ⚡ Quick Start
+- [setup-guide.md](docs/setup-guide.md)
+
+## 📦 Requirements
+
+- [subworkflows.md](docs/subworkflows.md)
+- [credentials-guide.md](config/credentials-guide.md)
+    - Gmail, Google Drive, Google Sheets
+        - **Two Google Sheets required:** `2505_Invoices` (invoice logging) + `PathToIDLookup` (folder structure cache)
+    - LLM: Groq (free) or Gemini (free tier)
+    - Optional: Telegram bot

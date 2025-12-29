@@ -6,14 +6,6 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 ---
 
-## ⚡ Quick Start
-- [setup-guide.md](docs/setup-guide.md)
-
-## 📦 Requirements
-
-- Google Sheets OAuth
-- LLM: Groq (free)
-
 ## 🎯 Two Setup Modes
 
 | Setup | Description |
@@ -24,3 +16,11 @@ Extract structured data from unstructured text into any Google Sheets table — 
 > ### Auto-Schema Discovery
 >
 > Point it at any table — the workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping needed.
+
+## ⚡ Quick Start
+- [setup-guide.md](docs/setup-guide.md)
+
+## 📦 Requirements
+
+- Google Sheets OAuth
+- LLM: Groq (free)

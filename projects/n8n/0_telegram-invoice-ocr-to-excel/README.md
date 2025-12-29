@@ -14,17 +14,17 @@ Send invoice photos via Telegram, get structured data in Google Sheets automatic
 **📊 Store** → Appends extracted fields to Google Sheets
 **💬 Confirm** → Sends summary back via Telegram
 
-## Requirements
-
-- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
-- Telegram Bot API
-- Google Gemini API
-- Google Sheets (with service account)
-
-## Setup
+## ⚡ Quick Start
 
 1. Copy the JSON workflow into n8n (`Ctrl+V` on canvas)
 2. Configure Telegram bot credentials
 3. Configure Google Gemini API
 4. Configure Google Sheets connection
 5. Update the target spreadsheet ID
+
+## 📦 Requirements
+
+- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
+- Telegram Bot API
+- Google Gemini API
+- Google Sheets (with service account)
