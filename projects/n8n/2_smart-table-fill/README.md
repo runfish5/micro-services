@@ -1,22 +1,26 @@
-# smart-table-fill
+# Smart Table Fill: Text-to-Structured-Data Extraction
 
-Extract structured data from unstructured text into any Google Sheets table - zero schema configuration required.
+Extract structured data from unstructured text into any Google Sheets table — zero schema configuration required.
 
-## Features
+**Perfect for:** Converting notes, emails, or any text into structured table rows automatically.
 
-- **Auto-schema discovery**: Reads your table headers, builds extraction schema automatically
-- **LLM-powered extraction**: Uses Groq to parse unstructured notes into structured fields
-- **Dynamic field mapping**: Works with any table structure without code changes
+---
 
-## Quick Start
+## ⚡ Quick Start
+- [setup-guide.md](docs/setup-guide.md)
 
-1. Import workflow into n8n
-2. Connect Google Sheets credentials
-3. Point to your sheet with column headers defined
-4. Feed unstructured text - get structured rows
+## 📦 Requirements
 
-## Requirements
+- Google Sheets OAuth
+- LLM: Groq (free)
 
-- n8n v2+
-- Google Sheets OAuth credentials
-- Groq API key
+## 🎯 Two Setup Modes
+
+| Setup | Description |
+|-------|-------------|
+| **A) Standalone** | Manual text input via String Input node |
+| **B) Email-CRM** | Auto-process incoming emails (uses nodes from [3_inbox-attachment-organizer](../3_inbox-attachment-organizer/)) |
+
+> ### Auto-Schema Discovery
+>
+> Point it at any table — the workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping needed.
