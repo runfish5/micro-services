@@ -19,7 +19,7 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -5424,
+        -5200,
         400
       ],
       "id": "12f5de96-7448-4f61-9972-3cb2ad3db46d",
@@ -44,7 +44,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -5424,
+        -5200,
         768
       ],
       "id": "94d5718a-f954-4c26-a6ba-5efb2d8ab533",
@@ -77,7 +77,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5200,
+        -4976,
         576
       ]
     },
@@ -105,7 +105,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5200,
+        -4976,
         768
       ],
       "id": "978606c1-bbe9-41d6-82b2-f96ad04bff6e",
@@ -166,7 +166,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -5200,
+        -4976,
         400
       ],
       "id": "6b7058be-a43e-4a2d-8a3e-342a6611cec5",
@@ -210,7 +210,8 @@
         560
       ],
       "id": "eb86b6a1-000b-45d4-88c8-82eaca73b867",
-      "name": "financial doc router"
+      "name": "financial doc router",
+      "disabled": true
     },
     {
       "parameters": {
@@ -241,7 +242,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -4928,
+        -4704,
         448
       ],
       "id": "579a7d40-f08d-4dd8-9618-95e7264f14b4",
@@ -249,21 +250,8 @@
     },
     {
       "parameters": {
-        "jsCode": "// // Ultra-Aggressive Email Text Cleaner for n8n\n// // Removes ALL formatting artifacts for clean LLM processing\n\n// // Process ALL items\n// const items = $input.all();\n// const results = [];\n\n// for (const item of items) {\n//   const $json = item.json;\n  \n//   // Get the raw text from various possible locations\n//   let rawText = '';\n\n//   // Try different paths to find the text\n//   if ($json.text) {\n//     rawText = $json.text;\n//   } else if ($json.data && $json.data.text) {\n//     rawText = $json.data.text;\n//   } else if ($json['data.text']) {\n//     rawText = $json['data.text'];\n//   } else if ($input.item.json.text) {\n//     rawText = $input.item.json.text;\n//   } else if ($input.item.json.data && $input.item.json.data.text) {\n//     rawText = $input.item.json.data.text;\n//   }\n\n//   // If still no text, return error\n//   if (!rawText || rawText.trim().length === 0) {\n//     return {\n//       error: 'No text content found',\n//       paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n//       available_keys: Object.keys($json || {})\n//     };\n//   }\n\n//   // EXTRACT ATTACHMENT NAMES from item.binary (simple key extraction)\n//   const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n//   // STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\n//   let text = rawText\n//     // Convert to standard ASCII where possible\n//     .normalize('NFD')\n//     // Remove ALL control and invisible characters\n//     .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n//     // Remove zero-width characters\n//     .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n//     // Remove other invisibles\n//     .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n//     // Remove soft hyphens and special spaces\n//     .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n//     // Remove the specific problematic characters from your email\n//     .replace(/[­͏‌]/g, ' ')\n//     // Replace ALL multiple spaces with single space\n//     .replace(/\\s+/g, ' ')\n//     // Trim each line\n//     .split('\\n')\n//     .map(line => line.trim())\n//     .join('\\n');\n\n//   // STEP 2: Extract URLs and create a clean mapping\n//   const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n//   const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n//   // First remove image URLs completely\n//   text = text.replace(imageRegex, ' ');\n\n//   // Then handle other URLs\n//   const urls = text.match(urlRegex) || [];\n//   const uniqueUrls = [...new Set(urls)];\n//   const urlMap = {};\n\n//   uniqueUrls.forEach((url, i) => {\n//     const linkId = `[Link${i + 1}]`;\n//     urlMap[linkId] = url;\n//     // Replace URL with placeholder\n//     text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n//   });\n\n//   // STEP 3: Fix spacing issues caused by removed content\n//   text = text\n//     // Fix spaces around punctuation\n//     .replace(/\\s+([.,;!?])/g, '$1')\n//     .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n//     // Remove multiple spaces again\n//     .replace(/\\s+/g, ' ')\n//     // Fix line breaks - ensure proper spacing\n//     .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n//     .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n//     ;\n\n//   // STEP 4: Clean up brackets and special formatting\n//   text = text\n//     .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n//     .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n//     .replace(/\\s*\\]\\s*/g, '] ')\n//     .replace(/\\s+/g, ' '); // Final space cleanup\n\n//   // STEP 5: Smart paragraph detection and formatting\n//   const lines = text.split('\\n');\n//   const formattedLines = [];\n//   let currentParagraph = '';\n\n//   for (const line of lines) {\n//     const trimmed = line.trim();\n//     if (trimmed.length === 0) continue;\n    \n//     // Check if this looks like a new section/paragraph\n//     if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n//         trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n//       // Save current paragraph if exists\n//       if (currentParagraph) {\n//         formattedLines.push(currentParagraph.trim());\n//       }\n//       currentParagraph = trimmed;\n//     } else {\n//       // Continue current paragraph\n//       currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n//     }\n//   }\n//   // Don't forget the last paragraph\n//   if (currentParagraph) {\n//     formattedLines.push(currentParagraph.trim());\n//   }\n\n//   text = formattedLines.join('\\n\\n');\n\n//   // STEP 6: Extract key information\n//   const extractedInfo = {\n//     orderNumber: null,\n//     trackingNumber: null,\n//     product: null,\n//     deliveryAddress: null,\n//     amounts: [],\n//     dates: []\n//   };\n\n//   // Extract order number\n//   const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n//   if (orderMatch) {\n//     extractedInfo.orderNumber = orderMatch[1];\n//   }\n\n//   // Extract tracking number (long number that's not the order)\n//   const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n//   extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n//   // Extract product name\n//   const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n//   if (productMatch) {\n//     extractedInfo.product = productMatch[0].trim();\n//   }\n\n//   // Extract delivery address\n//   const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n//   if (addressMatch) {\n//     extractedInfo.deliveryAddress = addressMatch[1].trim();\n//   }\n\n//   // Extract dates\n//   const dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\n//   if (dateMatches) {\n//     extractedInfo.dates = dateMatches;\n//   }\n\n//   // STEP 7: Create super-clean version for LLM\n//   const textForLLM = text\n//     .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n//     .replace(/\\[\\]/g, '') // Remove empty brackets\n//     .replace(/\\s+/g, ' ') // Normalize spaces\n//     .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n//     .trim();\n\n//   // STEP 8: Create a structured summary for LLM\n//   const attachmentList = attachmentNames.length > 0 \n//     ? attachmentNames.join(', ')\n//     : 'No attachments';\n\n//   const structuredSummary = `\n// ORDER DETAILS:\n// - Order Number: ${extractedInfo.orderNumber || 'Not found'}\n// - Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n// - Product: ${extractedInfo.product || 'Not found'}\n// - Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n// - Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n// - Attachments: ${attachmentList}\n\n// ORIGINAL MESSAGE:\n// ${textForLLM}\n// `.trim();\n\n//   // STEP 9: Get metadata safely\n//   const metadata = {\n//     subject: $json.subject || $input.item?.json?.subject || 'No subject',\n//     from: $json.from || $input.item?.json?.from || 'Unknown',\n//     to: $json.to || $input.item?.json?.to || 'Unknown',\n//     date: $json.date || $input.item?.json?.date || new Date().toISOString()\n//   };\n\n//   // Add to results array - ATTACHMENT NAMES AT TOP\n//   results.push({\n//     // Attachment names FIRST\n//     attachmentNames: attachmentNames,\n    \n//     // Ultra-clean version for LLM\n//     textForLLM: textForLLM,\n    \n//     // Structured summary for better LLM understanding\n//     structuredSummary: structuredSummary,\n    \n//     // Main cleaned text with placeholders\n//     text: text,\n    \n//     // Keep the data structure for compatibility\n//     data: {\n//       text: textForLLM\n//     },\n    \n//     // Metadata\n//     ...metadata,\n    \n//     // Extracted information\n//     extracted: extractedInfo,\n    \n//     // URL mapping (if you need references)\n//     linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n    \n//     // Statistics\n//     stats: {\n//       originalLength: rawText.length,\n//       cleanLength: text.length,\n//       llmLength: textForLLM.length,\n//       reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n//       linkCount: Object.keys(urlMap).length\n//     }\n//   });\n// } // Close the for loop\n\n// // Return all processed items in n8n format\n// return results.map(result => ({ json: result }));\n\n\n// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Process ALL items\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const $json = item.json;\n  \n  // Get the raw text from various possible locations\n  let rawText = '';\n\n  // Try different paths to find the text\n  if ($json.text) {\n    rawText = $json.text;\n  } else if ($json.data && $json.data.text) {\n    rawText = $json.data.text;\n  } else if ($json['data.text']) {\n    rawText = $json['data.text'];\n  } else if ($input.item.json.text) {\n    rawText = $input.item.json.text;\n  } else if ($input.item.json.data && $input.item.json.data.text) {\n    rawText = $input.item.json.data.text;\n  }\n\n  // If still no text, return error\n  if (!rawText || rawText.trim().length === 0) {\n    return {\n      json: { // Wrap error in json to maintain standard format\n        error: 'No text content found',\n        paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n        available_keys: Object.keys($json || {})\n      }\n    };\n  }\n\n  // EXTRACT ATTACHMENT NAMES from item.binary (simple key extraction)\n  const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n  // STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\n  let text = rawText\n    // Convert to standard ASCII where possible\n    .normalize('NFD')\n    // Remove ALL control and invisible characters\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    // Remove zero-width characters\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n    // Remove other invisibles\n    .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n    // Remove soft hyphens and special spaces\n    .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n    // Remove the specific problematic characters from your email\n    .replace(/[­͏‌]/g, ' ')\n    // Replace ALL multiple spaces with single space\n    .replace(/\\s+/g, ' ')\n    // Trim each line\n    .split('\\n')\n    .map(line => line.trim())\n    .join('\\n');\n\n  // STEP 2: Extract URLs and create a clean mapping\n  const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n  const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n  // First remove image URLs completely\n  text = text.replace(imageRegex, ' ');\n\n  // Then handle other URLs\n  const urls = text.match(urlRegex) || [];\n  const uniqueUrls = [...new Set(urls)];\n  const urlMap = {};\n\n  uniqueUrls.forEach((url, i) => {\n    const linkId = `[Link${i + 1}]`;\n    urlMap[linkId] = url;\n    // Replace URL with placeholder\n    text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n  });\n\n  // STEP 3: Fix spacing issues caused by removed content\n  text = text\n    // Fix spaces around punctuation\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n    // Remove multiple spaces again\n    .replace(/\\s+/g, ' ')\n    // Fix line breaks - ensure proper spacing\n    .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n    .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n    ;\n\n  // STEP 4: Clean up brackets and special formatting\n  text = text\n    .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n    .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n    .replace(/\\s*\\]\\s*/g, '] ')\n    .replace(/\\s+/g, ' '); // Final space cleanup\n\n  // STEP 5: Smart paragraph detection and formatting\n  const lines = text.split('\\n');\n  const formattedLines = [];\n  let currentParagraph = '';\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (trimmed.length === 0) continue;\n    \n    // Check if this looks like a new section/paragraph\n    if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n        trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n      // Save current paragraph if exists\n      if (currentParagraph) {\n        formattedLines.push(currentParagraph.trim());\n      }\n      currentParagraph = trimmed;\n    } else {\n      // Continue current paragraph\n      currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n    }\n  }\n  // Don't forget the last paragraph\n  if (currentParagraph) {\n    formattedLines.push(currentParagraph.trim());\n  }\n\n  text = formattedLines.join('\\n\\n');\n\n  // STEP 6: Extract key information\n  const extractedInfo = {\n    orderNumber: null,\n    trackingNumber: null,\n    product: null,\n    deliveryAddress: null,\n    amounts: [],\n    dates: []\n  };\n\n  // Extract order number\n  const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n  if (orderMatch) {\n    extractedInfo.orderNumber = orderMatch[1];\n  }\n\n  // Extract tracking number (long number that's not the order)\n  const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n  extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n  // Extract product name\n  const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n  if (productMatch) {\n    extractedInfo.product = productMatch[0].trim();\n  }\n\n  // Extract delivery address\n  const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n  if (addressMatch) {\n    extractedInfo.deliveryAddress = addressMatch[1].trim();\n  }\n\n  // Extract dates\n  const dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\n  if (dateMatches) {\n    extractedInfo.dates = dateMatches;\n  }\n\n  // STEP 7: Create super-clean version for LLM\n  const textForLLM = text\n    .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n    .replace(/\\[\\]/g, '') // Remove empty brackets\n    .replace(/\\s+/g, ' ') // Normalize spaces\n    .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n    .trim();\n\n  // STEP 8: Create a structured summary for LLM\n  const attachmentList = attachmentNames.length > 0 \n    ? attachmentNames.join(', ')\n    : 'No attachments';\n\n  const structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n- Attachments: ${attachmentList}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n  // STEP 9: Get metadata safely\n  const metadata = {\n    subject: $json.subject || $input.item?.json?.subject || 'No subject',\n    from: $json.from || $input.item?.json?.from || 'Unknown',\n    to: $json.to || $input.item?.json?.to || 'Unknown',\n    date: $json.date || $input.item?.json?.date || new Date().toISOString()\n  };\n\n  // Add to results array - WITH BINARY DATA INCLUDED\n  results.push({\n    // 1. JSON Part\n    json: {\n      attachmentNames: attachmentNames,\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: {\n        text: textForLLM\n      },\n      ...metadata,\n      extracted: extractedInfo,\n      linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: Object.keys(urlMap).length\n      }\n    },\n    // 2. Binary Part (The Fix)\n    // This passes the input binary data directly to the output\n    binary: item.binary \n  });\n} // Close the for loop\n\n// Return results directly (we already structured them as {json, binary} above)\nreturn results;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -4448,
-        496
-      ],
-      "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
-      "name": "Clean Email Text"
-    },
-    {
-      "parameters": {
         "chatId": "7582730035",
-        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:",
+        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:\n{{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? $('subject-classifier-LM').item.json.output.message : '' }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -271,7 +259,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2992,
+        -2864,
         496
       ],
       "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
@@ -363,7 +351,7 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4928,
+        -4704,
         672
       ],
       "id": "93d1354e-67e7-4b56-be62-a6e9caccd5f0",
@@ -371,8 +359,8 @@
     },
     {
       "parameters": {
-        "language": "python",
-        "pythonCode": "# Create your dictionary/JSON data\noutput_data = {\n  \"accounts\": \n    [\n      \"payments-noreply@google.com\",\n      \"noreply@notifications.digitec.ch\",\n      \"invoice+statements@mail.anthropic.com\",\n      \"uniqued4ve@gmail.com\"\n    ]\n}\n\n# Set it to the first input item's json\nfor item in _input.all():\n    item.json = output_data\n    break  # Only set first item\n\nreturn _input.all()"
+        "language": "pythonNative",
+        "pythonCode": "output_data = {\n  \"accounts\": [\n    \"payments-noreply@google.com\",\n    \"noreply@notifications.digitec.ch\",\n    \"invoice+statements@mail.anthropic.com\",\n    \"uniqued4ve@gmail.com\"\n  ]\n}\n\nif _items:\n    _items[0][\"json\"] = output_data\n\nreturn _items"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -773,14 +761,20 @@
             {
               "id": "290dd0a6-a92b-48c9-b5de-ae15ea4199fc",
               "name": "processed_attachments.data",
-              "value": "={{ $('attachement_as_text').item.json.processed_attachments.data }}",
+              "value": "={{ $if($('attachement_as_text').isExecuted, $('attachement_as_text').item.json.processed_attachments.data, []) }}",
               "type": "array"
             },
             {
               "id": "724ccebf-8dcc-450e-a97a-551a9522f54c",
               "name": "attachement_names",
-              "value": "={{ Object.keys($('Gmail').first().binary) }}",
+              "value": "={{ $('Gmail').first().binary ? Object.keys($('Gmail').first().binary) : [] }}",
               "type": "string"
+            },
+            {
+              "id": "2b538817-1d59-44a5-ae78-c5b8961343cb",
+              "name": "attachment_array",
+              "value": "={{ $if($('Build Attachment Profiles').isExecuted, $('Build Attachment Profiles').item.json.data, null) }}",
+              "type": "array"
             }
           ]
         },
@@ -791,8 +785,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4448,
-        1104
+        -4480,
+        1040
       ],
       "id": "d3f0f4d6-eaa3-4256-b63b-5f8716231356",
       "name": "prepare attachment meta"
@@ -806,7 +800,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -4224,
+        -4000,
         672
       ],
       "id": "3f0df553-6420-4610-b9c3-1b250551b79b",
@@ -834,7 +828,7 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -5424,
+        -5200,
         576
       ],
       "id": "6e8051ea-5137-4bcd-bc9e-572800a93066",
@@ -913,7 +907,7 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -6032,
+        -5808,
         288
       ],
       "typeVersion": 1,
@@ -993,25 +987,11 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2672,
-        1280
+        -3280,
+        1392
       ],
       "id": "f32040b1-d196-4d29-bf58-374b758071f0",
       "name": "Sticky Note5"
-    },
-    {
-      "parameters": {
-        "content": "![PathToIDLookup Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/lookup-table-schema-columns-path-folder-id.png)",
-        "width": 368
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -3280,
-        1456
-      ],
-      "id": "edafe183-6880-425a-b8bd-5ff363084f25",
-      "name": "Sticky Note9"
     },
     {
       "parameters": {
@@ -1022,43 +1002,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -2672,
-        1056
+        -3008,
+        1072
       ],
       "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
       "name": "Sticky Note21"
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "b649d9b4-d34b-4dbd-bd06-6a7a57cba287",
-              "name": "attachment_array",
-              "value": "={{ $('Aggregate Attachment Profiles').item.json.data }}",
-              "type": "array"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -4448,
-        960
-      ],
-      "id": "9ae40cf7-077b-4251-bced-48f91a41c7bc",
-      "name": "binary_data"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// Removes ALL formatting artifacts for clean LLM processing\n\n// Get the raw text from various possible locations\nlet rawText = '';\n\n// Try different paths to find the text\nif ($json.text) {\n  rawText = $json.text;\n} else if ($json.data && $json.data.text) {\n  rawText = $json.data.text;\n} else if ($json['data.text']) {\n  rawText = $json['data.text'];\n} else if ($input.item.json.text) {\n  rawText = $input.item.json.text;\n} else if ($input.item.json.data && $input.item.json.data.text) {\n  rawText = $input.item.json.data.text;\n}\n\n// If still no text, return error\nif (!rawText || rawText.trim().length === 0) {\n  return {\n    error: 'No text content found',\n    paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// STEP 1: NUCLEAR OPTION - Remove ALL non-standard characters first\nlet text = rawText\n  // Convert to standard ASCII where possible\n  .normalize('NFD')\n  // Remove ALL control and invisible characters\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n  // Remove zero-width characters\n  .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n  // Remove other invisibles\n  .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n  // Remove soft hyphens and special spaces\n  .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n  // Remove the specific problematic characters from your email\n  .replace(/[­͏‌]/g, ' ')\n  // Replace ALL multiple spaces with single space\n  .replace(/\\s+/g, ' ')\n  // Trim each line\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// STEP 2: Extract URLs and create a clean mapping\nconst urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\nconst imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n// First remove image URLs completely\ntext = text.replace(imageRegex, ' ');\n\n// Then handle other URLs\nconst urls = text.match(urlRegex) || [];\nconst uniqueUrls = [...new Set(urls)];\nconst urlMap = {};\n\nuniqueUrls.forEach((url, i) => {\n  const linkId = `[Link${i + 1}]`;\n  urlMap[linkId] = url;\n  // Replace URL with placeholder\n  text = text.replace(new RegExp(url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), linkId);\n});\n\n// STEP 3: Fix spacing issues caused by removed content\ntext = text\n  // Fix spaces around punctuation\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n  // Remove multiple spaces again\n  .replace(/\\s+/g, ' ')\n  // Fix line breaks - ensure proper spacing\n  .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2') // Join words split across lines\n  .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2') // Add line break after sentences\n  ;\n\n// STEP 4: Clean up brackets and special formatting\ntext = text\n  .replace(/\\[\\s*\\]/g, '') // Remove empty brackets\n  .replace(/\\s*\\[\\s*/g, ' [') // Clean bracket spacing\n  .replace(/\\s*\\]\\s*/g, '] ')\n  .replace(/\\s+/g, ' '); // Final space cleanup\n\n// STEP 5: Smart paragraph detection and formatting\nconst lines = text.split('\\n');\nconst formattedLines = [];\nlet currentParagraph = '';\n\nfor (const line of lines) {\n  const trimmed = line.trim();\n  if (trimmed.length === 0) continue;\n  \n  // Check if this looks like a new section/paragraph\n  if (trimmed.match(/^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i) ||\n      trimmed.match(/^[A-Z].*[.!?]$/) && currentParagraph.length > 50) {\n    // Save current paragraph if exists\n    if (currentParagraph) {\n      formattedLines.push(currentParagraph.trim());\n    }\n    currentParagraph = trimmed;\n  } else {\n    // Continue current paragraph\n    currentParagraph = currentParagraph ? `${currentParagraph} ${trimmed}` : trimmed;\n  }\n}\n// Don't forget the last paragraph\nif (currentParagraph) {\n  formattedLines.push(currentParagraph.trim());\n}\n\ntext = formattedLines.join('\\n\\n');\n\n// STEP 6: Extract key information\nconst extractedInfo = {\n  orderNumber: null,\n  trackingNumber: null,\n  product: null,\n  deliveryAddress: null,\n  amounts: [],\n  dates: []\n};\n\n// Extract order number\nconst orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\nif (orderMatch) {\n  extractedInfo.orderNumber = orderMatch[1];\n}\n\n// Extract tracking number (long number that's not the order)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// Extract product name (stop at quantity indicator or duplicate)\nconst productMatch = text.match(/tomtoc[^-\\n]*?(?:\\([^)]+\\))?/i);\nif (productMatch) {\n  extractedInfo.product = productMatch[0].trim()\n    .replace(/\\s*-\\s*$/, '') // Remove trailing dash\n    .replace(/\\s+/g, ' '); // Normalize spaces\n}\n\n// Extract delivery address\nconst addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\nif (addressMatch) {\n  extractedInfo.deliveryAddress = addressMatch[1].trim();\n}\n\n// Extract dates\nconst dateMatches = text.match(/\\d{1,2}[\\.\\/\\-]\\d{1,2}[\\.\\/\\-]\\d{2,4}/g);\nif (dateMatches) {\n  extractedInfo.dates = dateMatches;\n}\n\n// STEP 7: Create super-clean version for LLM\nconst textForLLM = text\n  .replace(/\\[Link\\d+\\]/g, '') // Remove all link placeholders\n  .replace(/\\[\\]/g, '') // Remove empty brackets\n  .replace(/\\s+/g, ' ') // Normalize spaces\n  .replace(/\\n{3,}/g, '\\n\\n') // Max 2 line breaks\n  .trim();\n\n// STEP 8: Create a structured summary for LLM\nconst structuredSummary = `\nORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates?.[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}\n`.trim();\n\n// STEP 9: Get metadata safely\nconst metadata = {\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString()\n};\n\n// Return comprehensive cleaned data\nreturn {\n  // Ultra-clean version for LLM\n  textForLLM: textForLLM,\n  \n  // Structured summary for better LLM understanding\n  structuredSummary: structuredSummary,\n  \n  // Main cleaned text with placeholders\n  text: text,\n  \n  // Keep the data structure for compatibility\n  data: {\n    text: textForLLM\n  },\n  \n  // Metadata\n  ...metadata,\n  \n  // Extracted information\n  extracted: extractedInfo,\n  \n  // URL mapping (if you need references)\n  linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n\n  // Attachments placeholder for no-attachment branch\n  summary_attachments: \"No attachments for this email\",\n\n  // Statistics\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: Object.keys(urlMap).length\n  }\n};"
+        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text \n  || $json.data?.text \n  || $json['data.text'] \n  || $input.item?.json?.text \n  || $input.item?.json?.data?.text \n  || '';\n\nif (!rawText.trim()) {\n  return {\n    error: 'No text content found',\n    available_keys: Object.keys($json || {})\n  };\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  // Remove image URLs entirely\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  // Replace remaining URLs with placeholders in ONE pass\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    // Dedupe: check if we've seen this URL\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup (single chain)\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info (fast, non-greedy patterns)\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,\n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,\n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\n// Find tracking (long number ≠ order number)\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}`;\n\n// 9. Return (same structure as before)\nreturn {\n  textForLLM,\n  structuredSummary,\n  text,\n  data: { text: textForLLM },\n  subject: $json.subject || $input.item?.json?.subject || 'No subject',\n  from: $json.from || $input.item?.json?.from || 'Unknown',\n  to: $json.to || $input.item?.json?.to || 'Unknown',\n  date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n  extracted: extractedInfo,\n  linkMapping: linkCounter > 0 ? urlMap : null,\n  summary_attachments: \"No attachments for this email\",\n  stats: {\n    originalLength: rawText.length,\n    cleanLength: text.length,\n    llmLength: textForLLM.length,\n    reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n    linkCount: linkCounter\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4448,
+        -4224,
         336
       ],
       "id": "e14c0350-b14b-4e0d-a15a-6e4cc6fca46e",
@@ -1073,7 +1030,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -4704,
+        -4480,
         672
       ],
       "id": "26b6b5aa-6bb3-43b1-ad0c-310d3a928b09",
@@ -1100,7 +1057,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "object"
+              "type": "object",
+              "removed": true
             },
             {
               "id": "data",
@@ -1109,7 +1067,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "object"
+              "type": "object",
+              "removed": true
             },
             {
               "id": "metadata",
@@ -1118,7 +1077,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "object"
+              "type": "object",
+              "removed": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -1131,7 +1091,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -4448,
+        -4224,
         672
       ],
       "id": "1db5d433-e586-44f8-af0e-0163fa91333f",
@@ -1141,7 +1101,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        }\n      \n\t},\n\t\"required\": [\n      \"classification_rationale\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"sender\": {\n          \"type\": \"string\",\n          \"description\": \"Must be a legal person with a full name. Not allowed: companies or other suggested personal entities are not allowed.\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        }\n      \n\t},\n\t\"required\": [\n      \"sender\",\n      \"classification_rationale\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -1321,30 +1281,14 @@
     },
     {
       "parameters": {
-        "aggregate": "aggregateAllItemData",
-        "options": {
-          "includeBinaries": false
-        }
-      },
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [
-        -4224,
-        496
-      ],
-      "id": "0f9cd61f-b869-40fe-88de-f646264ba543",
-      "name": "Aggregate Attachment Profiles"
-    },
-    {
-      "parameters": {
-        "content": "# attachment processer\nNodes 7-15",
+        "content": "# attachment processer\nNodes 7-14",
         "height": 608,
-        "width": 1152,
+        "width": 928,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -4992,
+        -4768,
         288
       ],
       "typeVersion": 1,
@@ -1360,7 +1304,7 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5472,
+        -5248,
         288
       ],
       "typeVersion": 1,
@@ -1369,7 +1313,7 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 16-23",
+        "content": "# subject classifier\nNodes 15-22",
         "height": 608,
         "width": 720,
         "color": 7
@@ -1385,14 +1329,14 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 24-35",
+        "content": "#  Invoices & Receipts\nNodes 23-34",
         "height": 464,
-        "width": 1920,
+        "width": 1696,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -4992,
+        -4768,
         928
       ],
       "typeVersion": 1,
@@ -1408,35 +1352,11 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4448,
-        1264
+        -4480,
+        1200
       ],
       "id": "85e36b85-312c-499c-9ac7-c30fb115b39f",
       "name": "new section"
-    },
-    {
-      "parameters": {
-        "operation": "addLabels",
-        "messageId": "={{ $('Gmail').item.json.id }}",
-        "labelIds": [
-          "Label_83"
-        ]
-      },
-      "id": "92b1d54d-487b-4a24-bd96-24d0f7eaf145",
-      "name": "Mark as Processed1",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        -3264,
-        976
-      ],
-      "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "F3cQVIbokuyDLVR2",
-          "name": "Google_0Auth"
-        }
-      }
     },
     {
       "parameters": {
@@ -1521,6 +1441,43 @@
           "name": "Groq account"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail').item.json.id }}",
+        "labelIds": [
+          "Label_83"
+        ]
+      },
+      "id": "92b1d54d-487b-4a24-bd96-24d0f7eaf145",
+      "name": "Mark as Processed1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3264,
+        976
+      ],
+      "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// + Aggregates all results into single output\n// + Includes pairedItem for downstream node references\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const $json = item.json;\n\n  let rawText = '';\n\n  if ($json.text) {\n    rawText = $json.text;\n  } else if ($json.data && $json.data.text) {\n    rawText = $json.data.text;\n  } else if ($json['data.text']) {\n    rawText = $json['data.text'];\n  }\n\n  if (!rawText || rawText.trim().length === 0) {\n    results.push({\n      error: 'No text content found',\n      paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n      available_keys: Object.keys($json || {})\n    });\n    continue;\n  }\n\n  const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n  let text = rawText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n    .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n    .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .split('\\n')\n    .map(line => line.trim())\n    .join('\\n');\n\n  const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n  const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n  text = text.replace(imageRegex, ' ');\n\n  const urls = text.match(urlRegex) || [];\n  const uniqueUrls = [...new Set(urls)];\n  const urlMap = {};\n\n  uniqueUrls.forEach((url, i) => {\n    const linkId = '[Link' + (i + 1) + ']';\n    urlMap[linkId] = url;\n    const escapedUrl = url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    text = text.replace(new RegExp(escapedUrl, 'g'), linkId);\n  });\n\n  text = text\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n    .replace(/\\s+/g, ' ')\n    .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2')\n    .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2');\n\n  text = text\n    .replace(/\\[\\s*\\]/g, '')\n    .replace(/\\s*\\[\\s*/g, ' [')\n    .replace(/\\s*\\]\\s*/g, '] ')\n    .replace(/\\s+/g, ' ');\n\n  const lines = text.split('\\n');\n  const formattedLines = [];\n  let currentParagraph = '';\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (trimmed.length === 0) continue;\n\n    const isNewSection = /^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i.test(trimmed);\n    const isCompleteSentence = /^[A-Z].*[.!?]$/.test(trimmed) && currentParagraph.length > 50;\n\n    if (isNewSection || isCompleteSentence) {\n      if (currentParagraph) {\n        formattedLines.push(currentParagraph.trim());\n      }\n      currentParagraph = trimmed;\n    } else {\n      currentParagraph = currentParagraph ? currentParagraph + ' ' + trimmed : trimmed;      \n    }\n  }\n  if (currentParagraph) {\n    formattedLines.push(currentParagraph.trim());\n  }\n\n  text = formattedLines.join('\\n\\n');\n\n  const extractedInfo = {\n    orderNumber: null,\n    trackingNumber: null,\n    product: null,\n    deliveryAddress: null,\n    amounts: [],\n    dates: []\n  };\n\n  const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n  if (orderMatch) {\n    extractedInfo.orderNumber = orderMatch[1];\n  }\n\n  const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n  extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null; \n\n  const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n  if (productMatch) {\n    extractedInfo.product = productMatch[0].trim();\n  }\n\n  const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n  if (addressMatch) {\n    extractedInfo.deliveryAddress = addressMatch[1].trim();\n  }\n\n  const dateMatches = text.match(/\\d{1,2}[.\\/-]\\d{1,2}[.\\/-]\\d{2,4}/g);\n  if (dateMatches) {\n    extractedInfo.dates = dateMatches;\n  }\n\n  const textForLLM = text\n    .replace(/\\[Link\\d+\\]/g, '')\n    .replace(/\\[\\]/g, '')\n    .replace(/\\s+/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n\n  const attachmentList = attachmentNames.length > 0\n    ? attachmentNames.join(', ')\n    : 'No attachments';\n\n  const structuredSummary = 'ORDER DETAILS:\\n' +\n    '- Order Number: ' + (extractedInfo.orderNumber || 'Not found') + '\\n' +\n    '- Tracking: ' + (extractedInfo.trackingNumber || 'Not found') + '\\n' +\n    '- Product: ' + (extractedInfo.product || 'Not found') + '\\n' +\n    '- Delivery Address: ' + (extractedInfo.deliveryAddress || 'Not found') + '\\n' +\n    '- Order Date: ' + (extractedInfo.dates[0] || 'Not found') + '\\n' +\n    '- Attachments: ' + attachmentList + '\\n\\n' +\n    'ORIGINAL MESSAGE:\\n' + textForLLM;\n\n  const metadata = {\n    subject: $json.subject || 'No subject',\n    from: $json.from || 'Unknown',\n    to: $json.to || 'Unknown',\n    date: $json.date || new Date().toISOString()\n  };\n\n  results.push({\n    attachmentNames: attachmentNames,\n    textForLLM: textForLLM,\n    structuredSummary: structuredSummary,\n    text: text,\n    data: {\n      text: textForLLM\n    },\n    subject: metadata.subject,\n    from: metadata.from,\n    to: metadata.to,\n    date: metadata.date,\n    extracted: extractedInfo,\n    linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n    stats: {\n      originalLength: rawText.length,\n      cleanLength: text.length,\n      llmLength: textForLLM.length,\n      reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n      linkCount: Object.keys(urlMap).length\n    }\n  });\n}\n\n// Return aggregated result WITH pairedItem data\nreturn [{\n  json: {\n    data: results\n  },\n  pairedItem: items.map((item, index) => ({ item: index }))\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4224,
+        496
+      ],
+      "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
+      "name": "Build Attachment Profiles"
     }
   ],
   "connections": {
@@ -1602,17 +1559,6 @@
         [
           {
             "node": "sp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Clean Email Text": {
-      "main": [
-        [
-          {
-            "node": "Aggregate Attachment Profiles",
             "type": "main",
             "index": 0
           }
@@ -1756,17 +1702,6 @@
         []
       ]
     },
-    "binary_data": {
-      "main": [
-        [
-          {
-            "node": "prepare attachment meta",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Clean Email object": {
       "main": [
         [
@@ -1782,7 +1717,7 @@
       "main": [
         [
           {
-            "node": "Clean Email Text",
+            "node": "Build Attachment Profiles",
             "type": "main",
             "index": 0
           }
@@ -1827,7 +1762,7 @@
       "main": [
         [
           {
-            "node": "binary_data",
+            "node": "prepare attachment meta",
             "type": "main",
             "index": 0
           }
@@ -1899,17 +1834,6 @@
         ]
       ]
     },
-    "Aggregate Attachment Profiles": {
-      "main": [
-        [
-          {
-            "node": "attachement_as_text",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "new section": {
       "main": [
         [
@@ -1949,6 +1873,17 @@
           {
             "node": "subject-classifier-LM",
             "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Attachment Profiles": {
+      "main": [
+        [
+          {
+            "node": "attachement_as_text",
+            "type": "main",
             "index": 0
           }
         ]
