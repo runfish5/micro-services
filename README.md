@@ -1,15 +1,15 @@
 # micro-services
 
-n8n automation workflows for document processing and AI-powered data extraction.
+Small code snippets to handle life's recurring tasks — data processing, document handling, inbox management, and more. DIY-friendly, built for self-learners.
 
-Batch LLM processing, email attachment organization, invoice OCR, structured output from unstructured text. Runs on Groq and Gemini free tiers.
+Projects are grouped by platform. Currently n8n workflows, with Python and JavaScript tools planned.
 
-## Projects
+---
 
-**[LLM-bulk-responses](projects/n8n/1_LLM-bulk-responses)** — Process hundreds of spreadsheet rows through an LLM. Structured JSON output.
+## [n8n](projects/n8n)
 
-**[inbox-attachment-organizer](projects/n8n/3_inbox-attachment-organizer)** — AI classifies email attachments, files to Google Drive folders.
+n8n workflow templates for document processing and AI-powered data extraction. These n8n automations connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text.
 
-**[smart-table-fill](projects/n8n/2_smart-table-fill)** — Text in, structured data out. Dynamic schema extraction.
+Built with n8n's visual workflow builder. Integrates Google Workspace (Gmail, Drive, Sheets), Groq, Gemini, Telegram — with Supabase integrations coming. Most n8n workflows run entirely on free tiers.
 
-**[telegram-invoice-ocr](projects/n8n/0_telegram-invoice-ocr-to-excel)** — Photo → Telegram bot → Google Sheets.
+Browse the [n8n projects →](projects/n8n)
