@@ -123,7 +123,7 @@
       "typeVersion": 1.2,
       "position": [
         -2992,
-        880
+        960
       ],
       "id": "b93328d6-d6ab-4831-b9eb-31bdb4325c75",
       "name": "Telegram & done",
@@ -259,8 +259,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2864,
-        496
+        -2992,
+        640
       ],
       "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
       "name": "notify rejection",
@@ -327,13 +327,14 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": true
         },
+        "mode": "each",
         "options": {}
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3264,
-        1168
+        -4176,
+        1152
       ],
       "id": "6db79504-d105-47b1-854c-0a8096451f40",
       "name": "Call 'Google Drive Folder ID Lookup'",
@@ -374,7 +375,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').first().json.text }}\n---\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
+        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').first().json.text }}\n---{{ $json.processed_attachments.data[0] }}\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -399,12 +400,12 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=<parsed-document-content>\n{{ $json['processed_attachments.data'].textForLLM }}\n</parsed-document-content>\n\nClassify this document and extract all available data.",
+        "text": "=  <parsed-document-content>\n  {{ $json.textForLLM }}\n  </parsed-document-content>\n\n  Classify this document and extract all available data.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
             {
-              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- Revenue: Customer invoices we send\n- Expense: Invoices/receipts we receive from suppliers\n- Invoice: Formal billing document with invoice number\n- Receipt: Proof of payment (often simpler, may lack invoice #)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, invoice_date, supplier_name, recipient_business_name, total_amount_due, currency_code, due_date, line_items, etc.\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
+              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- accounting_category: \"Expense\" (we pay) | \"Revenue\" (we bill)\n- document_type: \"Invoice\" (billing doc) | \"Receipt\" (payment proof)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, invoice_date, supplier_name, recipient_business_name, total_amount_due, currency_code, due_date, line_items, etc.\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
             }
           ]
         },
@@ -413,8 +414,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -3936,
-        1024
+        -4752,
+        992
       ],
       "id": "fe1b17b6-7544-49d1-8237-d4fd3fa5070e",
       "name": "Accountant-concierge-LM",
@@ -742,8 +743,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -2992,
-        1104
+        -4400,
+        960
       ],
       "id": "21d038a1-2970-455a-be3a-88bcef506917",
       "name": "insert doc record",
@@ -753,43 +754,6 @@
           "name": "GoogleDriveMAIN"
         }
       }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "290dd0a6-a92b-48c9-b5de-ae15ea4199fc",
-              "name": "processed_attachments.data",
-              "value": "={{ $if($('email-info-hub').isExecuted, $('email-info-hub').item.json.processed_attachments.data, []) }}",
-              "type": "array"
-            },
-            {
-              "id": "724ccebf-8dcc-450e-a97a-551a9522f54c",
-              "name": "attachement_names",
-              "value": "={{ $('Gmail').first().binary ? Object.keys($('Gmail').first().binary) : [] }}",
-              "type": "string"
-            },
-            {
-              "id": "2b538817-1d59-44a5-ae78-c5b8961343cb",
-              "name": "attachment_array",
-              "value": "={{ $if($('Build Attachment Profiles').isExecuted, $('Build Attachment Profiles').item.json.data, null) }}",
-              "type": "array"
-            }
-          ]
-        },
-        "options": {
-          "ignoreConversionErrors": true
-        }
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -4480,
-        1040
-      ],
-      "id": "d3f0f4d6-eaa3-4256-b63b-5f8716231356",
-      "name": "prepare attachment meta"
     },
     {
       "parameters": {
@@ -805,21 +769,6 @@
       ],
       "id": "3f0df553-6420-4610-b9c3-1b250551b79b",
       "name": "Merge"
-    },
-    {
-      "parameters": {
-        "options": {
-          "reset": false
-        }
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        -4160,
-        944
-      ],
-      "id": "e44f9a41-161f-4ee3-885b-a0fd28b6d236",
-      "name": "loop invoices"
     },
     {
       "parameters": {
@@ -852,8 +801,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -2832,
-        1296
+        -3728,
+        1152
       ],
       "id": "b1db0433-988a-4d90-b22a-607bef5d8316",
       "name": "save doc to folder",
@@ -898,31 +847,31 @@
     {
       "parameters": {
         "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.telegram)",
-        "height": 556,
-        "width": 280,
+        "height": 492,
+        "width": 232,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3040,
-        480
+        -3056,
+        624
       ],
       "id": "ccb93ee3-2836-4962-ace7-653ed4e6d42b",
       "name": "Sticky Note18"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
-        "height": 412,
-        "width": 344,
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
+        "height": 364,
+        "width": 456,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3648,
-        1168
+        -4448,
+        1136
       ],
       "id": "0b5c7ac9-633a-4e9d-80bc-827e99ce8c97",
       "name": "Sticky Note19"
@@ -930,30 +879,28 @@
     {
       "parameters": {
         "content": "Connect to the created google sheet.",
-        "height": 220,
+        "height": 204,
         "width": 280,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3040,
-        1056
+        -4448,
+        912
       ],
       "id": "43d6ccf9-14fe-4a32-b8dc-910fd1d8c068",
       "name": "Sticky Note20"
     },
     {
       "parameters": {
-        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/google-drive-folder-structure.png)",
-        "height": 256,
-        "width": 432
+        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/google-drive-folder-structure.png)"
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3280,
-        1392
+        -3984,
+        1312
       ],
       "id": "f32040b1-d196-4d29-bf58-374b758071f0",
       "name": "Sticky Note5"
@@ -961,21 +908,21 @@
     {
       "parameters": {
         "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
-        "height": 192,
-        "width": 432
+        "height": 176,
+        "width": 336
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3008,
-        1072
+        -4432,
+        928
       ],
       "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
       "name": "Sticky Note21"
     },
     {
       "parameters": {
-        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n// Returns same structure as Build Attachment Profiles for compatibility\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text\n  || $json.data?.text\n  || $json['data.text']\n  || $input.item?.json?.text\n  || $input.item?.json?.data?.text\n  || '';\n\nif (!rawText.trim()) {\n  return [{\n    json: {\n      data: [{\n        error: 'No text content found',\n        text: '',\n        textForLLM: '',\n        attachmentNames: [],\n        available_keys: Object.keys($json || {})\n      }]\n    }\n  }];\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,\n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,\n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\\n- Product: ${extractedInfo.product || 'Not found'}\\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\\n\\nORIGINAL MESSAGE:\\n${textForLLM}`;\n\n// 9. Return same structure as Build Attachment Profiles\nreturn [{\n  json: {\n    data: [{\n      attachmentNames: [],\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: { text: textForLLM },\n      subject: $json.subject || $input.item?.json?.subject || 'No subject',\n      from: $json.from || $input.item?.json?.from || 'Unknown',\n      to: $json.to || $input.item?.json?.to || 'Unknown',\n      date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n      extracted: extractedInfo,\n      linkMapping: linkCounter > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: linkCounter\n      }\n    }]\n  }\n}];"
+        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n// Returns same structure as Build Attachment Profiles for compatibility\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text\n  || $json.data?.text\n  || $json['data.text']\n  || $input.item?.json?.text\n  || $input.item?.json?.data?.text\n  || '';\n\nif (!rawText.trim()) {\n  return [{\n    json: {\n      data: [{\n        error: 'No text content found',\n        text: '',\n        textForLLM: '',\n        attachmentNames: [],\n        available_keys: Object.keys($json || {})\n      }]\n    }\n  }];\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,        \n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,        \n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}`;\n\n// 9. Return same structure as Build Attachment Profiles\nreturn [{\n  json: {\n    data: [{\n      attachmentNames: [],\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: { text: textForLLM },\n      subject: $json.subject || $input.item?.json?.subject || 'No subject',\n      from: $json.from || $input.item?.json?.from || 'Unknown',\n      to: $json.to || $input.item?.json?.to || 'Unknown',\n      date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n      extracted: extractedInfo,\n      linkMapping: linkCounter > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: linkCounter\n      }\n    }]\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1146,22 +1093,22 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3600,
-        928
+        -3280,
+        1056
       ],
       "id": "e427a373-9929-4bc4-a560-7c55043e1e0a",
       "name": "craft report note"
     },
     {
       "parameters": {
-        "model": "moonshotai/kimi-k2-instruct-0905",
+        "model": "moonshotai/kimi-k2-instruct",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -3936,
-        1184
+        -4744,
+        1216
       ],
       "id": "1fa5df01-f254-4b0c-b5f2-c25097d5377a",
       "name": "any LM1",
@@ -1180,8 +1127,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3792,
-        1184
+        -4616,
+        1216
       ],
       "id": "25a31f7e-fd4b-48d3-b26e-437deb46e57f",
       "name": "Structured output"
@@ -1215,8 +1162,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3536,
-        1168
+        -4400,
+        1152
       ],
       "id": "52ca50af-d13e-490e-9d18-f1eb79ff1b19",
       "name": "input folder lookup"
@@ -1228,7 +1175,7 @@
             {
               "id": "1c259a48-b3c0-4d98-a5b0-bc81786bc978",
               "name": "file1",
-              "value": "={{ $('Get binary data').item.json.binary_files[\n  $('loop invoices').item.json['processed_attachments.data'].attachmentNames[0]\n] }}",
+              "value": "={{ $('Prepare Attachments').item.binary.file1 }}",
               "type": "binary"
             }
           ]
@@ -1238,8 +1185,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2992,
-        1296
+        -3952,
+        1152
       ],
       "id": "4746f644-6638-40c8-9d61-de801740157c",
       "name": "Get binary data2"
@@ -1263,7 +1210,7 @@
     {
       "parameters": {
         "content": "# E-Mail trigger\nNodes 1-6",
-        "height": 896,
+        "height": 608,
         "width": 448,
         "color": 7
       },
@@ -1295,33 +1242,18 @@
     {
       "parameters": {
         "content": "#  Invoices & Receipts\nNodes 23-34",
-        "height": 464,
-        "width": 1696,
+        "height": 416,
+        "width": 2128,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -4768,
-        928
+        -5248,
+        944
       ],
       "typeVersion": 1,
       "id": "155a7695-ad4c-4557-b152-b92ebe5d2d68",
       "name": "Sticky Note24"
-    },
-    {
-      "parameters": {
-        "fieldToSplitOut": "processed_attachments.data",
-        "include": "allOtherFields",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitOut",
-      "typeVersion": 1,
-      "position": [
-        -4480,
-        1200
-      ],
-      "id": "85e36b85-312c-499c-9ac7-c30fb115b39f",
-      "name": "new section"
     },
     {
       "parameters": {
@@ -1420,8 +1352,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3264,
-        976
+        -3056,
+        1152
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1459,6 +1391,12 @@
               "name": "summary_attachments",
               "value": "={{ $json.data.map(item => item.text).join('\\n---\\n') }}",
               "type": "string"
+            },
+            {
+              "id": "e885d0fb-fab0-4703-985a-44236baddfa1",
+              "name": "attachement_names",
+              "value": "={{ $('Gmail').first().binary ? Object.keys($('Gmail').first().binary) : [] }}",
+              "type": "string"
             }
           ]
         },
@@ -1472,6 +1410,65 @@
       ],
       "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
       "name": "email-info-hub"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
+              "leftValue": "={{ $('email-info-hub').item.json.attachement_names }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -5200,
+        992
+      ],
+      "id": "355f14d9-05d3-4428-9bea-824704edc7ea",
+      "name": "Has Attachments?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3504,
+        1056
+      ],
+      "id": "e58d5891-9abd-43d4-92e6-e59f76018977",
+      "name": "Await Storage Complete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('email-info-hub').item.json.processed_attachments?.data || [];\nconst gmailBinary = $('Gmail').first().binary;\n\nreturn data.map(item => {\n  const binaryKey = item.attachmentNames?.[0];\n  return {\n    json: item,\n    binary: binaryKey ? { file1: gmailBinary[binaryKey] } : {}\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4976,
+        992
+      ],
+      "id": "2ba625fe-4d0f-4f5b-bec7-fbfcd9933218",
+      "name": "Prepare Attachments"
     }
   ],
   "connections": {
@@ -1629,11 +1626,11 @@
         ]
       ]
     },
-    "prepare attachment meta": {
+    "insert doc record": {
       "main": [
         [
           {
-            "node": "new section",
+            "node": "Await Storage Complete",
             "type": "main",
             "index": 0
           }
@@ -1645,24 +1642,6 @@
         [
           {
             "node": "Loop Over Attachment Binaries",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "loop invoices": {
-      "main": [
-        [
-          {
-            "node": "craft report note",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Accountant-concierge-LM",
             "type": "main",
             "index": 0
           }
@@ -1682,7 +1661,13 @@
     },
     "save doc to folder": {
       "main": [
-        []
+        [
+          {
+            "node": "Await Storage Complete",
+            "type": "main",
+            "index": 1
+          }
+        ]
       ]
     },
     "Clean Email object": {
@@ -1745,7 +1730,7 @@
       "main": [
         [
           {
-            "node": "prepare attachment meta",
+            "node": "Has Attachments?",
             "type": "main",
             "index": 0
           }
@@ -1797,11 +1782,6 @@
             "node": "Call 'Google Drive Folder ID Lookup'",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "loop invoices",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -1811,17 +1791,6 @@
         [
           {
             "node": "save doc to folder",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "new section": {
-      "main": [
-        [
-          {
-            "node": "loop invoices",
             "type": "main",
             "index": 0
           }
@@ -1877,6 +1846,39 @@
         [
           {
             "node": "subject-classifier-LM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Attachments?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Await Storage Complete": {
+      "main": [
+        [
+          {
+            "node": "craft report note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Attachments": {
+      "main": [
+        [
+          {
+            "node": "Accountant-concierge-LM",
             "type": "main",
             "index": 0
           }
