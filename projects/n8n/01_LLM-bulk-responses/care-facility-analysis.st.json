@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "properties": {
+    "monthly_cost": {
+      "type": "integer",
+      "description": "Monthly cost in dollars (use base rate if range given)"
+    },
+    "facility_size": {
+      "type": "string",
+      "description": "Approximate size of facility"
+    },
+    "medical_services": {
+      "type": "boolean",
+      "description": "On-site nursing or medical care mentioned"
+    },
+    "specialized_dementia_care": {
+      "type": "boolean",
+      "description": "Dementia/Alzheimer's programs mentioned"
+    },
+    "staff_ratio_mentioned": {
+      "type": "boolean",
+      "description": "Staff-to-resident ratios mentioned"
+    },
+    "overall_suitability_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Overall suitability score"
+    },
+    "red_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Concerning elements"
+    }
+  },
+  "required": ["monthly_cost", "cost_range", "medical_services", "overall_suitability_score"],
+
+  "enum_values": {
+    "availability_status": ["immediate", "within_month", "1_3_months", "waiting_list", "no_availability"],
+    "cost_range": ["under_3000", "3000_4000", "4000_5000", "5000_7000", "over_7000"],
+    "facility_size": ["small", "medium", "large", "very_large"]
+  }
+}

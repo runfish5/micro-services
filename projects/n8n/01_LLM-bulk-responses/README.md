@@ -1,6 +1,6 @@
 # Bulk Data Processing Workflow
 
-Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
+Process hundreds of rows automatically instead of manual repetition. Eliminates copy-pasting data rows for analysis one by one.
 
 **Video Tutorial:** [Watch](https://www.youtube.com/watch?v=qR_nJLv_Z9g) ![views](https://img.shields.io/youtube/views/qR_nJLv_Z9g?style=flat&label=)
 
@@ -18,7 +18,9 @@ Eliminates copy-pasting data rows for analysis one by one. Process hundreds of r
 
 ## 🌟 Use Cases
 
-**Out-of-the-box:** Sorting items, pulling out key info, processing lists
+**Out-of-the-box:** Pulling out key info from care facility emails (costs, services, red flags, suitability scores)
+
+**Alternatives:** Product descriptions, review sentiment, lead qualification, content tagging
 
 ## What it does
 

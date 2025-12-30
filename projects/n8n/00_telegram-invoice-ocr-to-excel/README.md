@@ -18,6 +18,8 @@ Send invoice photos via Telegram, get structured data in Google Sheets automatic
 
 **Out-of-the-box:** Invoices, receipts (via Telegram photo)
 
+**Alternatives:** Business cards, handwritten notes, menus, price tags
+
 ## What it does
 
 **📸 Send** → Snap a photo, send via Telegram

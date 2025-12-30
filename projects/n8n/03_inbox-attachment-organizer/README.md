@@ -22,6 +22,8 @@ Automatically process email attachments (images, PDFs, documents), understand co
 
 **Out-of-the-box:** Financial documents (invoices, receipts)
 
+**Alternatives:** School materials, work reports, client contracts
+
 ## What it does
 
 **📧 Trigger** → Gmail receives email with attachment

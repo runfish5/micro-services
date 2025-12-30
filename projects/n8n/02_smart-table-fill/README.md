@@ -16,7 +16,9 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 ## 🌟 Use Cases
 
-**Out-of-the-box:** Notes, emails, any text to structured table rows
+**Out-of-the-box:** CRM entries from recurring client emails
+
+**Alternatives:** Survey answers, contact form submissions, job applications, quote requests
 
 ## What it does
 
