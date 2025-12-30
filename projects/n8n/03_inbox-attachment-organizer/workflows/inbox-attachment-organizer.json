@@ -757,21 +757,6 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "combineBy": "combineByPosition",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        -4000,
-        672
-      ],
-      "id": "3f0df553-6420-4610-b9c3-1b250551b79b",
-      "name": "Merge"
-    },
-    {
-      "parameters": {
         "inputSource": "passthrough"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -815,7 +800,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/05_May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, verifies sender whitelist and extracts structured data\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -935,21 +920,6 @@
     },
     {
       "parameters": {
-        "options": {
-          "reset": false
-        }
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        -4480,
-        672
-      ],
-      "id": "26b6b5aa-6bb3-43b1-ad0c-310d3a928b09",
-      "name": "Loop Over Attachment Binaries"
-    },
-    {
-      "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "GtcLjBMusAUB0h30",
@@ -996,6 +966,7 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": true
         },
+        "mode": "each",
         "options": {
           "waitForSubWorkflow": true
         }
@@ -1101,7 +1072,7 @@
     },
     {
       "parameters": {
-        "model": "moonshotai/kimi-k2-instruct",
+        "model": "openai/gpt-oss-120b",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
@@ -1552,7 +1523,7 @@
       "main": [
         [
           {
-            "node": "Loop Over Attachment Binaries",
+            "node": "Create Attachment Profile",
             "type": "main",
             "index": 0
           }
@@ -1618,17 +1589,6 @@
         ]
       ]
     },
-    "Merge": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Attachment Binaries",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "When Executed by Another Workflow": {
       "main": [
         [
@@ -1662,34 +1622,11 @@
         ]
       ]
     },
-    "Loop Over Attachment Binaries": {
-      "main": [
-        [
-          {
-            "node": "Clean Email object",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Create Attachment Profile",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Merge",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
     "Create Attachment Profile": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Clean Email object",
             "type": "main",
             "index": 0
           }
@@ -1856,32 +1793,7 @@
       ]
     }
   },
-  "pinData": {
-    "Create Attachment Profile": [
-      {
-        "data": {
-          "numpages": 1,
-          "numrender": 1,
-          "info": {
-            "PDFFormatVersion": "1.4",
-            "Language": null,
-            "EncryptFilterName": null,
-            "IsLinearized": false,
-            "IsAcroFormPresent": false,
-            "IsXFAPresent": false,
-            "IsCollectionPresent": false,
-            "IsSignaturesPresent": false,
-            "Creator": "",
-            "Producer": "",
-            "CreationDate": "D:20251115152143+00'00'",
-            "ModDate": "D:20251115152143+00'00'"
-          },
-          "text": "Page 1 of 1\nReceipt\nInvoice number LAFHCRRE\u00000006\nDate paid November 15, 2025\nAnthropic, PBC\n548 Market Street\nPMB 90375\nSan Francisco, California 94104\nUnited States\nsupport@anthropic.com\nBill to\nuniqued4ve@gmail.com's Organization\nPaulstrasse 19\nDavid Streuli\nCH\u00008400 Winterthur\nSwitzerland\nuniqued4ve@gmail.com\n$21.62 paid on November 15, 2025\nWhile we prefer electronic payment methods,\nany checks must be sent to the address below, NOT to our San Francisco office.\n----------------------------\nPAYMENT ADDRESS\u0000\nAnthropic, PBC\nP.O. Box 104477\nPasadena, CA 91189\u00004477\nDescription Qty \nUnit price \nTax \nAmount\nClaude Pro\nNov 15 – Dec 15, 2025\n1 $20.00 8.1% $20.00\nSubtotal $20.00\nTotal excluding tax $20.00\nVAT - Switzerland \u00008.1% on $20.00\u0000 $1.62\nTotal $21.62\nAmount paid $21.62\nPayment history\nPayment method Date Amount paid Receipt number\nLink November 15, 2025 $21.62 2758\u00004696\u0000\n7987",
-          "version": "5.3.31"
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
