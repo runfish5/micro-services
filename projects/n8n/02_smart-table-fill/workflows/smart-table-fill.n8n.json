@@ -27,6 +27,24 @@
               "name": "BatchSize",
               "value": 6,
               "type": "number"
+            },
+            {
+              "id": "a1b2c3d4-1111-2222-3333-444455556666",
+              "name": "SpreadsheetId",
+              "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-5555-6666-7777-888899990000",
+              "name": "DataSheetName",
+              "value": "Entries",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-aaaa-bbbb-cccc-ddddeeeeffff",
+              "name": "SchemaSheetName",
+              "value": "Description_hig7f6",
+              "type": "string"
             }
           ]
         },
@@ -35,43 +53,298 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1136,
-        -128
+        1552,
+        1360
       ],
-      "id": "eb58f2a6-8cd7-47a0-97ee-dc1b24ac813e",
+      "id": "a5a8f031-8f78-41c6-94dd-b1e30d6ca957",
       "name": "String Input"
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}/values/{{ encodeURIComponent($('String Input').first().json.DataSheetName) }}!1:1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "eabba3aa-4467-4b4b-bbaa-58c2d683691d",
+      "name": "Fetch Data Sheet Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1776,
+        1360
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
     },
     {
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
-          "mode": "list",
-          "cachedResultName": "PCRM_root_TestObject",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ/edit?usp=drivesdk"
+          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
+          "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": 565521761,
-          "mode": "list",
-          "cachedResultName": "Description",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ/edit#gid=565521761"
+          "value": "={{ $('String Input').first().json.SchemaSheetName }}",
+          "mode": "name"
         },
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "specifyRange"
-            }
-          }
+        "options": {}
+      },
+      "id": "f6ddf6bb-5bec-4c74-8c4d-4fb10ccde34b",
+      "name": "Try Fetch Schema Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2000,
+        1360
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
         }
       },
-      "id": "48c4d8da-41b2-4739-8263-b6ba7ed32953",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "schema-exists-condition",
+              "leftValue": "={{ $json.ColumnName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e96beba7-78e9-4417-aeb3-473610dc4fc2",
+      "name": "IF: Schema Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.SchemaSheetName }}\"\n      }\n    }\n  }]\n}",
+        "options": {}
+      },
+      "id": "46fe86c4-5dd4-433b-b659-5cfd50017a8f",
+      "name": "HTTP: Create Sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1616
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
+      },
+      "id": "e21cc0b6-0f49-4ac6-beb0-4a80a374d9d3",
+      "name": "Prep Columns for LLM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $json.columns }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "f95afa1a-2bab-44f1-84a4-702c5a85610b",
+      "name": "LLM: Generate Schema",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1792,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
+      },
+      "id": "e9515759-4db9-4388-8636-01d668ce5340",
+      "name": "Schema Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "id": "fd913b99-c8ac-4b70-94b4-a5ede799f966",
+      "name": "Schema LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        1840
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
+      },
+      "id": "c14cf4cd-0179-4063-9ef7-27d1309c2269",
+      "name": "Split Schema Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.SchemaSheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ColumnName": "={{ $json.ColumnName }}",
+            "Type": "={{ $json.Type }}",
+            "Description": "={{ $json.Description }}",
+            "Classes": "={{ $json.Classes }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ColumnName",
+              "displayName": "ColumnName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Classes",
+              "displayName": "Classes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2284a88d-8491-417d-abbb-a296a6aca4ca",
+      "name": "Append Schema to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2224,
+        1616
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.SchemaSheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "cc7ab14b-317e-4293-bca3-15fc9525a598",
       "name": "Fetch Headers",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1360,
-        -128
+        2560,
+        1344
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -90,10 +363,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1136,
-        80
+        2592,
+        1616
       ],
-      "id": "ee74abbe-2bb4-4029-a231-f4f5e991a31a",
+      "id": "91b8fcfc-662c-455f-ae53-f5b734f33860",
       "name": "Extract Data from String",
       "alwaysOutputData": false
     },
@@ -105,10 +378,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1280,
-        304
+        2736,
+        1840
       ],
-      "id": "ef2d3465-8941-426e-8906-b8850dfb0141",
+      "id": "ab61eb4e-fd7b-4390-81e9-a03c9859ed6b",
       "name": "Dynamic Output Parser"
     },
     {
@@ -119,10 +392,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        1152,
-        304
+        2608,
+        1840
       ],
-      "id": "13a75bd4-4fa7-4002-a0e9-3a0cf804c56c",
+      "id": "b822ab80-3760-41b4-889a-1ab3b209e50d",
       "name": "LLM Processor",
       "credentials": {
         "groqApi": {
@@ -136,23 +409,23 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        912,
-        48
+        1344,
+        1360
       ],
-      "id": "f3d3ff97-3d03-42a0-912b-baad5aee532a",
+      "id": "91e59217-1dd5-412f-8ede-4b095d52ac23",
       "name": "Manual Trigger"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.BatchSize;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.class\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
+        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.BatchSize;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1584,
-        -128
+        2784,
+        1344
       ],
-      "id": "c1c29904-ef1a-4ee8-9e97-6c19c6a94dd6",
+      "id": "4a21c71b-d54f-41aa-b4b4-f0e46a4cf1b2",
       "name": "Code"
     },
     {
@@ -160,17 +433,13 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
-          "mode": "list",
-          "cachedResultName": "PCRM_root_TestObject",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ/edit?usp=drivesdk"
+          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
+          "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Entries",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ/edit#gid=0"
+          "value": "={{ $('String Input').first().json.DataSheetName }}",
+          "mode": "name"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -190,237 +459,6 @@
               "type": "string",
               "canBeUsedToMatch": true,
               "removed": false
-            },
-            {
-              "id": "email",
-              "displayName": "email",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "last_topic",
-              "displayName": "last_topic",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "last_being_contacted",
-              "displayName": "last_being_contacted",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "last_contacted",
-              "displayName": "last_contacted",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "association",
-              "displayName": "association",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "groups",
-              "displayName": "groups",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "customer_id",
-              "displayName": "customer_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "goal_contact_frequency",
-              "displayName": "goal_contact_frequency",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "current_job",
-              "displayName": "current_job",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "birthday",
-              "displayName": "birthday",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "works_at",
-              "displayName": "works_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Interests_n_Expertise",
-              "displayName": "Interests_n_Expertise",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "address",
-              "displayName": "address",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "customer_created_at",
-              "displayName": "customer_created_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "customer_updated_at",
-              "displayName": "customer_updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "notes",
-              "displayName": "notes",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "output",
-              "displayName": "output",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "item",
-              "displayName": "item",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "input",
-              "displayName": "input",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "name_source",
-              "displayName": "name_source",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "row_number",
-              "displayName": "row_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "readOnly": true,
-              "removed": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -428,13 +466,13 @@
         },
         "options": {}
       },
-      "id": "9872674f-a962-4f95-b446-7d2c225e1738",
+      "id": "6bcbb13a-3841-4785-9282-43998b56f920",
       "name": "Write_Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1712,
-        80
+        3168,
+        1616
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -450,10 +488,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1488,
-        80
+        2944,
+        1616
       ],
-      "id": "1047f9f8-a44c-4eff-b308-2f3b1afbcb93",
+      "id": "11cb38ec-41d8-474d-b2de-018449102a18",
       "name": "Code1"
     },
     {
@@ -463,30 +501,177 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        912,
-        -128
+        1344,
+        1168
       ],
-      "id": "57081902-ef34-4f2b-84d9-11a0d9f6ce81",
+      "id": "e572f6d1-5446-47cb-b3ba-d7b50f471d61",
       "name": "When Executed by Another Workflow"
     },
     {
       "parameters": {
-        "content": "  \n\n\n\n\n\n\n\n\n\n\n\n\n\nToggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found) ",
-        "height": 288,
-        "width": 224
+        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
+        "height": 296,
+        "width": 452
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1648,
-        64
+        800,
+        1152
       ],
-      "id": "0b1f445a-a94c-444a-983e-9a7bd74c6194",
+      "id": "bd821957-9aab-4bfd-83df-9cb9c58482fa",
+      "name": "Sticky Note - Schema Info"
+    },
+    {
+      "parameters": {
+        "content": "## If workflow stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
+        "height": 332,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1904,
+        1184
+      ],
+      "id": "8bc89b5a-d0a2-44b0-af81-0d3b5709c3d3",
+      "name": "Sticky Note - Troubleshoot"
+    },
+    {
+      "parameters": {
+        "content": "Toggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
+        "height": 288,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3088,
+        1488
+      ],
+      "id": "7d799cc7-551e-419e-86c5-ba9ccbdfc5d8",
       "name": "Sticky Note1"
     }
   ],
   "connections": {
     "String Input": {
+      "main": [
+        [
+          {
+            "node": "Fetch Data Sheet Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Data Sheet Headers": {
+      "main": [
+        [
+          {
+            "node": "Try Fetch Schema Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Try Fetch Schema Sheet": {
+      "main": [
+        [
+          {
+            "node": "IF: Schema Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Schema Exists?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Headers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Create Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Create Sheet": {
+      "main": [
+        [
+          {
+            "node": "Prep Columns for LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Columns for LLM": {
+      "main": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Generate Schema": {
+      "main": [
+        [
+          {
+            "node": "Split Schema Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Schema Rows": {
+      "main": [
+        [
+          {
+            "node": "Append Schema to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Schema to Sheet": {
       "main": [
         [
           {
@@ -563,11 +748,6 @@
         ]
       ]
     },
-    "Write_Excel": {
-      "main": [
-        []
-      ]
-    },
     "Code1": {
       "main": [
         [
@@ -591,14 +771,7 @@
       ]
     }
   },
-  "pinData": {
-    "When Executed by Another Workflow": [
-      {
-        "TextObject_User": "",
-        "MatchValue": ""
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
   }
