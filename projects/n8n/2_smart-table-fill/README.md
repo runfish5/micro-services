@@ -2,9 +2,32 @@
 
 Extract structured data from unstructured text into any Google Sheets table — zero schema configuration required.
 
-**Perfect for:** Converting notes, emails, or any text into structured table rows automatically.
+## Workflow Preview
+
+<p align="center">
+  <img src="assets/cover.png" alt="Workflow Preview">
+</p>
+
+📝 Any text input
+🔍 Auto-discovers table schema
+📊 Fills structured rows
 
 ---
+
+## 🌟 Use Cases
+
+**Out-of-the-box:** Notes, emails, any text to structured table rows
+
+## What it does
+
+**📝 Input** → Paste unstructured text (notes, emails, etc.)
+**🔍 Discover** → Reads your table's column headers automatically
+**🧠 Extract** → LLM structures data to match your schema
+**📊 Store** → Updates the matching row in Google Sheets
+
+## Who it's for
+
+Anyone converting unstructured notes into structured data — sales teams logging calls, researchers organizing notes, anyone with a messy inbox.
 
 ## 🎯 Two Setup Modes
 
@@ -19,8 +42,10 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 ## ⚡ Quick Start
 - [setup-guide.md](docs/setup-guide.md)
+- [credentials-guide.md](../credentials-guide.md)
 
 ## 📦 Requirements
 
-- Google Sheets OAuth
-- LLM: Groq (free)
+- n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
+- Google Sheets
+- Chat model (Groq — free)

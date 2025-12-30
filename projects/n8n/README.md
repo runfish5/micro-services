@@ -6,10 +6,9 @@ Batch LLM processing, email attachment organization, invoice OCR, structured out
 
 ## Projects
 
-**[LLM-bulk-responses](1_LLM-bulk-responses)** — Process hundreds of spreadsheet rows through an LLM. Structured JSON output.
-
-**[inbox-attachment-organizer](3_inbox-attachment-organizer)** — AI classifies email attachments, files to Google Drive folders.
-
-**[smart-table-fill](2_smart-table-fill)** — Text in, structured data out. Dynamic schema extraction.
-
-**[telegram-invoice-ocr](0_telegram-invoice-ocr-to-excel)** — Photo → Telegram bot → Google Sheets.
+| | Project | Description |
+|---|---------|-------------|
+| 📸 | [telegram-invoice-ocr](0_telegram-invoice-ocr-to-excel) | Photo → Telegram bot → Google Sheets |
+| 🔄 | [LLM-bulk-responses](1_LLM-bulk-responses) | Batch process spreadsheet rows with AI |
+| 📝 | [smart-table-fill](2_smart-table-fill) | Text in, structured data out |
+| 📧 | [inbox-attachment-organizer](3_inbox-attachment-organizer) | Email attachments → AI → Google Drive |

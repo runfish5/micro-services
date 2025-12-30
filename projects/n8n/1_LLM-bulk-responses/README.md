@@ -1,5 +1,7 @@
 # Bulk Data Processing Workflow
 
+Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
+
 **Video Tutorial:** [Watch](https://www.youtube.com/watch?v=qR_nJLv_Z9g) ![views](https://img.shields.io/youtube/views/qR_nJLv_Z9g?style=flat&label=)
 
 <p align="center">
@@ -8,16 +10,21 @@
   </a>
 </p>
 
-Eliminates copy-pasting data rows for analysis one by one. Process hundreds of rows automatically instead of manual repetition.
-
----
-
-## What it does
-
 🔄 Batch process rows
 📂 Categorize content
 🔍 Extract data
-🔗 Combine sources
+
+---
+
+## 🌟 Use Cases
+
+**Out-of-the-box:** Sorting items, pulling out key info, processing lists
+
+## What it does
+
+**📥 Load** → Pull rows from Google Sheets, CSV, or any data source
+**🧠 Process** → LLM analyzes each row with your prompt
+**📤 Output** → Structured results back to your spreadsheet
 
 ## Who it's for
 
@@ -35,9 +42,14 @@ See `.st.json` files for JSON Schema examples.
 
 ## ⚡ Quick Start
 - [setup-guide.md](docs/setup-guide.md)
+- [credentials-guide.md](../credentials-guide.md)
 
 ## 📦 Requirements
 
 - n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
-- Data source (Google Sheets, CSV, etc.)
-- LLM access (Groq free tier, OpenAI, Claude, etc.)
+- Google Sheet with your data in a column (one item per row)
+- Chat model (Groq, Gemini — both free)
+
+## 🔗 Links
+
+- [Video Tutorial](https://www.youtube.com/watch?v=qR_nJLv_Z9g)
