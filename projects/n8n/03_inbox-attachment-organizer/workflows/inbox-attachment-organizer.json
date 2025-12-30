@@ -19,10 +19,10 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -5200,
-        400
+        -5072,
+        1264
       ],
-      "id": "12f5de96-7448-4f61-9972-3cb2ad3db46d",
+      "id": "ea5147ab-cef3-4997-8b89-f9de63b5aabd",
       "name": "Gmail Trigger",
       "credentials": {
         "gmailOAuth2": {
@@ -44,10 +44,10 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -5200,
-        768
+        -5072,
+        1632
       ],
-      "id": "94d5718a-f954-4c26-a6ba-5efb2d8ab533",
+      "id": "0b74cd47-24a4-4d98-b3c6-95308985eef1",
       "name": "Gmail",
       "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
       "credentials": {
@@ -72,13 +72,13 @@
         "includeOtherFields": true,
         "options": {}
       },
-      "id": "88317ede-1315-4625-ad6a-74be84ee5513",
+      "id": "d3e02740-bd18-45b8-9be1-0b4ba87ad519",
       "name": "Set File ID",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4976,
-        576
+        -4848,
+        1440
       ]
     },
     {
@@ -105,10 +105,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4976,
-        768
+        -4848,
+        1632
       ],
-      "id": "978606c1-bbe9-41d6-82b2-f96ad04bff6e",
+      "id": "663f1afd-087a-430c-bd09-a28228f881d5",
       "name": "Get binary data"
     },
     {
@@ -122,10 +122,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2992,
-        960
+        -3120,
+        1824
       ],
-      "id": "b93328d6-d6ab-4831-b9eb-31bdb4325c75",
+      "id": "2fc49326-652b-4674-b3d8-800653d7e91a",
       "name": "Telegram & done",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
@@ -166,10 +166,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -4976,
-        400
+        -4848,
+        1264
       ],
-      "id": "6b7058be-a43e-4a2d-8a3e-342a6611cec5",
+      "id": "05b945f4-50fd-4efd-9488-9c4fc31e7776",
       "name": "Stop promotions"
     },
     {
@@ -206,10 +206,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3424,
-        560
+        -3552,
+        1424
       ],
-      "id": "eb86b6a1-000b-45d4-88c8-82eaca73b867",
+      "id": "7164fdc1-9e5c-43e7-a8fa-ea356e0f66ed",
       "name": "financial doc router",
       "disabled": true
     },
@@ -242,10 +242,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -4704,
-        448
+        -4576,
+        1360
       ],
-      "id": "579a7d40-f08d-4dd8-9618-95e7264f14b4",
+      "id": "c50b5726-d2be-4212-b73a-cb128abf1e87",
       "name": "Empty?"
     },
     {
@@ -259,10 +259,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2992,
-        640
+        -3120,
+        1504
       ],
-      "id": "dbbcaedb-8615-4de9-ae51-54bb14b0bfda",
+      "id": "22527da8-d851-4293-aac0-aacce3c5335a",
       "name": "notify rejection",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
@@ -333,10 +333,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -4176,
-        1152
+        -4048,
+        2000
       ],
-      "id": "6db79504-d105-47b1-854c-0a8096451f40",
+      "id": "de62cc59-d230-49a8-967b-74edf75046b0",
       "name": "Call 'Google Drive Folder ID Lookup'",
       "notes": "Set this as debugging folder destination: `\"/Accounting/2025/11_November/Expense\"`"
     },
@@ -352,10 +352,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4704,
-        672
+        -4352,
+        1536
       ],
-      "id": "93d1354e-67e7-4b56-be62-a6e9caccd5f0",
+      "id": "5f29f1ac-6b56-4c64-b892-55784763a826",
       "name": "sp"
     },
     {
@@ -366,10 +366,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3424,
-        752
+        -3552,
+        1616
       ],
-      "id": "a5b1dfd9-c6da-486d-beda-c664e88d79bd",
+      "id": "c8881149-bb5c-458e-8bb4-f24b398fcbce",
       "name": "user_email_whitelist"
     },
     {
@@ -389,10 +389,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -3776,
-        496
+        -3904,
+        1360
       ],
-      "id": "39d4afb7-c612-49b2-b099-02f819e31812",
+      "id": "f5436fb0-43ab-4eee-8702-4d28cace9c4c",
       "name": "subject-classifier-LM",
       "retryOnFail": true,
       "maxTries": 2
@@ -414,10 +414,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -4752,
-        992
+        -4624,
+        1824
       ],
-      "id": "fe1b17b6-7544-49d1-8237-d4fd3fa5070e",
+      "id": "e05379c4-e445-4645-b517-9b6980d0e581",
       "name": "Accountant-concierge-LM",
       "retryOnFail": true,
       "maxTries": 4
@@ -743,10 +743,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -4400,
-        960
+        -3952,
+        1824
       ],
-      "id": "21d038a1-2970-455a-be3a-88bcef506917",
+      "id": "e13bc4b3-aeb3-4a08-9bf4-5a18e664504f",
       "name": "insert doc record",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -762,10 +762,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -5200,
-        576
+        -5072,
+        1440
       ],
-      "id": "6e8051ea-5137-4bcd-bc9e-572800a93066",
+      "id": "ead491ac-3396-4d17-89a9-442ff948ea7a",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -786,10 +786,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -3728,
-        1152
+        -3632,
+        2000
       ],
-      "id": "b1db0433-988a-4d90-b22a-607bef5d8316",
+      "id": "8020f2ce-db33-41c0-98dd-59c222071a7f",
       "name": "save doc to folder",
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -806,11 +806,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5808,
-        288
+        -5680,
+        1152
       ],
       "typeVersion": 1,
-      "id": "1d732fd0-64cf-43fc-bd6c-74142ba1bfe1",
+      "id": "dc5fbf41-617f-4bb8-8160-733c2bd01958",
       "name": "Sticky Note13"
     },
     {
@@ -823,10 +823,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3632,
-        752
+        -3760,
+        1616
       ],
-      "id": "1d318047-1492-43d1-b001-5033cc2caf42",
+      "id": "599b5ae4-a9eb-4ecb-bd71-978e05a6f728",
       "name": "Sticky Note17"
     },
     {
@@ -839,10 +839,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3056,
-        624
+        -3184,
+        1488
       ],
-      "id": "ccb93ee3-2836-4962-ace7-653ed4e6d42b",
+      "id": "2994c448-5b8b-4bdf-835e-c0c75eed5049",
       "name": "Sticky Note18"
     },
     {
@@ -855,10 +855,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4448,
-        1136
+        -4320,
+        2000
       ],
-      "id": "0b5c7ac9-633a-4e9d-80bc-827e99ce8c97",
+      "id": "18e62520-e9be-40c2-af92-bd9ee4fd5c4a",
       "name": "Sticky Note19"
     },
     {
@@ -871,10 +871,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4448,
-        912
+        -4048,
+        1776
       ],
-      "id": "43d6ccf9-14fe-4a32-b8dc-910fd1d8c068",
+      "id": "dc62ed16-0f9b-47b0-9b9c-b305c8cca6e2",
       "name": "Sticky Note20"
     },
     {
@@ -884,10 +884,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3984,
-        1312
+        -3856,
+        2176
       ],
-      "id": "f32040b1-d196-4d29-bf58-374b758071f0",
+      "id": "418244f4-9bae-45b9-9c95-4f1a51d1c1e5",
       "name": "Sticky Note5"
     },
     {
@@ -899,10 +899,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4432,
-        928
+        -4112,
+        1776
       ],
-      "id": "3ef6f9fb-e129-4bf1-b22c-434670cacb3a",
+      "id": "e4fb79d3-3b34-46e7-aa69-92278bd36210",
       "name": "Sticky Note21"
     },
     {
@@ -912,10 +912,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4224,
-        432
+        -4352,
+        1360
       ],
-      "id": "e14c0350-b14b-4e0d-a15a-6e4cc6fca46e",
+      "id": "9e3a929c-8228-46fd-b551-a764a098d594",
       "name": "Clean Email object"
     },
     {
@@ -974,10 +974,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -4224,
-        672
+        -4128,
+        1536
       ],
-      "id": "1db5d433-e586-44f8-af0e-0163fa91333f",
+      "id": "bf503e7b-f0c8-452e-81ff-6b687f32250e",
       "name": "Create Attachment Profile",
       "alwaysOutputData": true
     },
@@ -989,10 +989,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3632,
-        608
+        -3760,
+        1472
       ],
-      "id": "d61cc3b7-cd9a-45c0-a209-707abe7106b8",
+      "id": "e882c09a-c432-4f07-8115-2e407bb83355",
       "name": "output profile"
     },
     {
@@ -1001,10 +1001,10 @@
       "name": "Trigger non-spam lineage",
       "typeVersion": 1,
       "position": [
-        -3216,
-        336
+        -3344,
+        1200
       ],
-      "id": "8002d4a6-926f-4357-8b50-d2f813d8aea0"
+      "id": "9545684a-72f8-4dc2-9f81-2bdaf774f0ab"
     },
     {
       "parameters": {
@@ -1041,10 +1041,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3216,
-        736
+        -3344,
+        1600
       ],
-      "id": "facde472-f1fc-4906-9006-f66d9eeadfec",
+      "id": "70d4c8d7-9242-4c51-8090-3ec1774491c2",
       "name": "whitelist validator"
     },
     {
@@ -1064,10 +1064,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3280,
-        1056
+        -3408,
+        1824
       ],
-      "id": "e427a373-9929-4bc4-a560-7c55043e1e0a",
+      "id": "e5028514-c73e-4d28-929d-a74cb6e322d7",
       "name": "craft report note"
     },
     {
@@ -1078,10 +1078,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -4744,
-        1216
+        -4624,
+        2000
       ],
-      "id": "1fa5df01-f254-4b0c-b5f2-c25097d5377a",
+      "id": "bb5bf8d6-f781-412b-b515-fb01d7b30c10",
       "name": "any LM1",
       "credentials": {
         "groqApi": {
@@ -1098,10 +1098,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -4616,
-        1216
+        -4480,
+        2000
       ],
-      "id": "25a31f7e-fd4b-48d3-b26e-437deb46e57f",
+      "id": "6e605e66-1522-4b78-83f2-0304b5872aa4",
       "name": "Structured output"
     },
     {
@@ -1133,10 +1133,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4400,
-        1152
+        -4272,
+        2000
       ],
-      "id": "52ca50af-d13e-490e-9d18-f1eb79ff1b19",
+      "id": "44ff2ef8-536f-442d-8696-40f84828f6ae",
       "name": "input folder lookup"
     },
     {
@@ -1156,26 +1156,26 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3952,
-        1152
+        -3856,
+        2000
       ],
-      "id": "4746f644-6638-40c8-9d61-de801740157c",
+      "id": "f528ced0-7626-43b6-bf13-e81493cc0008",
       "name": "Get binary data2"
     },
     {
       "parameters": {
         "content": "# attachment processer\nNodes 7-13",
         "height": 608,
-        "width": 928,
+        "width": 672,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -4768,
-        288
+        -4640,
+        1152
       ],
       "typeVersion": 1,
-      "id": "8db79f1b-c3b3-45d9-acb3-d1dbf5549478",
+      "id": "b248a0d5-920d-4ffb-bd05-69c35cf36bf2",
       "name": "Sticky Note"
     },
     {
@@ -1187,11 +1187,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5248,
-        288
+        -5120,
+        1152
       ],
       "typeVersion": 1,
-      "id": "aba2bb55-a19c-423a-91b7-d6b3b498452f",
+      "id": "5ae0c5e4-b1ca-422e-a782-d7f912ad2092",
       "name": "Sticky Note22"
     },
     {
@@ -1203,27 +1203,27 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3808,
-        288
+        -3936,
+        1152
       ],
       "typeVersion": 1,
-      "id": "d7bf3e74-ebba-434b-97e5-5fa4106b62ec",
+      "id": "ff97a6c7-7421-4490-9707-dd1e9e94877c",
       "name": "Sticky Note23"
     },
     {
       "parameters": {
         "content": "#  Invoices & Receipts\nNodes 22-33",
         "height": 416,
-        "width": 2128,
+        "width": 1904,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5248,
-        944
+        -5120,
+        1792
       ],
       "typeVersion": 1,
-      "id": "155a7695-ad4c-4557-b152-b92ebe5d2d68",
+      "id": "82b755d3-bd19-4ed4-89e7-823fdc1380b4",
       "name": "Sticky Note24"
     },
     {
@@ -1260,10 +1260,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3424,
-        336
+        -3552,
+        1200
       ],
-      "id": "71ce604f-05ed-449d-b2df-026214ff69fa",
+      "id": "d705905c-07c0-4d49-a893-3f99500ce74e",
       "name": "appointment router"
     },
     {
@@ -1274,13 +1274,13 @@
           "Label_82"
         ]
       },
-      "id": "2962de2b-4c57-4936-add7-786a561d71ac",
+      "id": "48c2b472-8334-40a4-948e-946f246f6b3a",
       "name": "Tag Mail with 'n8n'",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3216,
-        496
+        -3344,
+        1360
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1298,10 +1298,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -3776,
-        608
+        -3904,
+        1472
       ],
-      "id": "5ba47fe9-262a-48a5-b7ea-f32c374f2dc6",
+      "id": "ee74d6d2-d451-428f-9a92-912c60176939",
       "name": "Any LM",
       "credentials": {
         "groqApi": {
@@ -1318,13 +1318,13 @@
           "Label_83"
         ]
       },
-      "id": "92b1d54d-487b-4a24-bd96-24d0f7eaf145",
+      "id": "8da54600-47b6-406f-848d-ba1af7110d2e",
       "name": "Mark as Processed1",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3056,
-        1152
+        -3184,
+        2016
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1357,10 +1357,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4000,
-        496
+        -4128,
+        1360
       ],
-      "id": "d5afd2dd-0765-47fe-b296-ad50efb29abd",
+      "id": "c91f07e2-8f2b-4f51-95a2-d0bd819d78bb",
       "name": "email-info-hub"
     },
     {
@@ -1392,10 +1392,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -5200,
-        992
+        -5072,
+        1888
       ],
-      "id": "355f14d9-05d3-4428-9bea-824704edc7ea",
+      "id": "4bc843e4-8b07-4762-bae9-586fc3f74143",
       "name": "Has Attachments?"
     },
     {
@@ -1403,10 +1403,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -3504,
-        1056
+        -3632,
+        1824
       ],
-      "id": "e58d5891-9abd-43d4-92e6-e59f76018977",
+      "id": "4359aed6-d8f6-4558-98a2-74e6a681e648",
       "name": "Await Storage Complete"
     },
     {
@@ -1416,10 +1416,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -5008,
-        992
+        -4864,
+        1872
       ],
-      "id": "2ba625fe-4d0f-4f5b-bec7-fbfcd9933218",
+      "id": "545e0711-796a-4ef2-b3ea-295a82d5da5c",
       "name": "Prepare Attachments"
     }
   ],
