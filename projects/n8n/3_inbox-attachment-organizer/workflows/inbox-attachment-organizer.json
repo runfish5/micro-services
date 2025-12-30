@@ -375,7 +375,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=**document TEXT INPUT:**  \n{{ $('Gmail').first().json.text }}\n---{{ $json.processed_attachments.data[0] }}\n** Attachements content**\n{{ $json.summary_attachments }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
+        "text": "=**document TEXT INPUT:**  \n{{ $json.cleaned_email.data[0].emailBodyTextForLLM }}\n---\n** Attachements content**\n{{ $json.cleaned_email.data[0].attachmentsTextForLLM }}\n\n\n** Company profile context **\n\nJust regular SaaS business.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -400,7 +400,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=  <parsed-document-content>\n  {{ $json.textForLLM }}\n  </parsed-document-content>\n\n  Classify this document and extract all available data.",
+        "text": "=<parsed-document-content>\n{{ $json.attachmentTextForLLM }}\n</parsed-document-content>\n\nClassify this document and extract all available data.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -922,13 +922,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Fast Email Cleaner for n8n\n// Optimized for large marketing emails\n// Returns same structure as Build Attachment Profiles for compatibility\n\n// 1. Get raw text (check all paths)\nconst rawText = $json.text\n  || $json.data?.text\n  || $json['data.text']\n  || $input.item?.json?.text\n  || $input.item?.json?.data?.text\n  || '';\n\nif (!rawText.trim()) {\n  return [{\n    json: {\n      data: [{\n        error: 'No text content found',\n        text: '',\n        textForLLM: '',\n        attachmentNames: [],\n        available_keys: Object.keys($json || {})\n      }]\n    }\n  }];\n}\n\n// 2. Single-pass character cleanup (no normalize)\nlet text = rawText\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000­͏‌]+/g, ' ');\n\n// 3. Extract URLs ONCE, replace ALL in single pass\nconst urlMap = {};\nlet linkCounter = 0;\n\ntext = text\n  .replace(/\\[?https?:\\/\\/[^\\s\\[\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s\\[\\]]*\\]?/gi, ' ')\n  .replace(/https?:\\/\\/[^\\s\\[\\]()<>]+/gi, (url) => {\n    for (const [id, existingUrl] of Object.entries(urlMap)) {\n      if (existingUrl === url) return id;\n    }\n    const linkId = `[Link${++linkCounter}]`;\n    urlMap[linkId] = url;\n    return linkId;\n  });\n\n// 4. Final text cleanup\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\s+([.,;!?])/g, '$1')\n  .replace(/\\[\\s*\\]/g, '')\n  .trim();\n\n// 5. Simple paragraph formatting\ntext = text\n  .split(/(?<=[.!?])\\s+(?=[A-Z])/)\n  .map(p => p.trim())\n  .filter(p => p.length > 0)\n  .join('\\n\\n');\n\n// 6. Extract key info\nconst extractedInfo = {\n  orderNumber: (text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i) || [])[1] || null,        \n  trackingNumber: null,\n  product: (text.match(/tomtoc[^,\\n]{0,80}/i) || [''])[0].trim() || null,\n  deliveryAddress: (text.match(/Lieferadresse\\s*([^[\\n]{0,200})/i) || [])[1]?.trim() || null,        \n  dates: text.match(/\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}/g) || []\n};\n\nconst numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\nextractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null;\n\n// 7. LLM-ready version\nconst textForLLM = text.replace(/\\[Link\\d+\\]/g, '').replace(/\\s+/g, ' ').trim();\n\n// 8. Structured summary\nconst structuredSummary = `ORDER DETAILS:\n- Order Number: ${extractedInfo.orderNumber || 'Not found'}\n- Tracking: ${extractedInfo.trackingNumber || 'Not found'}\n- Product: ${extractedInfo.product || 'Not found'}\n- Delivery Address: ${extractedInfo.deliveryAddress || 'Not found'}\n- Order Date: ${extractedInfo.dates[0] || 'Not found'}\n\nORIGINAL MESSAGE:\n${textForLLM}`;\n\n// 9. Return same structure as Build Attachment Profiles\nreturn [{\n  json: {\n    data: [{\n      attachmentNames: [],\n      textForLLM: textForLLM,\n      structuredSummary: structuredSummary,\n      text: text,\n      data: { text: textForLLM },\n      subject: $json.subject || $input.item?.json?.subject || 'No subject',\n      from: $json.from || $input.item?.json?.from || 'Unknown',\n      to: $json.to || $input.item?.json?.to || 'Unknown',\n      date: $json.date || $input.item?.json?.date || new Date().toISOString(),\n      extracted: extractedInfo,\n      linkMapping: linkCounter > 0 ? urlMap : null,\n      stats: {\n        originalLength: rawText.length,\n        cleanLength: text.length,\n        llmLength: textForLLM.length,\n        reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n        linkCount: linkCounter\n      }\n    }]\n  }\n}];\n"
+        "jsCode": "const items = $input.all();\n\n  // 1. Clean email body\n  const rawEmailText = $('Gmail').first().json.text || '';\n  let emailBodyTextForLLM = '';\n\n  if (rawEmailText.trim()) {\n    const invisibleChars = /[\\x00-\\x1F\\x7F-\\x9F]+/g;\n    const zeroWidthChars = /[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF]+/g;\n    const weirdWhitespace = /[\\u00A0\\u1680\\u2000-\\u200A\\u3000]+/g;\n\n    emailBodyTextForLLM = rawEmailText\n      .replace(invisibleChars, ' ')\n      .replace(zeroWidthChars, '')\n      .replace(weirdWhitespace, ' ')\n      .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n      .replace(/\\s+/g, ' ')\n      .trim();\n  }\n\n  // 2. Build attachment texts MAP using Gmail's binary key names\n  const attachmentTextsMap = {};\n  const gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\n  const hasAttachments = gmailBinaryKeys.length > 0;\n\n  for (let i = 0; i < items.length; i++) {\n    const $json = items[i].json;\n\n    // Text is in $json.data.text (based on debug)\n    const text = $json.data?.text || $json.textForLLM || $json.text || '';\n    const key = gmailBinaryKeys[i] || `attachment_${i}`;\n\n    if (text.trim()) {\n      attachmentTextsMap[key] = text.trim();\n    }\n  }\n\n  // 3. Return ONE item\n  return [{\n    json: {\n      data: [{\n        emailBodyTextForLLM: emailBodyTextForLLM,\n        attachmentTextsMap: attachmentTextsMap,\n        attachmentNames: gmailBinaryKeys,\n        hasAttachments: hasAttachments,\n        subject: $('Gmail').first().json.subject || 'No subject',\n        from: $('Gmail').first().json.from || 'Unknown',\n        date: $('Gmail').first().json.date || new Date().toISOString()\n      }]\n    },\n    pairedItem: { item: 0 }\n  }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -4224,
-        336
+        432
       ],
       "id": "e14c0350-b14b-4e0d-a15a-6e4cc6fca46e",
       "name": "Clean Email object"
@@ -1193,7 +1193,7 @@
     },
     {
       "parameters": {
-        "content": "# attachment processer\nNodes 7-14",
+        "content": "# attachment processer\nNodes 7-13",
         "height": 608,
         "width": 928,
         "color": 7
@@ -1225,7 +1225,7 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 15-22",
+        "content": "# subject classifier\nNodes 14-21",
         "height": 608,
         "width": 720,
         "color": 7
@@ -1241,7 +1241,7 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 23-34",
+        "content": "#  Invoices & Receipts\nNodes 22-33",
         "height": 416,
         "width": 2128,
         "color": 7
@@ -1365,32 +1365,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Ultra-Aggressive Email Text Cleaner for n8n\n// + Aggregates all results into single output\n// + Includes pairedItem for downstream node references\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const $json = item.json;\n\n  let rawText = '';\n\n  if ($json.text) {\n    rawText = $json.text;\n  } else if ($json.data && $json.data.text) {\n    rawText = $json.data.text;\n  } else if ($json['data.text']) {\n    rawText = $json['data.text'];\n  }\n\n  if (!rawText || rawText.trim().length === 0) {\n    results.push({\n      error: 'No text content found',\n      paths_checked: ['$json.text', '$json.data.text', '$json[\"data.text\"]'],\n      available_keys: Object.keys($json || {})\n    });\n    continue;\n  }\n\n  const attachmentNames = item.binary ? Object.keys(item.binary) : [];\n\n  let text = rawText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F]/g, ' ')\n    .replace(/[\\uFEFF\\u034F\\u00AD]/g, ' ')\n    .replace(/[\\u00A0\\u1680\\u180E\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .split('\\n')\n    .map(line => line.trim())\n    .join('\\n');\n\n  const urlRegex = /https?:\\/\\/[^\\s\\[\\]\\(\\)<>]+/gi;\n  const imageRegex = /\\[?https?:\\/\\/[^\\]]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\]]*\\]?/gi;\n\n  text = text.replace(imageRegex, ' ');\n\n  const urls = text.match(urlRegex) || [];\n  const uniqueUrls = [...new Set(urls)];\n  const urlMap = {};\n\n  uniqueUrls.forEach((url, i) => {\n    const linkId = '[Link' + (i + 1) + ']';\n    urlMap[linkId] = url;\n    const escapedUrl = url.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    text = text.replace(new RegExp(escapedUrl, 'g'), linkId);\n  });\n\n  text = text\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/([.,;!?])\\s*([a-z])/g, '$1 $2')\n    .replace(/\\s+/g, ' ')\n    .replace(/([a-z])\\s*\\n\\s*([a-z])/g, '$1 $2')\n    .replace(/([.!?])\\s*([A-Z])/g, '$1\\n$2');\n\n  text = text\n    .replace(/\\[\\s*\\]/g, '')\n    .replace(/\\s*\\[\\s*/g, ' [')\n    .replace(/\\s*\\]\\s*/g, '] ')\n    .replace(/\\s+/g, ' ');\n\n  const lines = text.split('\\n');\n  const formattedLines = [];\n  let currentParagraph = '';\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (trimmed.length === 0) continue;\n\n    const isNewSection = /^(Hallo|Lieber|Sehr geehrte|Details|Bestellung|Noch Fragen|Freundliche|Angebot von|Lieferadresse|Paketversand)/i.test(trimmed);\n    const isCompleteSentence = /^[A-Z].*[.!?]$/.test(trimmed) && currentParagraph.length > 50;\n\n    if (isNewSection || isCompleteSentence) {\n      if (currentParagraph) {\n        formattedLines.push(currentParagraph.trim());\n      }\n      currentParagraph = trimmed;\n    } else {\n      currentParagraph = currentParagraph ? currentParagraph + ' ' + trimmed : trimmed;      \n    }\n  }\n  if (currentParagraph) {\n    formattedLines.push(currentParagraph.trim());\n  }\n\n  text = formattedLines.join('\\n\\n');\n\n  const extractedInfo = {\n    orderNumber: null,\n    trackingNumber: null,\n    product: null,\n    deliveryAddress: null,\n    amounts: [],\n    dates: []\n  };\n\n  const orderMatch = text.match(/(?:Bestellung|Order|Auftrag)[\\s#:]*(\\d{6,})/i);\n  if (orderMatch) {\n    extractedInfo.orderNumber = orderMatch[1];\n  }\n\n  const numbers = text.match(/\\b\\d{10,20}\\b/g) || [];\n  extractedInfo.trackingNumber = numbers.find(n => n !== extractedInfo.orderNumber) || null; \n\n  const productMatch = text.match(/tomtoc[^[]*?(?=\\[|$)/i);\n  if (productMatch) {\n    extractedInfo.product = productMatch[0].trim();\n  }\n\n  const addressMatch = text.match(/Lieferadresse\\s*([^[]+?)(?=Paket|\\[|$)/i);\n  if (addressMatch) {\n    extractedInfo.deliveryAddress = addressMatch[1].trim();\n  }\n\n  const dateMatches = text.match(/\\d{1,2}[.\\/-]\\d{1,2}[.\\/-]\\d{2,4}/g);\n  if (dateMatches) {\n    extractedInfo.dates = dateMatches;\n  }\n\n  const textForLLM = text\n    .replace(/\\[Link\\d+\\]/g, '')\n    .replace(/\\[\\]/g, '')\n    .replace(/\\s+/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n\n  const attachmentList = attachmentNames.length > 0\n    ? attachmentNames.join(', ')\n    : 'No attachments';\n\n  const structuredSummary = 'ORDER DETAILS:\\n' +\n    '- Order Number: ' + (extractedInfo.orderNumber || 'Not found') + '\\n' +\n    '- Tracking: ' + (extractedInfo.trackingNumber || 'Not found') + '\\n' +\n    '- Product: ' + (extractedInfo.product || 'Not found') + '\\n' +\n    '- Delivery Address: ' + (extractedInfo.deliveryAddress || 'Not found') + '\\n' +\n    '- Order Date: ' + (extractedInfo.dates[0] || 'Not found') + '\\n' +\n    '- Attachments: ' + attachmentList + '\\n\\n' +\n    'ORIGINAL MESSAGE:\\n' + textForLLM;\n\n  const metadata = {\n    subject: $json.subject || 'No subject',\n    from: $json.from || 'Unknown',\n    to: $json.to || 'Unknown',\n    date: $json.date || new Date().toISOString()\n  };\n\n  results.push({\n    attachmentNames: attachmentNames,\n    textForLLM: textForLLM,\n    structuredSummary: structuredSummary,\n    text: text,\n    data: {\n      text: textForLLM\n    },\n    subject: metadata.subject,\n    from: metadata.from,\n    to: metadata.to,\n    date: metadata.date,\n    extracted: extractedInfo,\n    linkMapping: Object.keys(urlMap).length > 0 ? urlMap : null,\n    stats: {\n      originalLength: rawText.length,\n      cleanLength: text.length,\n      llmLength: textForLLM.length,\n      reduction: Math.round((1 - textForLLM.length / rawText.length) * 100) + '%',\n      linkCount: Object.keys(urlMap).length\n    }\n  });\n}\n\n// Return aggregated result WITH pairedItem data\nreturn [{\n  json: {\n    data: results\n  },\n  pairedItem: items.map((item, index) => ({ item: index }))\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -4224,
-        496
-      ],
-      "id": "e48ac9d9-ed1e-4b6b-95b2-99f38c1af736",
-      "name": "Build Attachment Profiles"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "b42ef4b6-3228-4fca-87ea-ad1ebe176a1e",
-              "name": "processed_attachments",
+              "name": "cleaned_email",
               "value": "={{ $json }}",
               "type": "object"
-            },
-            {
-              "id": "897e3bce-eacf-4fe3-9b96-652edd2186c3",
-              "name": "summary_attachments",
-              "value": "={{ $json.data.map(item => item.text).join('\\n---\\n') }}",
-              "type": "string"
             },
             {
               "id": "e885d0fb-fab0-4703-985a-44236baddfa1",
@@ -1459,12 +1440,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $('email-info-hub').item.json.processed_attachments?.data || [];\nconst gmailBinary = $('Gmail').first().binary;\n\nreturn data.map(item => {\n  const binaryKey = item.attachmentNames?.[0];\n  return {\n    json: item,\n    binary: binaryKey ? { file1: gmailBinary[binaryKey] } : {}\n  };\n});"
+        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      emailBodyTextForLLM: cleanedData.emailBodyTextForLLM || '',\n      attachmentTextForLLM: cleanedData.attachmentTextsMap?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4976,
+        -5008,
         992
       ],
       "id": "2ba625fe-4d0f-4f5b-bec7-fbfcd9933218",
@@ -1685,7 +1666,7 @@
       "main": [
         [
           {
-            "node": "Build Attachment Profiles",
+            "node": "Clean Email object",
             "type": "main",
             "index": 0
           }
@@ -1830,17 +1811,6 @@
         ]
       ]
     },
-    "Build Attachment Profiles": {
-      "main": [
-        [
-          {
-            "node": "email-info-hub",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "email-info-hub": {
       "main": [
         [
@@ -1886,7 +1856,32 @@
       ]
     }
   },
-  "pinData": {},
+  "pinData": {
+    "Create Attachment Profile": [
+      {
+        "data": {
+          "numpages": 1,
+          "numrender": 1,
+          "info": {
+            "PDFFormatVersion": "1.4",
+            "Language": null,
+            "EncryptFilterName": null,
+            "IsLinearized": false,
+            "IsAcroFormPresent": false,
+            "IsXFAPresent": false,
+            "IsCollectionPresent": false,
+            "IsSignaturesPresent": false,
+            "Creator": "",
+            "Producer": "",
+            "CreationDate": "D:20251115152143+00'00'",
+            "ModDate": "D:20251115152143+00'00'"
+          },
+          "text": "Page 1 of 1\nReceipt\nInvoice number LAFHCRRE\u00000006\nDate paid November 15, 2025\nAnthropic, PBC\n548 Market Street\nPMB 90375\nSan Francisco, California 94104\nUnited States\nsupport@anthropic.com\nBill to\nuniqued4ve@gmail.com's Organization\nPaulstrasse 19\nDavid Streuli\nCH\u00008400 Winterthur\nSwitzerland\nuniqued4ve@gmail.com\n$21.62 paid on November 15, 2025\nWhile we prefer electronic payment methods,\nany checks must be sent to the address below, NOT to our San Francisco office.\n----------------------------\nPAYMENT ADDRESS\u0000\nAnthropic, PBC\nP.O. Box 104477\nPasadena, CA 91189\u00004477\nDescription Qty \nUnit price \nTax \nAmount\nClaude Pro\nNov 15 – Dec 15, 2025\n1 $20.00 8.1% $20.00\nSubtotal $20.00\nTotal excluding tax $20.00\nVAT - Switzerland \u00008.1% on $20.00\u0000 $1.62\nTotal $21.62\nAmount paid $21.62\nPayment history\nPayment method Date Amount paid Receipt number\nLink November 15, 2025 $21.62 2758\u00004696\u0000\n7987",
+          "version": "5.3.31"
+        }
+      }
+    ]
+  },
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"

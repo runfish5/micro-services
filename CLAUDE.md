@@ -31,3 +31,16 @@ Structure: 🔄 **Main Flow** title (with node count) → 📋 **Overview** one-
 **LLM Integration:** Most workflows use Groq (free) or Gemini for AI processing. LLM nodes are documented in mainflow.md under 🦜 **AI Model Nodes**.
 
 **Structured Output:** `.st.json` files contain JSON Schema examples for LLM structured output (see project 1). These schemas define the extraction format for AI responses.
+
+**n8n Data Lineage (pairedItem):** In Code nodes, `pairedItem` preserves upstream node references so expressions like `$('Gmail').item.json` work downstream. Rules:
+- If existing code has `pairedItem`, preserve it
+- If downstream nodes reference upstream data (e.g., `$('NodeName').item`), add it
+- Not needed for simple transformations where upstream refs aren't used later
+
+Example:
+```javascript
+return [{
+  json: { /* your data */ },
+  pairedItem: { item: 0 }  // or items.map((_, i) => ({ item: i })) for multiple
+}];
+```
