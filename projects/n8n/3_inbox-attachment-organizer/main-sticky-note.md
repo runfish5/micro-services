@@ -1,12 +1,12 @@
 ## Auto-File Email Attachments to Google Drive
 
-Reads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.
+Reads email attachment content, extracts key data to determine filing location (Accounting/2025/05_May/Expense/), and records details to Google Sheets.
 
 ### How it works
 1. Monitors Gmail for new emails with attachments
 2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)
    - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents
-3. For financial documents, extracts structured data and verifies sender
+3. For financial documents, verifies sender whitelist and extracts structured data
 4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)
    - *google-drive-folder-id-lookup*: Locates or creates correct folder structure
 5. Logs invoice details to Google Sheets

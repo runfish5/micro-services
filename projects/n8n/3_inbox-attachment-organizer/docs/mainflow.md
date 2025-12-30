@@ -1,4 +1,4 @@
-# 🔄 Main Flow (39 Nodes Total)
+# 🔄 Main Flow (33 Nodes)
 📋 Workflow Overview
 
 This workflow automates the entire invoice processing
@@ -11,20 +11,19 @@ This workflow automates the entire invoice processing
 
 ### Phases:
 ```
-Email Monitoring (1-6)
-Attachment Processing (7-15)
-LM1: AI Classification (16)
-Routing & Filtering (17-23)
-Deep Invoice Extraction (24-34)
-LM2: detailed invoice data (28)
-Storage & Logging (29, 31, 33)
-Notifications (23, 34)
-Alternative Entry (2)
+Email Trigger (Nodes 1-6)
+Attachment Processing (Nodes 7-13)
+Subject Classifier & Routing (Nodes 14-21)
+Deep Invoice Extraction & Storage (Nodes 22-33)
+  - LM2: Accountant-concierge-LM (Node 22)
+  - Storage: Google Sheets + Google Drive
+  - Notifications: Telegram & Gmail labels
+Alternative Entry: When Executed by Another Workflow
 ```
 
 ### Data Flow
 
-Note: This particular telegram cohnfiguration must still be implemented.
+Note: This particular telegram configuration must still be implemented.
 ```
 Email → Text Extraction → AI Classification
                               ↓
@@ -48,17 +47,26 @@ Email → Text Extraction → AI Classification
 ### Key Workflow Logic
 ```
   Flow Summary:
-  Gmail → Filter Promotions → Extract Attachments
+  Gmail Trigger → Stop promotions → Set File ID → Gmail (get attachments)
     ↓
-    ├─ No Attachments → Clean Text
-    └─ Has Attachments → Convert to Text → Aggregate
+  Get binary data → Empty? (check for attachments)
+    ├─ No Attachments → Clean Email object
+    └─ Has Attachments → sp (split) → Loop Over Attachment Binaries
+                          ↓
+                        Create Attachment Profile (subworkflow) → Merge
+                          ↓
+                        Clean Email object
     ↓
-  LM1: AI Classify → Determine Document Type
+  email-info-hub → subject-classifier-LM (LM1)
     ↓
-  Is Financial? → Check Whitelist → Deep Extract (Llama 4)
+  financial doc router → user_email_whitelist → whitelist validator
     ↓
-  LM2: Accountant Info Extraction → Upload to Drive → Log to Sheets →
-  Notify Telegram
+  Has Attachments? → Prepare Attachments → Accountant-concierge-LM (LM2)
+    ↓
+  input folder lookup → Call 'Google Drive Folder ID Lookup' → save doc to folder
+                  └→ insert doc record
+    ↓
+  Await Storage Complete → craft report note → Telegram & done / Mark as Processed1
 ```
 
 ### Lineage logging
@@ -72,42 +80,43 @@ START: Gmail Trigger
   └→ Empty? (check attachments)
      │
      ├─ NO ATTACHMENTS:
-     │  ├→ Code in JavaScript1 (clean text)
-     │  └→ new section *16
-     │     (subject-classifier-LM)
+     │  └→ Clean Email object
+     │     └→ email-info-hub *14
      │
      └─ HAS ATTACHMENTS:
-        ├→ sp (split attachments)
-        ├→ Loop Over Items
-        │  ├→ Clean Email Text
-        │  ├→ Analyze file (convert to text)
+        ├→ sp (split binaries)
+        ├→ Loop Over Attachment Binaries
+        │  ├→ Create Attachment Profile (subworkflow)
         │  └→ Merge
-        ├→ Aggregate1 (combine all)
-        ├→ attachement_as_text
-    *16 └→ subject-classifier-LM
-           │
-           ├→ non-spam lineage
-           └→ financial doc router
+        ├→ Clean Email object
+        └→ email-info-hub
+   *14    └→ subject-classifier-LM
               │
-              └─ IF FINANCIAL:
-                 ├→ user_email_whitelist
-                 ├→ whitelist validator
-                 │  ├→ format rejection
-                 │  └→ notify rejection
-                 ├→ verify sender
+              ├→ financial doc router
+              ├→ Tag Mail with 'n8n' → notify rejection
+              └→ appointment router → Trigger non-spam lineage
 
-    *24          ├→ extract attachments
-                 ├→ prepare attachment meta
-                 ├→ split attachments
-                 └→ loop invoices
-                    ├→ Accountant-concierge-LM (deep AI extraction)
-                    ├→ prepare folder lookup
-                    ├→ Call 'Google Drive Folder ID Lookup'
-                    ├→ get file binary
-                    ├→ save doc to folder
-                    ├→ insert doc record
-                    └→ Telegram & done
+              IF FINANCIAL:
+              ├→ user_email_whitelist
+              ├→ whitelist validator
+              └→ Has Attachments?
+                 │
+                 └→ Prepare Attachments
+                    └→ Accountant-concierge-LM
+                       │
+                       ├→ input folder lookup
+                       │  └→ Call 'Google Drive Folder ID Lookup'
+                       │     └→ Get binary data2
+                       │        └→ save doc to folder ─┐
+                       │                               │
+                       └→ insert doc record ───────────┤
+                                                       │
+                          Await Storage Complete ◄─────┘
+                             └→ craft report note
+                                ├→ Telegram & done
+                                └→ Mark as Processed1
 
+ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ```
 
 ## 🦜 AI Models Nodes
@@ -131,13 +140,13 @@ START: Gmail Trigger
 ## 🔗 External Workflows Called
 
 ### 1. any-file2json-converter
-- **Called by**: Analyze file (Node 12)
+- **Called by**: Create Attachment Profile (Node 10)
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
 - **Output**: Extracted text content from documents
 
 ### 2. google-drive-folder-id-lookup
-- **Called by**: Call 'Google Drive Folder ID Lookup' (Node 32)
+- **Called by**: Call 'Google Drive Folder ID Lookup' (Node 26)
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)
 - **Input**: Path components (year, month, category)

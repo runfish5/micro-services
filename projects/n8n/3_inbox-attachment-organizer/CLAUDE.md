@@ -17,12 +17,12 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ## Where Information Lives
 
 ### Documentation
-- `docs/mainflow.md` - Complete 39-node breakdown by phases (1-5: monitoring, 6-15: attachments, 16-18: classification, etc.), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
+- `docs/mainflow.md` - Complete 33-node breakdown by phases (1-6: trigger, 7-13: attachments, 14-21: classification & routing, 22-33: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
 - `docs/setup-guide.md` - 2505_Invoices sheet schema (28 columns tab-separated), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
 - `main-sticky-note.md` - Author's setup checklist showing deployment priorities and post-activation tasks
 
 ### Workflows
-- `workflows/inbox-attachment-organizer.json` - Main workflow (39 nodes) orchestrating the full pipeline
+- `workflows/inbox-attachment-organizer.json` - Main workflow (33 nodes) orchestrating the full pipeline
 - `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment in loop)
 - `workflows/subworkflows/google-drive-folder-id-lookup.json` - Finds or creates Drive folders using PathToIDLookup cache
 - `workflows/subworkflows/google-drive-folder-id-recursion.json` - Recursive folder creation helper (called by lookup when folders missing)
@@ -42,14 +42,11 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ## Workflow Phases (from mainflow.md)
 
-Nodes 1-5: Email Monitoring (Gmail Trigger polls every 1 min, filters promotions)
-Nodes 6-15: Attachment Processing (splits attachments, loops to call any-file2json-converter per file, aggregates text)
-Nodes 16-18: AI Classification First Pass (subject-classifier-LM outputs: confirmation, financial, newsletter, appointment, marketing, operational, other)
-Nodes 19-23: Routing & Filtering (financial doc router on type, user_email_whitelist whitelist check)
-Nodes 24-28: Deep Invoice Extraction (Accountant-concierge-LM extracts 28 fields: Revenue/Expense, Invoice/Receipt, dates, amounts, parties)
-Nodes 31-35: Storage & Logging (google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet)
-Nodes 36-38: Notifications (Telegram - note: configuration not yet implemented per mainflow.md)
-Node 39: Alternative Entry
+Nodes 1-6: Email Trigger (Gmail Trigger polls every 1 min, filters promotions, downloads attachments)
+Nodes 7-13: Attachment Processing (splits attachments, loops to call any-file2json-converter per file, Clean Email object aggregates text)
+Nodes 14-21: Classification & Routing (subject-classifier-LM, financial doc router, whitelist validator, appointment router)
+Nodes 22-33: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet, Telegram notification, Mark as Processed)
+Alternative Entry: When Executed by Another Workflow
 
 ## More Details
 
