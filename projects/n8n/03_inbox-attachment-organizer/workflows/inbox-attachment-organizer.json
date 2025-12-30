@@ -44,7 +44,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -5072,
+        -4848,
         1632
       ],
       "id": "0b74cd47-24a4-4d98-b3c6-95308985eef1",
@@ -80,36 +80,6 @@
         -4848,
         1440
       ]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "0af57e1c-21ab-433b-a109-3e21070857a2",
-              "name": "binary_files",
-              "value": "={{ $input.item.binary || JSON.parse('{\"message\": \"No binary Attachment\"}') }}",
-              "type": "object"
-            },
-            {
-              "id": "dde8fd18-7822-4f3b-8fd0-a9614db9e0b8",
-              "name": "attachment_names",
-              "value": "={{ Object.keys($binary) }}",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -4848,
-        1632
-      ],
-      "id": "663f1afd-087a-430c-bd09-a28228f881d5",
-      "name": "Get binary data"
     },
     {
       "parameters": {
@@ -225,12 +195,11 @@
           "conditions": [
             {
               "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{ $json.binary_files.message }}",
-              "rightValue": "No binary Attachment",
+              "leftValue": "={{ Object.keys($binary).length }}",
+              "rightValue": 0,
               "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
+                "type": "number",
+                "operation": "equals"
               }
             }
           ],
@@ -800,7 +769,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -879,7 +848,7 @@
     },
     {
       "parameters": {
-        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/google-drive-folder-structure.png)"
+        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/03_inbox-attachment-organizer/assets/google-drive-folder-structure.png)"
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -892,7 +861,7 @@
     },
     {
       "parameters": {
-        "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/3_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
+        "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/03_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
         "height": 176,
         "width": 336
       },
@@ -1164,7 +1133,7 @@
     },
     {
       "parameters": {
-        "content": "# attachment processer\nNodes 7-13",
+        "content": "# attachment processer\nNodes 6-10",
         "height": 608,
         "width": 672,
         "color": 7
@@ -1180,7 +1149,7 @@
     },
     {
       "parameters": {
-        "content": "# E-Mail trigger\nNodes 1-6",
+        "content": "# E-Mail trigger\nNodes 1-5",
         "height": 608,
         "width": 448,
         "color": 7
@@ -1196,7 +1165,7 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 14-21",
+        "content": "# subject classifier\nNodes 11-18",
         "height": 608,
         "width": 720,
         "color": 7
@@ -1212,7 +1181,7 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 22-33",
+        "content": "#  Invoices & Receipts\nNodes 19-30",
         "height": 416,
         "width": 1904,
         "color": 7
@@ -1299,7 +1268,7 @@
       "typeVersion": 1,
       "position": [
         -3904,
-        1472
+        1488
       ],
       "id": "ee74d6d2-d451-428f-9a92-912c60176939",
       "name": "Any LM",
@@ -1439,7 +1408,7 @@
       "main": [
         [
           {
-            "node": "Get binary data",
+            "node": "Empty?",
             "type": "main",
             "index": 0
           }
@@ -1451,17 +1420,6 @@
         [
           {
             "node": "Gmail",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get binary data": {
-      "main": [
-        [
-          {
-            "node": "Empty?",
             "type": "main",
             "index": 0
           }

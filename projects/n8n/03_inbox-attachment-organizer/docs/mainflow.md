@@ -1,4 +1,4 @@
-# 🔄 Main Flow (33 Nodes)
+# 🔄 Main Flow (30 Nodes)
 📋 Workflow Overview
 
 This workflow automates the entire invoice processing
@@ -11,11 +11,11 @@ This workflow automates the entire invoice processing
 
 ### Phases:
 ```
-Email Trigger (Nodes 1-6)
-Attachment Processing (Nodes 7-13)
-Subject Classifier & Routing (Nodes 14-21)
-Deep Invoice Extraction & Storage (Nodes 22-33)
-  - LM2: Accountant-concierge-LM (Node 22)
+Email Trigger (Nodes 1-5)
+Attachment Processing (Nodes 6-10)
+Subject Classifier & Routing (Nodes 11-18)
+Deep Invoice Extraction & Storage (Nodes 19-30)
+  - LM2: Accountant-concierge-LM
   - Storage: Google Sheets + Google Drive
   - Notifications: Telegram & Gmail labels
 Alternative Entry: When Executed by Another Workflow
@@ -49,11 +49,9 @@ Email → Text Extraction → AI Classification
   Flow Summary:
   Gmail Trigger → Stop promotions → Set File ID → Gmail (get attachments)
     ↓
-  Get binary data → Empty? (check for attachments)
+  Empty? (check for attachments)
     ├─ No Attachments → Clean Email object
-    └─ Has Attachments → sp (split) → Loop Over Attachment Binaries
-                          ↓
-                        Create Attachment Profile (subworkflow) → Merge
+    └─ Has Attachments → sp (split) → Create Attachment Profile (subworkflow)
                           ↓
                         Clean Email object
     ↓
@@ -76,21 +74,18 @@ START: Gmail Trigger
   ├→ Stop promotions (filter)
   ├→ Set File ID
   ├→ Gmail (get full email + attachments)
-  ├→ Get binary data
   └→ Empty? (check attachments)
      │
      ├─ NO ATTACHMENTS:
      │  └→ Clean Email object
-     │     └→ email-info-hub *14
+     │     └→ email-info-hub *11
      │
      └─ HAS ATTACHMENTS:
         ├→ sp (split binaries)
-        ├→ Loop Over Attachment Binaries
-        │  ├→ Create Attachment Profile (subworkflow)
-        │  └→ Merge
+        ├→ Create Attachment Profile (subworkflow, runs per item)
         ├→ Clean Email object
         └→ email-info-hub
-   *14    └→ subject-classifier-LM
+   *11    └→ subject-classifier-LM
               │
               ├→ financial doc router
               ├→ Tag Mail with 'n8n' → notify rejection
@@ -140,13 +135,13 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ## 🔗 External Workflows Called
 
 ### 1. any-file2json-converter
-- **Called by**: Create Attachment Profile (Node 10)
+- **Called by**: Create Attachment Profile
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
 - **Output**: Extracted text content from documents
 
 ### 2. google-drive-folder-id-lookup
-- **Called by**: Call 'Google Drive Folder ID Lookup' (Node 26)
+- **Called by**: Call 'Google Drive Folder ID Lookup'
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)
 - **Input**: Path components (year, month, category)

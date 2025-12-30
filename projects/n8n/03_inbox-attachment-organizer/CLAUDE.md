@@ -17,13 +17,13 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ## Where Information Lives
 
 ### Documentation
-- `docs/mainflow.md` - Complete 33-node breakdown by phases (1-6: trigger, 7-13: attachments, 14-21: classification & routing, 22-33: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
+- `docs/mainflow.md` - Complete 30-node breakdown by phases (1-5: trigger, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
 - `docs/setup-guide.md` - 2505_Invoices sheet schema (28 columns tab-separated), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
 - `main-sticky-note.md` - Author's setup checklist showing deployment priorities and post-activation tasks
 
 ### Workflows
-- `workflows/inbox-attachment-organizer.json` - Main workflow (33 nodes) orchestrating the full pipeline
-- `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment in loop)
+- `workflows/inbox-attachment-organizer.json` - Main workflow (30 nodes) orchestrating the full pipeline
+- `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment)
 - `workflows/subworkflows/google-drive-folder-id-lookup.json` - Finds or creates Drive folders using PathToIDLookup cache
 - `workflows/subworkflows/google-drive-folder-id-recursion.json` - Recursive folder creation helper (called by lookup when folders missing)
 - `workflows/subworkflows/gmail-systematic-processor.json` - Standalone batch processor for existing inbox emails
@@ -42,10 +42,10 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ## Workflow Phases (from mainflow.md)
 
-Nodes 1-6: Email Trigger (Gmail Trigger polls every 1 min, filters promotions, downloads attachments)
-Nodes 7-13: Attachment Processing (splits attachments, loops to call any-file2json-converter per file, Clean Email object aggregates text)
-Nodes 14-21: Classification & Routing (subject-classifier-LM, financial doc router, whitelist validator, appointment router)
-Nodes 22-33: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet, Telegram notification, Mark as Processed)
+Nodes 1-5: Email Trigger (Gmail Trigger polls every 1 min, filters promotions, downloads attachments)
+Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object aggregates text)
+Nodes 11-18: Classification & Routing (subject-classifier-LM, financial doc router, whitelist validator, appointment router)
+Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet, Telegram notification, Mark as Processed)
 Alternative Entry: When Executed by Another Workflow
 
 ## More Details
