@@ -34,7 +34,7 @@ Anyone converting unstructured notes into structured data — sales teams loggin
 | Setup | Description |
 |-------|-------------|
 | **A) Standalone** | Manual text input via String Input node |
-| **B) Email-CRM** | Auto-process incoming emails (uses nodes from [3_inbox-attachment-organizer](../3_inbox-attachment-organizer/)) |
+| **B) Email-CRM** | Auto-process incoming emails (uses nodes from [03_inbox-attachment-organizer](../03_inbox-attachment-organizer/)) |
 
 > ### Auto-Schema Discovery
 >

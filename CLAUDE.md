@@ -10,17 +10,17 @@ Collection of n8n automation workflows for document processing and AI-powered da
 
 ```
 projects/n8n/
-├── 0_telegram-invoice-ocr-to-excel/  # Telegram bot → OCR → Google Sheets
-├── 1_LLM-bulk-responses/             # Batch process data rows with LLM
-├── 2_smart-table-fill/               # Text → structured data via dynamic schema
-└── 3_inbox-attachment-organizer/     # Email attachments → AI classification → Google Drive
+├── 00_telegram-invoice-ocr-to-excel/  # Telegram bot → OCR → Google Sheets
+├── 01_LLM-bulk-responses/             # Batch process data rows with LLM
+├── 02_smart-table-fill/               # Text → structured data via dynamic schema
+└── 03_inbox-attachment-organizer/     # Email attachments → AI classification → Google Drive
 ```
 
 ## Project-Specific Documentation
 
 Projects 2 and 3 have their own CLAUDE.md files with detailed workflow documentation:
-- `projects/n8n/2_smart-table-fill/CLAUDE.md`
-- `projects/n8n/3_inbox-attachment-organizer/CLAUDE.md`
+- `projects/n8n/02_smart-table-fill/CLAUDE.md`
+- `projects/n8n/03_inbox-attachment-organizer/CLAUDE.md`
 
 ## Common Patterns Across Projects
 
