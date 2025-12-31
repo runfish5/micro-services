@@ -1367,6 +1367,135 @@
     },
     {
       "parameters": {
+        "mode": "expression",
+        "numberOutputs": 1,
+        "output": "=0"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -3552,
+        960
+      ],
+      "id": "dff55a01-f6ee-4490-9ac0-3590f2769b8e",
+      "name": "ContactManager-lineage"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 204,
+        "width": 680,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3168,
+        912
+      ],
+      "id": "170f8e14-9572-4e85-9cd6-bcf90a1fb39c",
+      "name": "Sticky Note25",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ZPJYCwXcmisoSkuz",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ZPJYCwXcmisoSkuz",
+          "cachedResultName": "record-search"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -3104,
+        912
+      ],
+      "id": "c5873ed9-7e9c-4299-8ff6-de7d35522a01",
+      "name": "Call 'record-search'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Lw53fM7EghZm7Qxy",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Lw53fM7EghZm7Qxy",
+          "cachedResultName": "smart-table-fill"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -2656,
+        912
+      ],
+      "id": "d8452973-2b4c-4d42-939c-32d871f40f73",
+      "name": "Call 'smart-table-fill'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42bc6d75-2bc9-4596-8dde-39a437b8d086",
+              "name": "TextObject_User",
+              "value": "={{ $('subject-classifier-LM').item.json.output.essential_content }}",
+              "type": "string"
+            },
+            {
+              "id": "c53001df-d38b-4855-a247-dee7f28eab38",
+              "name": "email",
+              "value": "={{ $('Gmail').item.json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "80a05ba9-38bc-4e19-b5a9-ab0cf0ce78c3",
+              "name": "found",
+              "value": "={{ $json.found }}",
+              "type": "string"
+            },
+            {
+              "id": "875e4349-7d59-4471-908e-5216e0d7f639",
+              "name": "matchType",
+              "value": "={{ $json.matchType }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2880,
+        912
+      ],
+      "id": "0738dc3c-d92c-4e3c-8b8f-0dbaf46c2cb5",
+      "name": "Prepare Contact Input"
+    },
+    {
+      "parameters": {
         "chatId": "7582730035",
         "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:\n{{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? $('subject-classifier-LM').item.json.output.message : '' }}",
         "additionalFields": {
@@ -1503,6 +1632,11 @@
     "subject-classifier-LM": {
       "main": [
         [
+          {
+            "node": "ContactManager-lineage",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "appointment router",
             "type": "main",
@@ -1750,9 +1884,101 @@
           }
         ]
       ]
+    },
+    "ContactManager-lineage": {
+      "main": [
+        [
+          {
+            "node": "Call 'record-search'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'record-search'": {
+      "main": [
+        [
+          {
+            "node": "Prepare Contact Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Contact Input": {
+      "main": [
+        [
+          {
+            "node": "Call 'smart-table-fill'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "pinData": {},
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "id": "19b6afd3bf1ecd0a",
+        "threadId": "19b6afd3bf1ecd0a",
+        "labelIds": [
+          "UNREAD",
+          "IMPORTANT",
+          "CATEGORY_UPDATES",
+          "INBOX"
+        ],
+        "sizeEstimate": 280411,
+        "headers": {
+          "delivered-to": "Delivered-To: uniqued4ve@gmail.com",
+          "received": "Received: from envelope.thomann.int (10.1.1.33) by EX19VC.thomann.int\r\n (10.1.1.82) with Microsoft SMTP Server (version=TLS1_2,\r\n cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.2.1544.36; Mon, 29 Dec\r\n 2025 17:42:13 +0100",
+          "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IFajBUJTZYF9Hk/xqJkPejRPG8pAL3LHiW+cb+Lsaol7dxGgq2CDvVV1bYYT9+ygFoyqHtH",
+          "x-received": "X-Received: by 2002:a05:6000:178c:b0:431:104:6daf with SMTP id ffacd0b85a97d-4324e709ab3mr45523642f8f.54.1767026539530;\r\n        Mon, 29 Dec 2025 08:42:19 -0800 (PST)",
+          "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1767026539; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=CtfdiVwuR9V5CBTkbea6RFfnt0Ggcm+K60lLdsWa+zaD/rTHUIMNISRnQjc+Km338Z\r\n         FUGn97/frCeVF9kwLqnnZWuyYXikhVZ8xkkvGVjE3PQSOGVYfNBynui2mhd0eAQzT7Ov\r\n         aJMKcN//BO/mAQm0BV6F//Gc+KzH9A0DRT/2yXmayQVVy4b/23RYV2wLmMPKzTB/b1g1\r\n         Ht8k+TW99xeNEoT7AeeMB+8483m6JB/7FpWkmmECsl+96+H+IxJbgs42Xow44BTsLQiu\r\n         iWPbtRPR5UvZDfpnS8KdyYRhVGcFhWe/wLlAWpur4WtTe1KDlXjb2qcsB+BAOHaMpAru\r\n         XegQ==",
+          "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=mime-version:message-id:subject:from:to:date:dkim-signature;\r\n        bh=OOad7tpHVR6xGHDKLCr2JCNe0HxmgzqUElgsHqKs9Oo=;\r\n        fh=tTJvaQ4oUHBEK3Ky1tcwaDSqXvaAiYixLcKn/U7T67M=;\r\n        b=V7b88dGuB575pjOyrG5CKubUcJM74olHwZB3H1/6k9p/56AcgTOD3gb3t7xka0YhQZ\r\n         jhEXURfNXzKTVt2fF4gwS949GmTLCfxSSZwscQAzmXIens41dHownJ6mt92kQaQ/C5bN\r\n         bbThSj1JJ3IighQghj69uRgiIMl7yjkF560SFEs3iPDNkmDBY41Qq8/Z5miWBiWiBTyG\r\n         rolBx4EDsoYFC7j2yMnCxasL7f2YW9UaMkidDMdZhVkwer5eUYmhyvh+r1QHA7SVMl1T\r\n         SG9UM2ekVfJrudOQ4LYM6jWFUc2YdXmDQr/KSMNFQekv/SGPFI/npBIEZLj3h49s+/tZ\r\n         17cQ==;\r\n        dara=google.com",
+          "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@thomann.de header.s=dkim header.b=Z+3nJhzj;\r\n       spf=pass (google.com: domain of kundenservice@thomann.de designates 212.184.107.109 as permitted sender) smtp.mailfrom=kundenservice@thomann.de;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=thomann.de",
+          "return-path": "Return-Path: kundenservice@thomann.de",
+          "received-spf": "Received-SPF: pass (google.com: domain of kundenservice@thomann.de designates 212.184.107.109 as permitted sender) client-ip=212.184.107.109;",
+          "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@thomann.de header.s=dkim header.b=Z+3nJhzj;\r\n       spf=pass (google.com: domain of kundenservice@thomann.de designates 212.184.107.109 as permitted sender) smtp.mailfrom=kundenservice@thomann.de;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=thomann.de",
+          "content-type": "Content-Type: multipart/mixed;\r\n\tboundary=\"b1=_nw5aplyvXmfOVFnvhsudpKSv8bMq93ZpxFRdSir2o\"",
+          "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; d=thomann.de; s=dkim; c=relaxed/relaxed;\r\n\tt=1767026533; h=from:subject:to:date:message-id;\r\n\tbh=OOad7tpHVR6xGHDKLCr2JCNe0HxmgzqUElgsHqKs9Oo=;\r\n\tb=Z+3nJhzjFb0ZAd8iN6Tc4cXcYLJ8aGSnxI7US+a2rEe/eOLXyxQ+jvdFIZbP/KnnL/5KXUsp2Mg\r\n\ti+szQBMK/moKkZ0EGrFW4+KkojN1qGOVagu3r1GcaDeINUkgcwZRR/9z6FDdO3WjkLg4LZ6giPA+U\r\n\t9W1xXHgpJLpdyzqFR62wtmSx5aA/n48pBQ307aMeogLygp2RmE4qFoz23PQCrrE+VXVlME/F1M/MT\r\n\tx+r5ZdYk/dze4Y0VqkPVt72bPZIHiFu+udKsY6lZ+KrbGxS0O6G1qpwh8t/0zqCICmlll0oLE8sCK\r\n\t6RbCXpT3su2Rgv0iTTRSUKJOjFf8O9Qav45A==",
+          "date": "Date: Mon, 29 Dec 2025 17:42:13 +0100",
+          "to": "To: <uniqued4ve@gmail.com>",
+          "from": "From: Thomann <kundenservice@thomann.de>",
+          "subject": "Subject: Versandbenachrichtigung und Rechnung (22923243)",
+          "message-id": "Message-ID: <bbb879f2-3aec-4c44-9a56-18873b693a02@thomann.de>",
+          "mime-version": "MIME-Version: 1.0",
+          "x-clientproxiedby": "X-ClientProxiedBy: EX19VC.thomann.int (10.1.1.82) To EX19VC.thomann.int\r\n (10.1.1.82)"
+        },
+        "html": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">\n<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"><title></title><style type=\"text/css\"></style><style type=\"text/css\"></style><style type=\"text/css\"></style></head><body leftmargin=\"0\" topmargin=\"0\" marginwidth=\"0\" marginheight=\"0\" style=\"-ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; margin: 0px; padding: 0px; width: 100% !important; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.2; background-color: #FFFFFF;\" bgcolor=\"#f2efe9\"><table bgcolor=\"#ffffff\" width=\"100%\" style=\"width: 100%\" border=\"0\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"border-collapse: collapse;\"><table width=\"600\" style=\"width: 600px\" border=\"0\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\"><tr><td valign=\"top\" style=\"border-collapse: collapse; padding-top: 40px; padding-bottom: 30px;\"><table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"border-collapse: collapse;\"><table width=\"600\" bgcolor=\"#f3f3f3\" cellpadding=\"0\" cellspacing=\"0\" style=\"width: 600px;\"><tr><td style=\"border-collapse: collapse; padding: 15px;\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" align=\"center\" width=\"570\" style=\"border: 1px solid #e2e2e2; width: 570px;\" bgcolor=\"#ffffff\" class=\"envelope\"><!-- // THOMANN HEADER \\\\ --><tr><td align=\"center\" style=\"border-collapse: collapse; text-align: center;\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" id=\"template-header\"><tr><td align=\"left\" style=\"border-collapse: collapse; padding: 20px 15px;\"><a href=\"https://www.thomannmusic.ch\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/common/thomann-logo-02.png\" width=\"128\" height=\"26\" alt=\"Thomann\" style=\"border: none;\"></a></td></tr></table></td></tr><!-- // THOMANN BODY \\\\ --><tr><td valign=\"top\" style=\"border-collapse: collapse;\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" id=\"template-body\"><tr><td valign=\"top\" align=\"left\" class=\"default-font\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding: 0 15px 15px 15px;\">\n                                            Sehr geehrter Herr Streuli,\n\n    <p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">\n                    sicherlich warten Sie schon sehnsüchtig auf Ihre Lieferung von Thomann.\n        \n                    Wir freuen uns, Ihnen mitteilen zu können, dass Ihre Sendung unser Haus verlassen hat und nun auf dem Weg zu Ihnen ist.\n            </p><p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">\n        Ihre Sendung besteht aus einem Paket.\n            </p><div style=\"margin-top: 25px\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 16px 0;\">Paket- und Trackinginformationen</h3><p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">\n                    Sie können den Sendungsverlauf Ihrer Pakete über das <a href=\"https://www.thomannmusic.ch/mythomann.html\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\">Kundencenter</a> nachverfolgen. \n                </p><p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Alternativ können Sie die Pakete auch direkt mit der unten angegebenen Sendungsnummer über die Webseite des Paketdienstes verfolgen.</p><p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Bitte beachten Sie, dass die Informationen für die Paketverfolgung erst aktualisiert werden, wenn das Paket vom örtlichen Zoll bearbeitet wurde und in der Schweiz angekommen ist. Dies dauert in der Regel etwa drei Werktage. Die Lieferung erfolgt dann wenige Tage später. Bitte prüfen Sie Ihr Kundenkonto für den aktuellen Status Ihres Pakets.</p></div><div style=\"margin-top: 25px;\"><table width=\"100%\" style=\"border: 1px solid #e6e4d8; width: 100%;\" cellspacing=\"0\" cellpadding=\"0\" class=\"parcel\"><tr><td class=\"parcel-head\" style=\"border-collapse: collapse; background-color: #f7f5f1; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table width=\"100%\" style=\"width: 100%; height: 40px\" cellpadding=\"10\" cellspacing=\"0\" height=\"40\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Paket 1 wurde heute an Sie verschickt</td><td align=\"right\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: right;\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" class=\"btn btn-right\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: right;\"><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"display: inline-block;\"><tr><td align=\"center\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center; background: #f8f5ed; background: -moz-linear-gradient(top, #f8f5ed 0%, #e8e5db 100%); background: -webkit-linear-gradient(top, #f8f5ed 0%,#e8e5db 100%); background: linear-gradient(to bottom, #f8f5ed 0%,#e8e5db 100%);\"><a href=\"https://www.thomannmusic.ch/mythomann_tracking.html?trackingId=86839384&amp;token=a75a37035a1abb822b0689331bf087f794e873c92d4b1e9f22df5a0f67a29523\" target=\"_blank\" style=\"color: #000; font-weight: normal; text-decoration: none; border: 1px solid #bab7b1; display: inline-block; padding: 6px 12px;\">Paket verfolgen</a></td></tr></table></td></tr></table></td></tr></table></td></tr><tr><td class=\"parcel-summary\" align=\"center\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table width=\"97%\" style=\"width: 97%\" cellpadding=\"10\" cellspacing=\"0\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center;\">\n                                    Versandart<br><strong>Die Post</strong></td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center;\">\n                                    Sendungsnummer<br><a href=\"https://service.post.ch/EasyTrack/submitParcelData.do?fromSearch=STANDARD_SIMPLE&amp;formattedParcelCodes=996012815000830021\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><span style=\"color: #616161; font-weight: normal; text-decoration: underline; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">996012815000830021</span></a></td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center;\">\n                                    Kartongröße<br><strong>\n                                                                                    33 x 28 x 11 cm\n                                                                            </strong></td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center;\">\n                                    Gewicht<br><strong>\n                                                                                    0,62 kg\n                                                                            </strong></td></tr></table></td></tr><tr><td class=\"parcel-items\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table width=\"100%\" style=\"border-top: 1px solid #e6e4d8; padding: 10px 0; width: 100%;\" cellpadding=\"10\" cellspacing=\"0\"><tr class=\"parcel-item\"><td valign=\"top\" align=\"center\" width=\"100\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: center; width: 100px;\"><a href=\"https://www.thomannmusic.ch/prod_AR_631545.html\" style=\"color: #000; font-weight: normal; text-decoration: none;\"><img src=\"https://www.thomann.de/thumb/thumb256x256/pics/prod/629241.jpg\" width=\"60\" height=\"60\" alt=\"YoloLiv YoloCam S3 B-Stock\" style=\"border: none;\"></a></td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/prod_AR_631545.html\" style=\"color: #000; font-weight: normal; text-decoration: none;\"><strong>1x YoloLiv YoloCam S3 B-Stock</strong></a><p class=\"parcel-item-text\" style=\"line-height: 1.2; margin: 13px 0; margin-top: 4px; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">B-Stock, YoloLiv YoloCam S3; 4K Webcam mit AI-Optimierung und Autofokus; 1/1.3\" CMOS-Sensor; Unkomprimiertes 4K30 &amp; 1...</p><span>Artikelnummer:\n        <a href=\"https://www.thomannmusic.ch/prod_AR_631545.html\" style=\"color: #000; font-weight: normal; text-decoration: none;\"><span style=\"color: #000; font-weight: normal; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">631545</span></a></span></td></tr></table></td></tr></table><div style=\"height: 20px\"> </div></div><table width=\"100%\" style=\"width: 100%\" cellpadding=\"5\" cellspacing=\"0\" class=\"default-table order-details\"><tr><td width=\"50%\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px; width: 50%;\" valign=\"top\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 9px 0; margin-top: 0;\">Rechnungsanschrift</h3><span>\n                        David Streuli<br>            Paulstrasse 19<br>\n                            CH-8400 Winterthur, Zurich\n                    </span></td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 9px 0; margin-top: 0;\">Lieferanschrift</h3><span>\n                        David Streuli<br>            Paulstrasse 19<br>\n                            CH-8400 Winterthur, Zurich\n                    </span></td></tr><tr><td colspan=\"2\" height=\"20\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\"> </td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 9px 0; margin-top: 0;\">Weitere Informationen</h3><table class=\"default-table fact-table\" width=\"100%\" style=\"width: 100%\"><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Auftragsart</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong>Normalauftrag</strong></td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Auftragsnummer</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong>202552.888786</strong></td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Auftragsdatum</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong>27.12.2025 19:06</strong></td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Kundennummer</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong>22923243</strong></td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Auftragswert</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong><nobr>189,00 CHF</nobr></strong></td></tr><tr><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Ansprechpartner</td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><strong>Kundenservice D-A-CH</strong></td></tr></table></td><td valign=\"top\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"> </td></tr></table><div style=\"margin-top: 25px\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 16px 0;\">Produkt zurücksenden oder Problem melden</h3><table width=\"100%\" style=\"width: 100%\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">\n                    Sie möchten Produkte zurücksenden, eine Reparatur veranlassen oder haben ein Problem mit der Lieferung? Dann finden Sie <a href=\"https://www.thomannmusic.ch/mythomann_retoure.html\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\">hier</a> eine einfache und schnelle Lösung.\n                </td></tr></table></div><div style=\"margin-top: 25px; margin-bottom: 20px\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 18px 0 16px 0;\">Ihr Ansprechpartner</h3><table width=\"100%\" style=\"width: 100%\"><tr><td width=\"60\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; width: 60px;\" align=\"left\"><img src=\"https://www.thomann.de/pics/sbpics/rund/rund_vorlage.png\" width=\"50\" height=\"50\" alt=\"Ansprechpartner\"></td><td width=\"205\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; width: 205px;\"><strong>Kundenservice D-A-CH</strong><br><a href=\"mailto:kundenservice@thomann.de\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><span style=\"color: #616161; font-weight: normal; text-decoration: underline; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">kundenservice@thomann.de</span></a></td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table class=\"default-table fact-table\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Telefon</td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a class=\"phonenumber\" href=\"tel:+41715670831\" style=\"color: #000001 !important; font-weight: normal; text-decoration: none; cursor: default; pointer-events: auto;\"><span style=\"color: #020202; font-weight: normal; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><nobr>071 567 08 31</nobr></span></a></td></tr><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 15px;\">Fax</td><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a class=\"faxnumber\" style=\"color: #020202; font-weight: normal; text-decoration: none;\"><span style=\"color: #020202; font-weight: normal; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><nobr>+49 9546 9223‑24</nobr></span></a></td></tr></table></td></tr></table></div><p style=\"line-height: 1.2; margin: 13px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Vielen Dank, dass Sie Thomann gewählt haben.</p>\n\n    Mit freundlichen Grooves<br><br>\n    Ihr Thomann-Team\n                                    </td></tr></table></td></tr></table><!-- // THOMANN FOOTER \\\\ --><table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" width=\"100%\" style=\"width: 100%;\"><tr><td colspan=\"3\" height=\"10\" style=\"border-collapse: collapse; height: 10px; font-size: 1px;\"> </td></tr><tr id=\"template-footer\"><td valign=\"top\" align=\"left\" class=\"default-font\" style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table cellpadding=\"0\" cellspacing=\"3\" class=\"fact-table\"><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 10px;\">E-Mail</td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"mailto:kundenservice@thomann.de\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><span style=\"color: #7b7b7a; font-weight: normal; text-decoration: underline; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">kundenservice@thomann.de</span></a></td></tr><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 10px;\">Telefon</td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a class=\"phonenumber\" href=\"tel:+41715670831\" style=\"color: #000001 !important; font-weight: normal; text-decoration: none; cursor: default; pointer-events: auto;\"><span style=\"color: #7b7b7a; font-weight: normal; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><nobr>071 567 08 31</nobr></span></a></td></tr><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; padding-right: 10px;\">Fax</td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a class=\"faxnumber\" style=\"color: #000000; font-weight: normal; text-decoration: none;\"><span style=\"color: #7b7b7a; font-weight: normal; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><nobr>+49 9546 9223‑24</nobr></span></a></td></tr></table></td><td valign=\"top\" align=\"left\" class=\"default-font\" style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><table cellpadding=\"0\" cellspacing=\"3\"><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/compinfo_contact.html\" target=\"_blank\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><span style=\"color: #7b7b7a; font-weight: normal; text-decoration: underline; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Öffnungszeiten</span></a></td></tr><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/mythomann.html\" target=\"_blank\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><span style=\"color: #7b7b7a; font-weight: normal; text-decoration: underline; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\">Kundencenter</span></a></td></tr></table></td><td valign=\"middle\" align=\"right\" class=\"default-font social-icons\" style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: right;\"><table cellpadding=\"3\" cellspacing=\"0\" border=\"0\" style=\"text-align: right\" align=\"right\"><tr><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.facebook.com/musikhausthomann\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/social/facebook-grey.png\" width=\"28\" alt=\"Facebook\" style=\"border: none;\"></a></td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.youtube.com/user/MusikhausThomann\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/social/youtube-grey.png\" width=\"28\" alt=\"YouTube\" style=\"border: none;\"></a></td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://instagram.com/thomann.music/\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/social/instagram-grey.png\" width=\"28\" alt=\"Instagram\" style=\"border: none;\"></a></td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.tiktok.com/@thomann.music\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/social/tiktok-grey.png\" width=\"28\" alt=\"TikTok\" style=\"border: none;\"></a></td><td style=\"border-collapse: collapse; color: #7b7b7a; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.pinterest.com/thomannde/\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/social/pinterest-grey.png\" width=\"28\" alt=\"Pinterest\" style=\"border: none;\"></a></td></tr></table></td></tr><tr><td colspan=\"3\" height=\"10\" style=\"border-collapse: collapse; height: 10px; font-size: 1px;\"> </td></tr></table><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"width: 100%\"><tr><td class=\"news default-font\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><h3 style=\"font-size: 18px; font-weight: normal; margin: 20px 0 10px 0;\">Infos und News rund um Thomann</h3><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"width: 100%\"><tr><td width=\"33%\" class=\"news-item default-font\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; vertical-align: top;\"><!-- yes, we have to wrap the image into a table cell to apply border for outlook --><table class=\"news-image\" style=\"border: 1px solid #e2e2e2;\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/newsletter.html?utm_source=automail&amp;utm_medium=footer&amp;utm_campaign=DOIservicemail\" style=\"color: #000000; font-weight: normal; text-decoration: none;\"><img src=\"https://www.thomann.de/pics/hq/mails/news/newsletter.jpg\" width=\"184\" height=\"113\" alt=\"Newsletter\" style=\"border: none; display: block;\"></a></td></tr></table><table cellpadding=\"0\" cellspacing=\"0\" width=\"170\"><tr><td class=\"news-headline\" style=\"border-collapse: collapse; padding: 12px 0 8px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/newsletter.html?utm_source=automail&amp;utm_medium=footer&amp;utm_campaign=DOIservicemail\" style=\"color: #343434; font-weight: bold; text-decoration: none;\">Newsletter</a></td></tr><tr><td class=\"news-text\" style=\"border-collapse: collapse; color: #020202; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/newsletter.html?utm_source=automail&amp;utm_medium=footer&amp;utm_campaign=DOIservicemail\" style=\"color: #000000; font-weight: normal; text-decoration: none;\">Regelmäßig informieren wir Sie über interessante Themen, Empfehlungen, Produktneuheiten und exklusive Deals für Musiker. Jetzt registrieren!</a></td></tr></table></td><td width=\"33%\" class=\"news-item default-font\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; vertical-align: top;\"><!-- yes, we have to wrap the image into a table cell to apply border for outlook --><table class=\"news-image\" style=\"border: 1px solid #e2e2e2;\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomann.de/blog/de/\" style=\"color: #000000; font-weight: normal; text-decoration: none;\"><img src=\"https://www.thomann.de/pics/hq/mails/news/t-blog.jpg\" width=\"184\" height=\"113\" alt=\"Blog\" style=\"border: none; display: block;\"></a></td></tr></table><table cellpadding=\"0\" cellspacing=\"0\" width=\"170\"><tr><td class=\"news-headline\" style=\"border-collapse: collapse; padding: 12px 0 8px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomann.de/blog/de/\" style=\"color: #343434; font-weight: bold; text-decoration: none;\">Blog</a></td></tr><tr><td class=\"news-text\" style=\"border-collapse: collapse; color: #020202; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomann.de/blog/de/\" style=\"color: #000000; font-weight: normal; text-decoration: none;\">Verpassen Sie nie wieder Events, Ankündigungen, Gewinnspiele oder News aus dem Treppendorfer Universum.</a></td></tr></table></td><td width=\"33%\" class=\"news-item default-font\" style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left; vertical-align: top;\"><!-- yes, we have to wrap the image into a table cell to apply border for outlook --><table class=\"news-image\" style=\"border: 1px solid #e2e2e2;\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"border-collapse: collapse; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/basket_coupon.html\" style=\"color: #000000; font-weight: normal; text-decoration: none;\"><img src=\"https://www.thomann.de/pics/hq/mails/news/vouchers.jpg\" width=\"184\" height=\"113\" alt=\"Gutscheine\" style=\"border: none; display: block;\"></a></td></tr></table><table cellpadding=\"0\" cellspacing=\"0\" width=\"170\"><tr><td class=\"news-headline\" style=\"border-collapse: collapse; padding: 12px 0 8px 0; color: #020202; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/basket_coupon.html\" style=\"color: #343434; font-weight: bold; text-decoration: none;\">Gutscheine</a></td></tr><tr><td class=\"news-text\" style=\"border-collapse: collapse; color: #020202; text-decoration: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; text-align: left;\"><a href=\"https://www.thomannmusic.ch/basket_coupon.html\" style=\"color: #000000; font-weight: normal; text-decoration: none;\">Das perfekte Geschenk für Ihre Musikerkollegen, Verwandte oder Freunde. Damit zaubern Sie garantiert ein entzücktes Grinsen aufs Gesicht.</a></td></tr></table></td></tr></table></td></tr></table><div style=\"height: 20px\"> </div><div class=\"keywords\" style=\"display: none; font-size: 1px; color: #f0eeeb;\"></div><table border=\"0\" cellpadding=\"5\" cellspacing=\"0\" width=\"100%\" style=\"width: 100%\"><tr id=\"template-footer-sub\"><td align=\"center\" style=\"border-collapse: collapse; color: #b6b5b3; font-family: Arial, Helvetica, sans-serif; font-size: 11px; text-align: center; border-top: 1px solid #dddddb; padding-top: 15px;\" class=\"default-font\" colspan=\"3\">\n                            Thomann GmbH,\n                            Hans-Thomann-Str. 1,\n                            96138 Burgebrach,\n                            Deutschland<br>\n                            Geschäftsführer: Johann Thomann,\n                            Handelsregister-Nummer: HRB 5862<br>\n                            Handelsregister beim Amtsgericht: Bamberg,\n                            Sitz der Gesellschaft: Burgebrach<br><br><a href=\"https://www.thomannmusic.ch\" style=\"color: #000000; font-weight: normal; text-decoration: underline;\"><img src=\"https://www.thomann.de/pics/hq/mails/common/thomann-footer-grey.png\" width=\"100\" height=\"18\" alt=\"Thomann\" style=\"border: none;\"></a></td></tr></table></td></tr></table></td></tr></table></td></tr></table></td></tr></table></body></html>\n",
+        "subject": "Versandbenachrichtigung und Rechnung (22923243)",
+        "date": "2025-12-29T16:42:13.000Z",
+        "to": {
+          "value": [
+            {
+              "address": "uniqued4ve@gmail.com",
+              "name": ""
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><a href=\"mailto:uniqued4ve@gmail.com\" class=\"mp_address_email\">uniqued4ve@gmail.com</a></span>",
+          "text": "uniqued4ve@gmail.com"
+        },
+        "from": {
+          "value": [
+            {
+              "address": "kundenservice@thomann.de",
+              "name": "Thomann"
+            }
+          ],
+          "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Thomann</span> &lt;<a href=\"mailto:kundenservice@thomann.de\" class=\"mp_address_email\">kundenservice@thomann.de</a>&gt;</span>",
+          "text": "\"Thomann\" <kundenservice@thomann.de>"
+        },
+        "messageId": "<bbb879f2-3aec-4c44-9a56-18873b693a02@thomann.de>"
+      }
+    ]
+  },
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"

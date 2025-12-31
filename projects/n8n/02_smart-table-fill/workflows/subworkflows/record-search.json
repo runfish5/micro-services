@@ -1,0 +1,183 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Contact RecordSearch\n\nTiered contact lookup:\n1. Fast match on `email` column\n2. Fallback search in `more_emails`\n3. Fuzzy name matching (first_name + surname)\n4. Return found: false if no match",
+        "height": 344,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "de52f66f-1c1b-4020-89bc-f2bfdde9558f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        16
+      ],
+      "id": "188ea06d-825b-4c8e-bfd0-557ad0b9f3ed",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -160
+      ],
+      "id": "2f2a17f2-b51e-4b07-b095-4115d167eded",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "search-email",
+              "name": "search_email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "search-first-name",
+              "name": "search_first_name",
+              "value": "={{ $json.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "search-surname",
+              "name": "search_surname",
+              "value": "={{ $json.surname }}",
+              "type": "string"
+            },
+            {
+              "id": "spreadsheet-id",
+              "name": "spreadsheet_id",
+              "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
+              "type": "string"
+            },
+            {
+              "id": "sheet-name",
+              "name": "sheet_name",
+              "value": "Entries",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        -80
+      ],
+      "id": "d518d463-59d7-4e8a-af62-cb74affd28c1",
+      "name": "Set Search Input"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        832,
+        -80
+      ],
+      "id": "82665820-3d16-4a83-a1d0-802e41eab25f",
+      "name": "Read All Contacts",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const contacts = $input.all();\nconst searchEmail = $('Set Search Input').first().json.search_email?.toLowerCase();\nconst searchFirstName = $('Set Search Input').first().json.search_first_name?.toLowerCase().trim();\nconst searchSurname = $('Set Search Input').first().json.search_surname?.toLowerCase().trim();\n\nlet match = null;\nlet matchType = 'none';\n\n// Step 1: Fast lookup - check email column\nif (searchEmail) {\n  match = contacts.find(c =>\n    c.json.email?.toLowerCase() === searchEmail\n  );\n  if (match) matchType = 'email';\n}\n\n// Step 2: Fallback - check more_emails\nif (!match && searchEmail) {\n  match = contacts.find(c =>\n    c.json.more_emails?.toLowerCase().includes(searchEmail)\n  );\n  if (match) matchType = 'more_emails';\n}\n\n// Step 3: Name matching (fuzzy) - combine first_name + surname\nif (!match && (searchFirstName || searchSurname)) {\n  const normalize = (s) => s?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';\n  const searchFullName = normalize((searchFirstName || '') + (searchSurname || ''));\n\n  match = contacts.find(c => {\n    const contactFullName = normalize((c.json.first_name || '') + (c.json.surname || ''));\n    // Exact match after normalization\n    return contactFullName === searchFullName;\n  });\n\n  // If no exact match, try partial matching\n  if (!match && searchFullName.length > 3) {\n    match = contacts.find(c => {\n      const contactFullName = normalize((c.json.first_name || '') + (c.json.surname || ''));\n      return contactFullName.includes(searchFullName) ||\n             searchFullName.includes(contactFullName);\n    });\n  }\n  if (match) matchType = 'name_fuzzy';\n}\n\nif (match) {\n  return [{ json: { found: true, matchType, contact: match.json } }];\n} else {\n  return [{ json: { found: false, matchType: 'none' } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -80
+      ],
+      "id": "60af8c4d-3776-4410-bbc4-c879617f814a",
+      "name": "Tiered Contact Search"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set Search Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Search Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Search Input": {
+      "main": [
+        [
+          {
+            "node": "Read All Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Contacts": {
+      "main": [
+        [
+          {
+            "node": "Tiered Contact Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

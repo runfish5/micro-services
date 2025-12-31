@@ -34,7 +34,7 @@ Trigger → String Input (config)
                                         ↓
                               Fetch Headers (schema)
                                         ↓
-                              Code (build JSON schema)
+                              Build Output Schema
                                         ↓
                               LLM: Extract Data
                                         ↓
@@ -70,13 +70,13 @@ START: Manual Trigger / When Executed by Another Workflow
                 │
                 └→ Fetch Headers (schema sheet)
                      │
-                     └→ Code (convert schema to JSON schema)
+                     └→ Build Output Schema (convert schema to JSON schema)
                           │
                           └→ Extract Data from String
                           │     ├─ LLM Processor (gpt-oss-120b)
                           │     └─ Dynamic Output Parser
                           │
-                          └→ Code1 (merge batch outputs)
+                          └→ Merge Outputs
                                │
                                └→ Write_Excel (update data sheet)
 ```
@@ -116,11 +116,11 @@ START: Manual Trigger / When Executed by Another Workflow
 | 13 | Append Schema to Sheet | googleSheets | Write schema rows |
 | 14 | Merge | merge | Join schema exists/created branches |
 | 15 | Fetch Headers | googleSheets | Read schema sheet |
-| 16 | Code | code | Build JSON schema from schema rows |
+| 16 | Build Output Schema | code | Build JSON schema from schema rows |
 | 17 | Extract Data from String | chainLlm | LLM data extraction |
 | 18 | LLM Processor | lmChatGroq | Language model for extraction |
 | 19 | Dynamic Output Parser | outputParser | Parse extracted data |
-| 20 | Code1 | code | Merge batch outputs |
+| 20 | Merge Outputs | code | Merge batch outputs |
 | 21 | Write_Excel | googleSheets | Update data sheet row |
 
 ## Notes
@@ -128,3 +128,54 @@ START: Manual Trigger / When Executed by Another Workflow
 - First run creates schema; subsequent runs skip creation
 - Edit schema sheet to customize extraction (types, descriptions, enum values)
 - BatchSize controls how many fields per LLM call
+- Write_Excel uses `appendOrUpdate` operation with `email` as matching column
+
+---
+
+## Subworkflows
+
+### RecordSearch (4_CM:RecordSearch)
+
+**File:** `workflows/subworkflows/record-search.json`
+
+**Purpose:** Tiered contact lookup before calling smart-table-fill, used by inbox-attachment-organizer.
+
+#### Flow
+```
+When Executed by Another Workflow
+  ↓
+Set Search Input (email, first_name, surname)
+  ↓
+Read All Contacts (Google Sheets)
+  ↓
+Tiered Contact Search (Code node)
+  ↓
+Return: { found, matchType, contact }
+```
+
+#### Tiered Matching Logic
+```
+Step 1: email column (exact match)
+  ↓
+Step 2: more_emails column (contains search)
+  ↓
+Step 3: first_name + surname (fuzzy normalized match)
+  ↓
+Step 4: return found: false
+```
+
+#### Node Details
+
+| # | Node | Type | Purpose |
+|---|------|------|---------|
+| 1 | When Executed by Another Workflow | trigger | Subworkflow entry |
+| 2 | Manual Trigger | trigger | Testing entry |
+| 3 | Set Search Input | set | Capture search params |
+| 4 | Read All Contacts | googleSheets | Fetch all contact rows |
+| 5 | Tiered Contact Search | code | Matching logic |
+
+#### Integration Point
+Called by inbox-attachment-organizer's `ContactManager-lineage` switch node:
+```
+ContactManager-lineage → RecordSearch → Prepare Contact Input → smart-table-fill
+```

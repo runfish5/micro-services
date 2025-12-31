@@ -2,84 +2,124 @@
   "nodes": [
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "17f1ff39-06cb-441e-ba35-2e83ec5a79d1",
-              "name": "TextObject_User",
-              "value": "Hey! Quick notes from the tech meetup last Thursday (December 5th).    Met this guy Marco Bellini - super interesting background. He's working at CloudForge Solutions as a Product Lead, but also does freelance consulting through his own thing called NexaBridge. Really into machine learning ops and developer tooling.    He messaged me yesterday (December 8th) asking about our API documentation, and I had actually emailed him back on December 6th with some links. His office is somewhere in Zurich, Technopark area I think - Technoparkstrasse 42 or something like that.    We connected at the UZH alumni event originally so definitely an academia contact. Should tag him in the Developer Relations group.    Contact info: marco.bellini@cloudforge.io and also marco@nexabridge.ch, mobile is +41 78 555 2341. Pretty sure his birthday is in July, the 23rd maybe?    He mentioned wanting to explore partnership opportunities around workflow automation. Seems like a good time to follow up - put him on the \"time to reach out\" list for next week.",
-              "type": "string"
-            },
-            {
-              "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
-              "name": "MatchValue",
-              "value": "Rene Uster",
-              "type": "string"
-            },
-            {
-              "id": "2af3e327-ba41-41d7-818b-6608d82566d0",
-              "name": "MatchColumn",
-              "value": "email",
-              "type": "string"
-            },
-            {
-              "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
-              "name": "BatchSize",
-              "value": 6,
-              "type": "number"
-            },
-            {
-              "id": "a1b2c3d4-1111-2222-3333-444455556666",
-              "name": "SpreadsheetId",
-              "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
-              "type": "string"
-            },
-            {
-              "id": "a1b2c3d4-5555-6666-7777-888899990000",
-              "name": "DataSheetName",
-              "value": "Entries",
-              "type": "string"
-            },
-            {
-              "id": "a1b2c3d4-aaaa-bbbb-cccc-ddddeeeeffff",
-              "name": "SchemaSheetName",
-              "value": "Description_hig7f6",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "content": "Toggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
+        "height": 288,
+        "width": 200
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
       "position": [
-        1552,
-        1360
+        3088,
+        1488
       ],
-      "id": "a5a8f031-8f78-41c6-94dd-b1e30d6ca957",
-      "name": "String Input"
+      "id": "7d799cc7-551e-419e-86c5-ba9ccbdfc5d8",
+      "name": "Sticky Note1"
     },
     {
       "parameters": {
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}/values/{{ encodeURIComponent($('String Input').first().json.DataSheetName) }}!1:1",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "options": {}
+        "content": "## If workflow stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
+        "height": 332,
+        "width": 280
       },
-      "id": "eabba3aa-4467-4b4b-bbaa-58c2d683691d",
-      "name": "Fetch Data Sheet Headers",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
       "position": [
-        1776,
+        1904,
+        1184
+      ],
+      "id": "8bc89b5a-d0a2-44b0-af81-0d3b5709c3d3",
+      "name": "Sticky Note - Troubleshoot"
+    },
+    {
+      "parameters": {
+        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
+        "height": 296,
+        "width": 452
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        800,
+        1152
+      ],
+      "id": "bd821957-9aab-4bfd-83df-9cb9c58482fa",
+      "name": "Sticky Note - Schema Info"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        1168
+      ],
+      "id": "e572f6d1-5446-47cb-b3ba-d7b50f471d61",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        1344,
         1360
       ],
+      "id": "91e59217-1dd5-412f-8ede-4b095d52ac23",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        1856
+      ],
+      "id": "b822ab80-3760-41b4-889a-1ab3b209e50d",
+      "name": "LLM Processor",
+      "notesInFlow": false,
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
         }
       }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={{ JSON.stringify($('Build Output Schema').all()[0].json, null, \" \") }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2736,
+        1792
+      ],
+      "id": "ab61eb4e-fd7b-4390-81e9-a03c9859ed6b",
+      "name": "Dynamic Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<source_text>\n{{ $('String Input').first().json.TextObject_User }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## EXPECTED OUTPUT:\nGiven\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n\nStart here.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        2592,
+        1616
+      ],
+      "id": "91b8fcfc-662c-455f-ae53-f5b734f33860",
+      "name": "Extract Data from String",
+      "alwaysOutputData": false
     },
     {
       "parameters": {
@@ -95,73 +135,13 @@
         },
         "options": {}
       },
-      "id": "f6ddf6bb-5bec-4c74-8c4d-4fb10ccde34b",
-      "name": "Try Fetch Schema Sheet",
+      "id": "cc7ab14b-317e-4293-bca3-15fc9525a598",
+      "name": "Fetch Headers",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        2000,
-        1360
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "schema-exists-condition",
-              "leftValue": "={{ $json.ColumnName }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e96beba7-78e9-4417-aeb3-473610dc4fc2",
-      "name": "IF: Schema Exists?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        2224,
-        1360
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}:batchUpdate",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.SchemaSheetName }}\"\n      }\n    }\n  }]\n}",
-        "options": {}
-      },
-      "id": "46fe86c4-5dd4-433b-b659-5cfd50017a8f",
-      "name": "HTTP: Create Sheet",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1344,
-        1616
+        2560,
+        1344
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -169,82 +149,6 @@
           "name": "GoogleDriveMAIN"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
-      },
-      "id": "e21cc0b6-0f49-4ac6-beb0-4a80a374d9d3",
-      "name": "Prep Columns for LLM",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1568,
-        1616
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $json.columns }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
-        "hasOutputParser": true,
-        "batching": {}
-      },
-      "id": "f95afa1a-2bab-44f1-84a4-702c5a85610b",
-      "name": "LLM: Generate Schema",
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.7,
-      "position": [
-        1792,
-        1616
-      ]
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
-      },
-      "id": "e9515759-4db9-4388-8636-01d668ce5340",
-      "name": "Schema Output Parser",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        1904,
-        1840
-      ]
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {}
-      },
-      "id": "fd913b99-c8ac-4b70-94b4-a5ede799f966",
-      "name": "Schema LLM",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        1792,
-        1840
-      ],
-      "credentials": {
-        "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
-      },
-      "id": "c14cf4cd-0179-4063-9ef7-27d1309c2269",
-      "name": "Split Schema Rows",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2016,
-        1616
-      ]
     },
     {
       "parameters": {
@@ -326,6 +230,141 @@
     },
     {
       "parameters": {
+        "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
+      },
+      "id": "c14cf4cd-0179-4063-9ef7-27d1309c2269",
+      "name": "Split Schema Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "id": "fd913b99-c8ac-4b70-94b4-a5ede799f966",
+      "name": "Schema LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        1840
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
+      },
+      "id": "e9515759-4db9-4388-8636-01d668ce5340",
+      "name": "Schema Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $json.columns }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "f95afa1a-2bab-44f1-84a4-702c5a85610b",
+      "name": "LLM: Generate Schema",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1792,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
+      },
+      "id": "e21cc0b6-0f49-4ac6-beb0-4a80a374d9d3",
+      "name": "Prep Columns for LLM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.SchemaSheetName }}\"\n      }\n    }\n  }]\n}",
+        "options": {}
+      },
+      "id": "46fe86c4-5dd4-433b-b659-5cfd50017a8f",
+      "name": "HTTP: Create Sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1616
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "schema-exists-condition",
+              "leftValue": "={{ $json.ColumnName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e96beba7-78e9-4417-aeb3-473610dc4fc2",
+      "name": "IF: Schema Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        1360
+      ]
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
           "value": "={{ $('String Input').first().json.SpreadsheetId }}",
@@ -338,13 +377,36 @@
         },
         "options": {}
       },
-      "id": "cc7ab14b-317e-4293-bca3-15fc9525a598",
-      "name": "Fetch Headers",
+      "id": "f6ddf6bb-5bec-4c74-8c4d-4fb10ccde34b",
+      "name": "Try Fetch Schema Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        2560,
-        1344
+        2000,
+        1360
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.SpreadsheetId }}/values/{{ encodeURIComponent($('String Input').first().json.DataSheetName) }}!1:1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "eabba3aa-4467-4b4b-bbaa-58c2d683691d",
+      "name": "Fetch Data Sheet Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1776,
+        1360
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -355,82 +417,7 @@
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<source_text>\n{{ $('String Input').first().json.TextObject_User }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## EXPECTED OUTPUT:\nGiven\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n\nStart here.",
-        "hasOutputParser": true,
-        "batching": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.7,
-      "position": [
-        2592,
-        1616
-      ],
-      "id": "91b8fcfc-662c-455f-ae53-f5b734f33860",
-      "name": "Extract Data from String",
-      "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "={{ JSON.stringify($('Code').all()[0].json, null, \" \") }}"
-      },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        2736,
-        1840
-      ],
-      "id": "ab61eb4e-fd7b-4390-81e9-a03c9859ed6b",
-      "name": "Dynamic Output Parser"
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        2608,
-        1840
-      ],
-      "id": "b822ab80-3760-41b4-889a-1ab3b209e50d",
-      "name": "LLM Processor",
-      "credentials": {
-        "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
-        }
-      }
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        1344,
-        1360
-      ],
-      "id": "91e59217-1dd5-412f-8ede-4b095d52ac23",
-      "name": "Manual Trigger"
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.BatchSize;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2784,
-        1344
-      ],
-      "id": "4a21c71b-d54f-41aa-b4b4-f0e46a4cf1b2",
-      "name": "Code"
-    },
-    {
-      "parameters": {
-        "operation": "update",
+        "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
           "value": "={{ $('String Input').first().json.SpreadsheetId }}",
@@ -444,17 +431,17 @@
         "columns": {
           "mappingMode": "autoMapInputData",
           "value": {
-            "name": "={{ $json.output.name  }}"
+            "email": "={{ $json.email }}"
           },
           "matchingColumns": [
-            "name"
+            "email"
           ],
           "schema": [
             {
-              "id": "name",
-              "displayName": "name",
+              "id": "email",
+              "displayName": "email",
               "required": false,
-              "defaultMatch": false,
+              "defaultMatch": true,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
@@ -466,12 +453,12 @@
         },
         "options": {}
       },
-      "id": "6bcbb13a-3841-4785-9282-43998b56f920",
+      "id": "78d054da-25bd-4104-ae6a-9616ba563314",
       "name": "Write_Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        3168,
+        3136,
         1616
       ],
       "credentials": {
@@ -483,104 +470,294 @@
     },
     {
       "parameters": {
-        "jsCode": "const allOutputs = $input.all();\nconst matchColumn = $('String Input').first().json.MatchColumn;\nconst matchValue = $('String Input').first().json.MatchValue;\n\nconst merged = {};\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  Object.assign(merged, output);\n}\n\n// Add source reference as separate field (e.g., name_source for debugging)\nmerged[matchColumn + '_source'] = matchValue;\n\nreturn [{ json: merged }];"
+        "assignments": {
+          "assignments": [
+            {
+              "id": "17f1ff39-06cb-441e-ba35-2e83ec5a79d1",
+              "name": "TextObject_User",
+              "value": "={{ $json.TextObject_User || $json.text || $json.body || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
+              "name": "MatchValue",
+              "value": "={{ $json.MatchValue || $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "2af3e327-ba41-41d7-818b-6608d82566d0",
+              "name": "MatchColumn",
+              "value": "={{ $json.MatchColumn || 'email' }}",
+              "type": "string"
+            },
+            {
+              "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
+              "name": "BatchSize",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "a1b2c3d4-1111-2222-3333-444455556666",
+              "name": "SpreadsheetId",
+              "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-5555-6666-7777-888899990000",
+              "name": "DataSheetName",
+              "value": "Entries",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-aaaa-bbbb-cccc-ddddeeeeffff",
+              "name": "SchemaSheetName",
+              "value": "Description_hig7f6",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        1360
+      ],
+      "id": "6ac66f3a-3c6f-4741-9647-0eb6d6cb1497",
+      "name": "String Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2dde6c5a-432c-49fa-98ae-a53b9e031f3b",
+              "name": "parent_folder_id",
+              "value": "1jXQCJpofwifg8AJjhGulbFJlyqgIIOdB",
+              "type": "string"
+            },
+            {
+              "id": "ae24ffe9-bc76-48ee-975c-c691674a9e0f",
+              "name": "contact_email",
+              "value": "={{ $('String Input').first().json.MatchValue }}",
+              "type": "string"
+            },
+            {
+              "id": "04dbff83-f23f-4f5f-bda0-0c997913f393",
+              "name": "email_body",
+              "value": "={{ $('String Input').first().json.TextObject_User }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3360,
+        1616
+      ],
+      "id": "be382f5d-497a-4497-ad87-df5e38aa1664",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "njbzxGvNwo6JuIfj",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/njbzxGvNwo6JuIfj",
+          "cachedResultName": "contact-folder-manager"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        3584,
+        1616
+      ],
+      "id": "8bc29d06-c9a5-4ce5-aadf-abd33b002536",
+      "name": "Call 'contact-folder-manager'"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.BatchSize;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2944,
+        2784,
+        1344
+      ],
+      "id": "4a21c71b-d54f-41aa-b4b4-f0e46a4cf1b2",
+      "name": "Build Output Schema"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue;\ntry {\n  matchColumn = $('String Input').first().json.MatchColumn;\n  matchValue = $('String Input').first().json.MatchValue;\n} catch (e) {\n  // Fallback for subworkflow execution - get from first input item\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n}\n\nconst merged = {};\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    Object.assign(merged, output);\n  }\n}\n\n// Set email from source (sender email) if matchColumn is email\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\n\n// Add source reference for debugging\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails: combine existing extracted emails (if any)\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\nreturn [{ json: merged }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
         1616
       ],
-      "id": "11cb38ec-41d8-474d-b2de-018449102a18",
-      "name": "Code1"
-    },
-    {
-      "parameters": {
-        "inputSource": "passthrough"
-      },
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        1344,
-        1168
-      ],
-      "id": "e572f6d1-5446-47cb-b3ba-d7b50f471d61",
-      "name": "When Executed by Another Workflow"
-    },
-    {
-      "parameters": {
-        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
-        "height": 296,
-        "width": 452
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        800,
-        1152
-      ],
-      "id": "bd821957-9aab-4bfd-83df-9cb9c58482fa",
-      "name": "Sticky Note - Schema Info"
-    },
-    {
-      "parameters": {
-        "content": "## If workflow stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
-        "height": 332,
-        "width": 280
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1904,
-        1184
-      ],
-      "id": "8bc89b5a-d0a2-44b0-af81-0d3b5709c3d3",
-      "name": "Sticky Note - Troubleshoot"
-    },
-    {
-      "parameters": {
-        "content": "Toggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
-        "height": 288,
-        "width": 200
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        3088,
-        1488
-      ],
-      "id": "7d799cc7-551e-419e-86c5-ba9ccbdfc5d8",
-      "name": "Sticky Note1"
+      "id": "a443b156-94f6-4ba7-881d-b3f3817ba14a",
+      "name": "Merge Outputs"
     }
   ],
   "connections": {
-    "String Input": {
+    "When Executed by Another Workflow": {
       "main": [
         [
           {
-            "node": "Fetch Data Sheet Headers",
+            "node": "String Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Data Sheet Headers": {
+    "Manual Trigger": {
       "main": [
         [
           {
-            "node": "Try Fetch Schema Sheet",
+            "node": "String Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Try Fetch Schema Sheet": {
+    "LLM Processor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Data from String",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        []
+      ]
+    },
+    "Dynamic Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Data from String",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data from String": {
       "main": [
         [
           {
-            "node": "IF: Schema Exists?",
+            "node": "Merge Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Headers": {
+      "main": [
+        [
+          {
+            "node": "Build Output Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Schema to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Fetch Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Schema Rows": {
+      "main": [
+        [
+          {
+            "node": "Append Schema to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Generate Schema": {
+      "main": [
+        [
+          {
+            "node": "Split Schema Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Columns for LLM": {
+      "main": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Create Sheet": {
+      "main": [
+        [
+          {
+            "node": "Prep Columns for LLM",
             "type": "main",
             "index": 0
           }
@@ -605,139 +782,62 @@
         ]
       ]
     },
-    "HTTP: Create Sheet": {
+    "Try Fetch Schema Sheet": {
       "main": [
         [
           {
-            "node": "Prep Columns for LLM",
+            "node": "IF: Schema Exists?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prep Columns for LLM": {
+    "Fetch Data Sheet Headers": {
       "main": [
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Try Fetch Schema Sheet",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "LLM: Generate Schema": {
+    "Write_Excel": {
       "main": [
         [
           {
-            "node": "Split Schema Rows",
+            "node": "Edit Fields",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Schema Output Parser": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "LLM: Generate Schema",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Schema LLM": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "LLM: Generate Schema",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split Schema Rows": {
+    "String Input": {
       "main": [
         [
           {
-            "node": "Append Schema to Sheet",
+            "node": "Fetch Data Sheet Headers",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Append Schema to Sheet": {
+    "Edit Fields": {
       "main": [
         [
           {
-            "node": "Fetch Headers",
+            "node": "Call 'contact-folder-manager'",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Headers": {
-      "main": [
-        [
-          {
-            "node": "Code",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Data from String": {
-      "main": [
-        [
-          {
-            "node": "Code1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dynamic Output Parser": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "Extract Data from String",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LLM Processor": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Extract Data from String",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Manual Trigger": {
-      "main": [
-        [
-          {
-            "node": "String Input",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code": {
+    "Build Output Schema": {
       "main": [
         [
           {
@@ -748,22 +848,11 @@
         ]
       ]
     },
-    "Code1": {
+    "Merge Outputs": {
       "main": [
         [
           {
             "node": "Write_Excel",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "When Executed by Another Workflow": {
-      "main": [
-        [
-          {
-            "node": "String Input",
             "type": "main",
             "index": 0
           }
