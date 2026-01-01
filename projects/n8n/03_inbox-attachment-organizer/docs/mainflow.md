@@ -141,13 +141,12 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 - **Output**: Extracted text content from documents
 
 ### 2. google-drive-folder-id-lookup
-- **Called by**: Call 'Google Drive Folder ID Lookup'
+- **Called by**: Call 'gdrive-recursion'
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)
 - **Input**: Path components (year, month, category)
 - **Output**: Folder ID for file upload
-- **Behavior**: Creates folders if they don't exist, caches results in PathToIDLookup sheet for performance
-- **Uses**: google-drive-folder-id-recursion subworkflow for recursive folder creation
+- **Behavior**: Self-recursive workflow—calls itself when folders don't exist, skips cache lookup on recursive calls for efficiency. Uses OR query for batch cache lookup (Google Sheets v4.7)
 
 💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
 

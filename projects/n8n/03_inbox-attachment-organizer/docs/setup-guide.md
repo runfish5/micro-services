@@ -12,9 +12,8 @@
 Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](n8n.io) :
 1. [inbox-attachment-organizer.json](../workflows/inbox-attachment-organizer.json) - Main workflow
 2. [any-file2json-converter.json](../workflows/subworkflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
-3. [google-drive-folder-id-lookup.json](../workflows/subworkflows/google-drive-folder-id-lookup.json) - Subworkflow: Locates/creates folders
-4. [google-drive-folder-id-recursion.json](../workflows/subworkflows/google-drive-folder-id-recursion.json) - Recursive subworkflow (used by folder lookup)
-5. [gmail-systematic-processor.json](../workflows/subworkflows/gmail-systematic-processor.json) - Batch processor for existing emails
+3. [google-drive-folder-id-lookup.json](../workflows/subworkflows/google-drive-folder-id-lookup.json) - Subworkflow: Self-recursive folder locator/creator
+4. [gmail-systematic-processor.json](../workflows/subworkflows/gmail-systematic-processor.json) - Batch processor for existing emails
 
 ### 2. Setup Credentials
 Only one authentication needed: **Google OAuth**
@@ -47,17 +46,17 @@ Create a Google Sheet named **"PathToIDLookup"** with these exact column headers
 path	folder_id	child_ids	last_update
 ```
 
-**Purpose:** This sheet acts as a cache for Google Drive folder structure lookups, significantly improving performance by avoiding repeated API calls.
+**Purpose:** n8n's Google Drive nodes only accept folder IDs, not path strings like `/Accounting/2025/05_May/`. This sheet maps human-readable paths to Drive folder IDs, also serving as a cache to avoid repeated API traversals.
 
 **Location:** Place this sheet at the **root directory** of your Google Drive (not inside Accounting or any subfolder)
 
-**How it works:** The `google-drive-folder-id-lookup` and `google-drive-folder-id-recursion` subworkflows automatically populate this sheet as they traverse and create folders. You don't need to manually add any data.
+**How it works:** The `google-drive-folder-id-lookup` subworkflow automatically populates this sheet as it traverses and creates folders. You don't need to manually add any data.
 
 **Example of populated sheet:**
 
 ![PathToIDLookup Sheet Structure](../assets/lookup-table-schema-columns-path-folder-id.png)
 
-*The sheet caches folder paths and their corresponding Google Drive IDs, enabling fast lookups without repeated API calls.*
+*Example: path `/Accounting/2025/05_May/Expense` maps to folder_id `1abc...xyz`*
 
 ### 5. Activate
 - Send test email with invoice attachment

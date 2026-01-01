@@ -2,76 +2,79 @@
   "nodes": [
     {
       "parameters": {
-        "content": "# Path to Folder ID Resolver",
-        "height": 752,
-        "width": 1440
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "target_path"
+            },
+            {
+              "name": "root_folder_id"
+            },
+            {
+              "name": "root_path"
+            },
+            {
+              "name": "current_folder_id"
+            },
+            {
+              "name": "current_path"
+            }
+          ]
+        }
       },
-      "type": "n8n-nodes-base.stickyNote",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
       "position": [
-        -256,
-        -160
+        5376,
+        2064
       ],
-      "typeVersion": 1,
-      "id": "9f34e71a-cd65-4166-ad77-dc0b1aff7e2d",
-      "name": "Sticky Note2"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        -304
-      ],
-      "id": "85fe0e0d-bc1e-4c3c-ba64-fa7e04a4c18d",
-      "name": "When clicking ‘Execute workflow’"
+      "id": "0e7d5f9e-d032-488a-b84e-20670364c8c8",
+      "name": "Trigger"
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
             {
-              "id": "target-path",
-              "name": "target_path",
-              "value": "={{ $json.target_path }}",
-              "type": "string"
-            },
-            {
-              "id": "root-id",
-              "name": "root_folder_id",
-              "value": "={{ $json.root_folder_id }}",
-              "type": "string"
-            },
-            {
-              "id": "root-path",
-              "name": "root_path",
-              "value": "={{ $json.root_path }}",
-              "type": "string"
+              "id": "is-recursion",
+              "leftValue": "={{ $json.current_folder_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
-        176,
-        -96
+        5600,
+        2064
       ],
-      "id": "abd14ba4-f315-4b7d-b9b1-9d2538db0946",
-      "name": "Set Input Path"
+      "id": "581b29d1-6b74-4e46-98a2-6834f1daf5c8",
+      "name": "Is Recursion?"
     },
     {
       "parameters": {
-        "jsCode": "// Generate all ancestor paths from target to root\nconst targetPath = $json.target_path;\nconst rootPath = $json.root_path;\n\nconst paths = [];\nlet current = targetPath;\n\nwhile (current.length >= rootPath.length) {\n  paths.push(current);\n  if (current === rootPath) break;\n  \n  // Move to parent\n  const lastSlash = current.lastIndexOf('/');\n  if (lastSlash <= 0) break;\n  current = current.substring(0, lastSlash);\n}\n\nreturn paths.map(path => ({\n  path: path,\n  target_path: targetPath,\n  root_folder_id: $json.root_folder_id,\n  root_path: rootPath\n}));"
+        "jsCode": "const targetPath = $('Trigger').item.json.target_path;\nconst rootPath = $('Trigger').item.json.root_path;\nconst rootFolderId = $('Trigger').item.json.root_folder_id;\n\n// Generate ancestor paths (longest first)\nconst paths = [];\nlet p = targetPath;\nwhile (p.length >= rootPath.length) {\n  paths.push(p);\n  if (p === rootPath) break;\n  p = p.substring(0, p.lastIndexOf('/'));\n}\n\n// Pad to 4 paths (use root_path for unused slots)\nwhile (paths.length < 4) {\n  paths.push(rootPath);\n}\n\nreturn [{\n  json: {\n    path1: paths[0],\n    path2: paths[1],\n    path3: paths[2],\n    path4: paths[3],\n    target_path: targetPath,\n    root_path: rootPath,\n    root_folder_id: rootFolderId\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        320,
-        -96
+        5824,
+        2064
       ],
-      "id": "c01631e6-0aee-45ba-b711-e410d3c63eab",
+      "id": "68c4b519-c750-4c7c-9a78-a490310756b2",
       "name": "Generate Ancestor Paths"
     },
     {
@@ -94,61 +97,53 @@
           "values": [
             {
               "lookupColumn": "path",
-              "lookupValue": "={{ $json.path }}"
+              "lookupValue": "={{ $json.path1 }}"
+            },
+            {
+              "lookupColumn": "path",
+              "lookupValue": "={{ $json.path2 }}"
+            },
+            {
+              "lookupColumn": "path",
+              "lookupValue": "={{ $json.path3 }}"
+            },
+            {
+              "lookupColumn": "path",
+              "lookupValue": "={{ $json.path4 }}"
             }
           ]
         },
+        "combineFilters": "OR",
         "options": {}
       },
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "typeVersion": 4.7,
       "position": [
-        528,
-        -96
+        6048,
+        2064
       ],
-      "id": "38925e89-c515-4127-940d-d7557a407859",
-      "name": "Lookup Each Path",
+      "id": "858d6ce1-c090-4995-8545-e606f129b296",
+      "name": "Cache OR Query",
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "O03W9YZyCWUacxnv",
           "name": "GoogleDriveMAIN"
         }
-      },
-      "continueOnFail": true
+      }
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "found-in-cache",
-              "leftValue": "={{ $json.folder_id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "exists"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "// Get cache results from OR query\nconst cacheResults = $input.all();\nconst meta = $('Generate Ancestor Paths').item.json;\nconst targetPath = meta.target_path;\nconst rootPath = meta.root_path;\nconst rootFolderId = meta.root_folder_id;\n\nlet currentPath = rootPath;\nlet currentFolderId = rootFolderId;\n\n// Find deepest cached path (longest path = deepest)\nlet deepestCached = null;\nfor (const item of cacheResults) {\n  if (item.json.path && item.json.folder_id) {\n    if (!deepestCached || item.json.path.length > deepestCached.path.length) {\n      deepestCached = { path: item.json.path, folder_id: item.json.folder_id };\n    }\n  }\n}\n\n// If target is cached, we're done!\nif (deepestCached && deepestCached.path === targetPath) {\n  return [{ json: {\n    status: 'done',\n    folder_id: deepestCached.folder_id,\n    folder_path: targetPath\n  }}];\n}\n\n// Use deepest cached as starting point\nif (deepestCached) {\n  currentPath = deepestCached.path;\n  currentFolderId = deepestCached.folder_id;\n}\n\n// Calculate next segment to traverse\nconst remaining = targetPath.substring(currentPath.length);\nconst segments = remaining.split('/').filter(s => s);\nconst nextSegment = segments[0];\nconst nextPath = currentPath + '/' + nextSegment;\n\nreturn [{\n  json: {\n    status: 'traverse',\n    target_path: targetPath,\n    root_folder_id: rootFolderId,\n    root_path: rootPath,\n    current_folder_id: currentFolderId,\n    current_path: currentPath,\n    next_segment: nextSegment,\n    next_path: nextPath\n  }\n}];"
       },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -48,
-        160
+        6272,
+        2064
       ],
-      "id": "2b35c254-57c3-4a0c-b8c5-196e7c35b0ea",
-      "name": "Found in Cache?"
+      "id": "73f44d44-16ca-420e-b798-c2aeee75eeb5",
+      "name": "Find Deepest Cached"
     },
     {
       "parameters": {
@@ -164,20 +159,19 @@
                 },
                 "conditions": [
                   {
-                    "id": "is-exact-match",
-                    "leftValue": "={{ $('Set Input Path').item.json.target_path.substring(0, $('Set Input Path').item.json.target_path.lastIndexOf('/')) }}",
-                    "rightValue": "={{ $json.path }}",
+                    "id": "is-done",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "done",
                     "operator": {
                       "type": "string",
-                      "operation": "equals",
-                      "singleValue": true
+                      "operation": "equals"
                     }
                   }
                 ],
                 "combinator": "and"
               },
               "renameOutput": true,
-              "outputKey": "exactMatch"
+              "outputKey": "done"
             }
           ]
         },
@@ -189,32 +183,26 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        192,
-        112
+        6496,
+        2064
       ],
-      "id": "8fcc18ff-2041-4044-adf7-cc93c89e9723",
-      "name": "Is Exact Match?"
+      "id": "60b3c304-6657-4527-a468-31ae87335629",
+      "name": "Status Check"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "return-id",
+              "id": "out-id",
               "name": "folder_id",
               "value": "={{ $json.folder_id }}",
               "type": "string"
             },
             {
-              "id": "return-path",
+              "id": "out-path",
               "name": "folder_path",
               "value": "={{ $json.folder_path }}",
-              "type": "string"
-            },
-            {
-              "id": "cache-status",
-              "name": "source",
-              "value": "cache_hit",
               "type": "string"
             }
           ]
@@ -224,32 +212,109 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        720,
-        96
+        6720,
+        2064
       ],
-      "id": "df960834-d55b-453e-b32e-3f2bbb236c40",
-      "name": "Return (Exact Match)"
+      "id": "96c584e5-c327-4037-91e0-9839bc2243de",
+      "name": "Return (Cache Hit)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// MERGE POINT: receives from TWO paths\n// Path 1 (recursion): from Is Recursion? (no 'status' field)\n// Path 2 (first call): from Status Check (has 'status' field)\n\nconst input = $input.item.json;\n\nconst targetPath = input.target_path;\nconst rootPath = input.root_path;\nconst rootFolderId = input.root_folder_id;\n\nlet currentPath, currentFolderId, nextSegment, nextPath;\n\nif (input.status) {\n  // First call path - has status='traverse', already calculated\n  currentPath = input.current_path;\n  currentFolderId = input.current_folder_id;\n  nextSegment = input.next_segment;\n  nextPath = input.next_path;\n} else {\n  // Recursion path - no status, need to calculate next segment\n  currentPath = input.current_path;\n  currentFolderId = input.current_folder_id;\n\n  const remaining = targetPath.substring(currentPath.length);\n  const segments = remaining.split('/').filter(s => s);\n  nextSegment = segments[0];\n  nextPath = currentPath + '/' + nextSegment;\n}\n\nreturn [{\n  json: {\n    target_path: targetPath,\n    root_folder_id: rootFolderId,\n    root_path: rootPath,\n    current_folder_id: currentFolderId,\n    current_path: currentPath,\n    next_segment: nextSegment,\n    next_path: nextPath\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5376,
+        2288
+      ],
+      "id": "6ed5e135-af08-41a6-bb4a-409aff03e247",
+      "name": "Calculate Next Segment"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "limit": 1,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.current_folder_id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5600,
+        2288
+      ],
+      "id": "1f08dd40-382f-4109-b1fe-61d13299fa85",
+      "name": "Google Drive: Find Folder",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "folder-found",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5824,
+        2288
+      ],
+      "id": "8f942b44-ce38-48b7-9045-038ec3dc7f5c",
+      "name": "Folder Found?"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "start-folder-id",
-              "name": "start_folder_id",
-              "value": "={{ $json.folder_id }}",
+              "id": "err",
+              "name": "error",
+              "value": "Folder not found",
               "type": "string"
             },
             {
-              "id": "start-path",
-              "name": "start_path",
-              "value": "={{ $json.folder_path }}",
+              "id": "missing",
+              "name": "missing_segment",
+              "value": "={{ $('Calculate Next Segment').item.json.next_segment }}",
               "type": "string"
             },
             {
-              "id": "target-keep",
-              "name": "target_path",
-              "value": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
+              "id": "searched",
+              "name": "searched_in",
+              "value": "={{ $('Calculate Next Segment').item.json.current_path }}",
               "type": "string"
             }
           ]
@@ -259,42 +324,172 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        416,
-        320
+        6048,
+        2464
       ],
-      "id": "8c314dea-bf5e-4c37-bb5c-7edf16e1d3f3",
-      "name": "Prepare for Recursive Search"
+      "id": "4b4d96ab-aa74-431d-abea-656470542859",
+      "name": "Return Error"
     },
     {
       "parameters": {
-        "workflowId": {
+        "jsCode": "// Prepare data for caching and next steps\nconst driveResult = $input.item.json;\nconst meta = $('Calculate Next Segment').item.json;\n\nreturn [{\n  json: {\n    found_folder_id: driveResult.id,\n    found_folder_name: driveResult.name,\n    next_path: meta.next_path,\n    target_path: meta.target_path,\n    root_folder_id: meta.root_folder_id,\n    root_path: meta.root_path\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6048,
+        2288
+      ],
+      "id": "db3c2790-96bf-4812-bc6f-e142527874e8",
+      "name": "Prepare Cache Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
           "__rl": true,
-          "value": "VzWAdxUdTKRfcUSh",
+          "value": "16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE",
           "mode": "list",
-          "cachedResultUrl": "/workflow/VzWAdxUdTKRfcUSh",
-          "cachedResultName": "Subworkflow - Recursive Folder Tree Walker"
+          "cachedResultName": "PathToIDLookup",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit?usp=drivesdk"
         },
-        "workflowInputs": {
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16vuiDJEZz3EOMN-8z7CF_1ENDWzjfORyykFNxqhGOWE/edit#gid=0"
+        },
+        "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "target_path": "={{ $json.target_path }}",
-            "folder_id": "={{ $('Set Input Path').item.json.root_folder_id }}",
-            "folder_path": "={{ $('Set Input Path').item.json.root_path }}"
+            "path": "={{ $json.next_path }}",
+            "folder_id": "={{ $json.found_folder_id }}"
           },
           "matchingColumns": [],
           "schema": [
+            {
+              "id": "path",
+              "displayName": "path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
             {
               "id": "folder_id",
               "displayName": "folder_id",
               "required": false,
               "defaultMatch": false,
               "display": true,
-              "canBeUsedToMatch": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        6256,
+        2288
+      ],
+      "id": "98b97f9c-4996-4fbd-8f98-65ab61584a95",
+      "name": "Cache New Path",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-target",
+              "leftValue": "={{ $('Prepare Cache Data').item.json.next_path }}",
+              "rightValue": "={{ $('Prepare Cache Data').item.json.target_path }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6480,
+        2288
+      ],
+      "id": "300756cb-2d98-4ace-ae55-3da8d3bd51e4",
+      "name": "Reached Target?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-id",
+              "name": "folder_id",
+              "value": "={{ $('Prepare Cache Data').item.json.found_folder_id }}",
               "type": "string"
             },
             {
-              "id": "folder_path",
-              "displayName": "folder_path",
+              "id": "out-path",
+              "name": "folder_path",
+              "value": "={{ $('Prepare Cache Data').item.json.target_path }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6704,
+        2272
+      ],
+      "id": "2294e345-3eb2-4487-b0f0-ed276ca0b342",
+      "name": "Return (Found)"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "vFnk7s9sqVnrt4hC",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/vFnk7s9sqVnrt4hC",
+          "cachedResultName": "google-drive-folder-id-lookup"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "target_path": "={{ $('Prepare Cache Data').item.json.target_path }}",
+            "current_path": "={{ $('Prepare Cache Data').item.json.next_path }}",
+            "current_folder_id": "={{ $('Prepare Cache Data').item.json.found_folder_id }}",
+            "root_path": "={{ $('Prepare Cache Data').item.json.root_path }}",
+            "root_folder_id": "={{ $('Prepare Cache Data').item.json.root_folder_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "target_path",
+              "displayName": "target_path",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -302,8 +497,35 @@
               "type": "string"
             },
             {
-              "id": "target_path",
-              "displayName": "target_path",
+              "id": "root_folder_id",
+              "displayName": "root_folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "root_path",
+              "displayName": "root_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "current_folder_id",
+              "displayName": "current_folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "current_path",
+              "displayName": "current_path",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -321,90 +543,41 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        608,
-        320
+        6704,
+        2448
       ],
-      "id": "c66da099-e417-4184-8ea3-1f8307dd0021",
-      "name": "Recursive Search from Ancestor"
+      "id": "c5eb54a7-d424-40fd-b167-99c8f9fc9db3",
+      "name": "Recurse (Call Self)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        5152,
+        1872
+      ],
+      "id": "de899d9c-9048-492a-a5dc-b1960c362c34",
+      "name": "Manual Test Trigger"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "fallback-id",
-              "name": "start_folder_id",
-              "value": "={{ $('Generate Ancestor Paths').first().json.root_folder_id }}",
-              "type": "string"
-            },
-            {
-              "id": "fallback-path",
-              "name": "start_path",
-              "value": "={{ $('Generate Ancestor Paths').first().json.root_path }}",
-              "type": "string"
-            },
-            {
-              "id": "fallback-target",
+              "id": "test-target",
               "name": "target_path",
-              "value": "={{ $('Generate Ancestor Paths').first().json.target_path }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        176,
-        320
-      ],
-      "id": "d42b84b4-7986-490a-a146-11d12d3b45eb",
-      "name": "Fallback to Root (Slow Path)"
-    },
-    {
-      "parameters": {
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "target_path"
-            },
-            {
-              "name": "root_folder_id"
-            },
-            {
-              "name": "root_path"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        -32,
-        -96
-      ],
-      "id": "e9ef3874-3f88-43fb-8d5e-fa9c55755249",
-      "name": "When Executed by Another Workflow"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "target-path",
-              "name": "target_path",
-              "value": "/Accounting/2025/07_July/Expenses",
+              "value": "/Accounting/2025/11_November/Expense",
               "type": "string"
             },
             {
-              "id": "root-id",
+              "id": "test-root-id",
               "name": "root_folder_id",
               "value": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
               "type": "string"
             },
             {
-              "id": "root-path",
+              "id": "test-root-path",
               "name": "root_path",
               "value": "/Accounting",
               "type": "string"
@@ -416,27 +589,49 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        176,
-        -304
+        5376,
+        1872
       ],
-      "id": "b4b0cde6-a5de-4227-ac61-68b39321d998",
-      "name": "test_data"
+      "id": "b5046fde-e201-4995-8201-a9f404f35066",
+      "name": "Test Data"
+    },
+    {
+      "parameters": {
+        "content": "# Folder ID Lookup (Self-Recursive)\n\n**First call:** Cache OR query → Find deepest cached → Traverse\n**Recursion:** Skip cache → Traverse directly\n\n## Flow\n1. Check if recursion (current_folder_id exists?)\n2. First call: Generate paths → OR query → Find deepest\n3. Both: Calculate next segment → Drive query → Cache → Done/Recurse",
+        "height": 584,
+        "width": 376
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4944,
+        2016
+      ],
+      "typeVersion": 1,
+      "id": "3d56ba52-6414-4095-8aea-ab3578125255",
+      "name": "Sticky Note"
     }
   ],
   "connections": {
-    "When clicking ‘Execute workflow’": {
+    "Trigger": {
       "main": [
         [
           {
-            "node": "test_data",
+            "node": "Is Recursion?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Input Path": {
+    "Is Recursion?": {
       "main": [
+        [
+          {
+            "node": "Calculate Next Segment",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Generate Ancestor Paths",
@@ -450,108 +645,149 @@
       "main": [
         [
           {
-            "node": "Lookup Each Path",
+            "node": "Cache OR Query",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lookup Each Path": {
+    "Cache OR Query": {
       "main": [
         [
           {
-            "node": "Found in Cache?",
+            "node": "Find Deepest Cached",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Found in Cache?": {
+    "Find Deepest Cached": {
       "main": [
         [
           {
-            "node": "Is Exact Match?",
+            "node": "Status Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Check": {
+      "main": [
+        [
+          {
+            "node": "Return (Cache Hit)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fallback to Root (Slow Path)",
+            "node": "Calculate Next Segment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Is Exact Match?": {
+    "Calculate Next Segment": {
       "main": [
         [
           {
-            "node": "Return (Exact Match)",
+            "node": "Google Drive: Find Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive: Find Folder": {
+      "main": [
+        [
+          {
+            "node": "Folder Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Folder Found?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cache Data",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Prepare for Recursive Search",
+            "node": "Return Error",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Return (Exact Match)": {
-      "main": [
-        []
-      ]
-    },
-    "Prepare for Recursive Search": {
+    "Prepare Cache Data": {
       "main": [
         [
           {
-            "node": "Recursive Search from Ancestor",
+            "node": "Cache New Path",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Recursive Search from Ancestor": {
-      "main": [
-        []
-      ]
-    },
-    "Fallback to Root (Slow Path)": {
+    "Cache New Path": {
       "main": [
         [
           {
-            "node": "Prepare for Recursive Search",
+            "node": "Reached Target?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "When Executed by Another Workflow": {
+    "Reached Target?": {
       "main": [
         [
           {
-            "node": "Set Input Path",
+            "node": "Return (Found)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recurse (Call Self)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "test_data": {
+    "Manual Test Trigger": {
       "main": [
         [
           {
-            "node": "Set Input Path",
+            "node": "Test Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Data": {
+      "main": [
+        [
+          {
+            "node": "Is Recursion?",
             "type": "main",
             "index": 0
           }
@@ -560,8 +796,14 @@
     }
   },
   "pinData": {
-    "When clicking ‘Execute workflow’": [
-      {}
+    "Trigger": [
+      {
+        "target_path": "/Accounting/2025/11_November/Expense",
+        "root_folder_id": "1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS",
+        "root_path": "/Accounting",
+        "current_folder_id": null,
+        "current_path": null
+      }
     ]
   },
   "meta": {

@@ -24,15 +24,10 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ### Workflows
 - `workflows/inbox-attachment-organizer.json` - Main workflow (30 nodes) orchestrating the full pipeline
 - `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment)
-- `workflows/subworkflows/google-drive-folder-id-lookup.json` - Finds or creates Drive folders using PathToIDLookup cache
-- `workflows/subworkflows/google-drive-folder-id-recursion.json` - Recursive folder creation helper (called by lookup when folders missing)
+- `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; creates missing folders, caches results, uses batch OR query
 - `workflows/subworkflows/gmail-systematic-processor.json` - Standalone batch processor for existing inbox emails
 
 ## Non-Obvious Architecture
-
-**PathToIDLookup sheet**: Workaround because n8n Google Drive nodes only accept folder IDs, not path-based API access. The sheet maps paths to IDs so you can request "/Accounting/2025/05_May/Expense/" instead of cryptic Drive IDs. Secondary benefit: caches results so repeated lookups are instant sheet reads vs slow API traversal. Schema in setup-guide.md.
-
-**Subworkflow calls**: Main workflow calls any-file2json-converter (per attachment) and google-drive-folder-id-lookup (per file). The lookup calls google-drive-folder-id-recursion when folders don't exist.
 
 **Two AI stages**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check happens between stages.
 
