@@ -482,7 +482,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": true\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"content_class\": {\n      \"type\": \"string\",\n      \"enum\": [\"primary_document\", \"style_element\", \"unclassified\"]\n    },\n    \"classification_confidence\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\"content_class\", \"classification_confidence\"],\n  \"additionalProperties\": true\n}"
       },
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "name": "Structured Output Parser",
@@ -501,7 +501,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
+              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- classification_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
             },
             {
               "type": "HumanMessagePromptTemplate",
