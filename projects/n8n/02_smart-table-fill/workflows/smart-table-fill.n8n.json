@@ -615,6 +615,22 @@
       ],
       "id": "a443b156-94f6-4ba7-881d-b3f3817ba14a",
       "name": "Merge Outputs"
+    },
+    {
+      "parameters": {
+        "content": "**Optional:** LLM confidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md`",
+        "height": 80,
+        "width": 300,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        1600
+      ],
+      "id": "conf-note-002",
+      "name": "Confidence Note"
     }
   ],
   "connections": {

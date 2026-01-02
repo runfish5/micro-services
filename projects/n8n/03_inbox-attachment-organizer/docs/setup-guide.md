@@ -15,6 +15,8 @@ Download and paste these workflow clipboard :clipboard: content directly into yo
 3. [google-drive-folder-id-lookup.json](../workflows/subworkflows/google-drive-folder-id-lookup.json) - Subworkflow: Self-recursive folder locator/creator
 4. [gmail-systematic-processor.json](../workflows/subworkflows/gmail-systematic-processor.json) - Batch processor for existing emails
 
+*Note: any-file2json-converter includes optional LLM confidence scoring — see [observability-through-llm-confidence-estimate.md](../../docs/observability-through-llm-confidence-estimate.md)*
+
 ### 2. Setup Credentials
 Only one authentication needed: **Google OAuth**
 

@@ -667,6 +667,22 @@
       ],
       "id": "0ff0f643-cf7e-4268-b870-7944b45f4d7b",
       "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "**Optional:** LLM confidence scoring via `class_confidence` field. See `docs/observability-through-llm-confidence-estimate.md`",
+        "height": 80,
+        "width": 300,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1480
+      ],
+      "id": "conf-note-001",
+      "name": "Confidence Note"
     }
   ],
   "connections": {

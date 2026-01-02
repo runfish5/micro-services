@@ -42,3 +42,7 @@ Two integration modes:
 |------|-----|
 | **All-in-one** | Paste nodes directly into your workflow |
 | **Subworkflow** | Call smart-table-fill via Execute Workflow trigger |
+
+---
+
+*Optional: LLM confidence scoring available — see [observability-through-llm-confidence-estimate.md](../../docs/observability-through-llm-confidence-estimate.md)*
