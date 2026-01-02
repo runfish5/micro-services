@@ -362,9 +362,9 @@
           "assignments": [
             {
               "id": "d783b0b2-3058-49db-a543-0a405c5d815e",
-              "name": "data",
-              "value": "={{$json}}",
-              "type": "object"
+              "name": "data.text",
+              "value": "={{ typeof $json.text === 'string' ? $json.text : JSON.stringify($json.output || $json) }}",
+              "type": "string"
             }
           ]
         },
@@ -535,29 +535,6 @@
         1200
       ],
       "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "252dc06a-a11a-4bd5-b32d-18d700b2ab1c",
-              "name": "text",
-              "value": "={{ JSON.stringify($json.output || $json) }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1472,
-        1200
-      ],
-      "id": "930191d8-19e3-419d-9f1b-9760562eec93",
-      "name": "Edit Fields4"
     },
     {
       "parameters": {
@@ -892,7 +869,7 @@
       "main": [
         [
           {
-            "node": "Edit Fields4",
+            "node": "Return node",
             "type": "main",
             "index": 0
           }
@@ -904,17 +881,6 @@
         [
           {
             "node": "Image-to-text",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields4": {
-      "main": [
-        [
-          {
-            "node": "Return node",
             "type": "main",
             "index": 0
           }
