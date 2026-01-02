@@ -138,7 +138,11 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 - **Called by**: Create Attachment Profile
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
-- **Output**: Extracted text content from documents
+- **Output**:
+  - `data.text`: Extracted text content (string or JSON)
+  - `data.content_class`: `primary_document` | `style_element` | `unclassified` | `UNK`
+  - `data.class_confidence`: `0.0-1.0` | `UNK`
+- **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`.
 
 ### 2. google-drive-folder-id-lookup
 - **Called by**: Call 'gdrive-recursion'

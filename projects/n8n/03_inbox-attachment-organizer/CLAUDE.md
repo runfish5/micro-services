@@ -23,7 +23,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ### Workflows
 - `workflows/inbox-attachment-organizer.json` - Main workflow (30 nodes) orchestrating the full pipeline
-- `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment)
+- `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`.
 - `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; creates missing folders, caches results, uses batch OR query
 - `workflows/subworkflows/gmail-systematic-processor.json` - Standalone batch processor for existing inbox emails
 
