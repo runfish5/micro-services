@@ -1,0 +1,402 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
+        "height": 944,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4432,
+        2672
+      ],
+      "id": "5d84dfab-20fb-4379-88f2-c473c75d7520",
+      "name": "Overview"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        4976,
+        3120
+      ],
+      "id": "0271f426-0a93-496b-9d21-f29ca77c75b4",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    retry_of: execution.retryOf || '',\n    error_message: (error.message || JSON.stringify(error) || 'Unknown error').substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5216,
+        3120
+      ],
+      "id": "411b4aae-7de0-416e-8eee-a9afab0019fd",
+      "name": "Prepare Error Record"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Classify Error by Type\n// Determines severity, retryability, and suggested action\n\nconst errorMsg = ($json.error_message || '').toLowerCase();\nconst errorStack = ($json.error_stack || '').toLowerCase();\nconst errorName = ($json.error_name || '').toLowerCase();\n\nlet errorType = 'unknown';\nlet severity = 'medium';\nlet isRetryable = false;\nlet suggestedAction = 'manual_review';\n\n// Auth errors (401, 403, credential issues)\nif (errorMsg.includes('401') || errorMsg.includes('403') ||\n    errorMsg.includes('unauthorized') || errorMsg.includes('forbidden') ||\n    errorMsg.includes('credential') || errorMsg.includes('token expired') ||\n    errorMsg.includes('invalid_grant') || errorMsg.includes('authentication')) {\n  errorType = 'auth_error';\n  severity = 'critical';\n  suggestedAction = 'refresh_credentials';\n  isRetryable = false;\n}\n// Rate limits (429)\nelse if (errorMsg.includes('429') || errorMsg.includes('rate limit') ||\n         errorMsg.includes('too many requests') || errorMsg.includes('quota') ||\n         errorMsg.includes('throttl')) {\n  errorType = 'rate_limit';\n  severity = 'high';\n  suggestedAction = 'wait_and_retry';\n  isRetryable = true;\n}\n// Network/timeout errors\nelse if (errorMsg.includes('timeout') || errorMsg.includes('etimedout') ||\n         errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') ||\n         errorMsg.includes('network') || errorMsg.includes('enotfound') ||\n         errorMsg.includes('socket hang up') || errorMsg.includes('502') ||\n         errorMsg.includes('503') || errorMsg.includes('504')) {\n  errorType = 'network_error';\n  severity = 'high';\n  suggestedAction = 'retry_with_backoff';\n  isRetryable = true;\n}\n// Parse errors (JSON, schema)\nelse if (errorMsg.includes('json') || errorMsg.includes('parse') ||\n         errorMsg.includes('unexpected token') || errorMsg.includes('schema') ||\n         errorMsg.includes('syntax error') || errorName.includes('syntaxerror')) {\n  errorType = 'parse_error';\n  severity = 'medium';\n  suggestedAction = 'check_llm_output';\n  isRetryable = false;\n}\n// Validation errors\nelse if (errorMsg.includes('required') || errorMsg.includes('missing') ||\n         errorMsg.includes('invalid') || errorMsg.includes('validation') ||\n         errorMsg.includes('not found') || errorMsg.includes('does not exist')) {\n  errorType = 'validation_error';\n  severity = 'medium';\n  suggestedAction = 'check_input_data';\n  isRetryable = false;\n}\n// Resource errors\nelse if (errorMsg.includes('memory') || errorMsg.includes('disk') ||\n         errorMsg.includes('storage') || errorMsg.includes('out of space')) {\n  errorType = 'resource_error';\n  severity = 'critical';\n  suggestedAction = 'check_resources';\n  isRetryable = false;\n}\n\nreturn [{\n  json: {\n    ...($json),\n    error_type: errorType,\n    severity: severity,\n    is_retryable: isRetryable,\n    suggested_action: suggestedAction\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5456,
+        3120
+      ],
+      "id": "c26d35bd-f647-4c62-9165-c7dfb8e1a0e5",
+      "name": "Classify Error"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "007_Error-handler.n8n-sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "workflow_id",
+              "displayName": "workflow_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "execution_mode",
+              "displayName": "execution_mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "retry_of",
+              "displayName": "retry_of",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_stack",
+              "displayName": "error_stack",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_name",
+              "displayName": "error_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "started_at",
+              "displayName": "started_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_type",
+              "displayName": "error_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "is_retryable",
+              "displayName": "is_retryable",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suggested_action",
+              "displayName": "suggested_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        5696,
+        3120
+      ],
+      "id": "7998d32b-4a00-40a8-9b5b-58c6ab2fc900",
+      "name": "Append to FailedItems",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Telegram Alert with Severity Emoji\n// Outputs FULL message (no truncation) - chunking handled downstream\n\nconst esc = (s) => String(s).replace(/_/g, '\\\\_');\n\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34', // Red circle\n  high: '\\uD83D\\uDFE0',     // Orange circle\n  medium: '\\uD83D\\uDFE1',   // Yellow circle\n  low: '\\uD83D\\uDFE2'       // Green circle\n};\n\nconst emoji = severityEmoji[$json.severity] || '\\u26AA'; // White circle default\n\n// Build full message without truncation\nconst msg = `${emoji} ${esc($json.error_type).toUpperCase()}\n\nWorkflow: ${esc($json.workflow_name)}\nExecution: ${$json.execution_id}\nSeverity: ${$json.severity}\nRetryable: ${$json.is_retryable ? 'Yes' : 'No'}\nAction: ${esc($json.suggested_action)}\n\nError: ${esc($json.error_message)}\n\nStack: ${esc($json.error_stack || 'N/A')}`;\n\nreturn [{\n  json: {\n    chatId: 'YOUR_TELEGRAM_CHAT_ID',\n    fullMessage: msg\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5936,
+        3120
+      ],
+      "id": "0bbba7f6-9e71-4a0b-855a-c2fbbde1323e",
+      "name": "Format Telegram Alert"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split Long Message into Chunks\n// Telegram max message length is ~4096 chars, using 4000 to be safe\n\nconst message = $json.fullMessage || 'No error message';\nconst chatId = $json.chatId;\nconst maxLength = 4000;\nconst chunks = [];\n\nfor (let i = 0; i < message.length; i += maxLength) {\n  chunks.push(message.substring(i, i + maxLength));\n}\n\nreturn chunks.map((chunk, idx) => ({\n  json: {\n    chatId: chatId,\n    chunk: chunk,\n    part: idx + 1,\n    total: chunks.length\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6176,
+        3120
+      ],
+      "id": "3dbc6801-4b2f-40e1-8698-348a9df83c77",
+      "name": "Split Long Message"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6416,
+        3120
+      ],
+      "id": "063ee78f-6133-4f76-a4a7-e6c07427ae4c",
+      "name": "Loop Over Chunks"
+    },
+    {
+      "parameters": {
+        "chatId": "=7582730035",
+        "text": "={{ $json.total > 1 ? '[' + $json.part + '/' + $json.total + '] ' : '' }}{{ $json.chunk }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6656,
+        3200
+      ],
+      "id": "ad3a4566-1808-4819-adfd-f7b5d3407c0f",
+      "name": "Send Telegram Alert",
+      "webhookId": "dda13267-ca61-4073-8a48-fd2f496c5c0f",
+      "credentials": {
+        "telegramApi": {
+          "id": "mlZdNwRkWhIVuDdr",
+          "name": "Telegram inbox_important"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Error Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Record": {
+      "main": [
+        [
+          {
+            "node": "Classify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Error": {
+      "main": [
+        [
+          {
+            "node": "Append to FailedItems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to FailedItems": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Split Long Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Long Message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Chunks": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
