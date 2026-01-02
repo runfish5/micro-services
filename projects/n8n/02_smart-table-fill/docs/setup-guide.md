@@ -17,6 +17,8 @@ Choose your setup:
 
 Import [smart-table-fill.json](../workflows/smart-table-fill.json) into n8n.
 
+**Important:** After importing, click **Publish** to save the workflow.
+
 ### 2. Setup Credentials
 
 - Google Sheets OAuth
