@@ -1371,8 +1371,7 @@
         912
       ],
       "id": "c5873ed9-7e9c-4299-8ff6-de7d35522a01",
-      "name": "Call 'record-search'",
-      "disabled": true
+      "name": "Call 'record-search'"
     },
     {
       "parameters": {
@@ -1400,8 +1399,7 @@
         912
       ],
       "id": "d8452973-2b4c-4d42-939c-32d871f40f73",
-      "name": "Call 'smart-table-fill'",
-      "disabled": true
+      "name": "Call 'smart-table-fill'"
     },
     {
       "parameters": {
@@ -1430,6 +1428,24 @@
               "name": "matchType",
               "value": "={{ $json.matchType }}",
               "type": "string"
+            },
+            {
+              "id": "bb62a143-9b62-4977-bb96-42b8a7e821e6",
+              "name": "sender_name",
+              "value": "={{ $('subject-classifier-LM').item.json.output.sender || $('Gmail').item.json.from.value[0].name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a505d61c-dfe3-4ab8-ab3c-9cab31a57496",
+              "name": "existing_contact",
+              "value": "={{ $json.found ? JSON.stringify($json.contact || {}) : '{}' }}",
+              "type": "string"
+            },
+            {
+              "id": "837b8479-431a-4a77-84d6-64f9d52b8e39",
+              "name": "subject",
+              "value": "={{ $('Gmail').item.json.subject }}",
+              "type": "string"
             }
           ]
         },
@@ -1442,13 +1458,12 @@
         912
       ],
       "id": "0738dc3c-d92c-4e3c-8b8f-0dbaf46c2cb5",
-      "name": "Prepare Contact Input",
-      "disabled": true
+      "name": "Prepare Contact Input"
     },
     {
       "parameters": {
         "chatId": "7582730035",
-        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:\n{{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? $('subject-classifier-LM').item.json.output.message : '' }}",
+        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:📧 https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }}\n\\n\\n{{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? $('subject-classifier-LM').item.json.output.message : '' }}",
         "additionalFields": {
           "appendAttribution": false
         }

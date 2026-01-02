@@ -107,7 +107,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<source_text>\n{{ $('String Input').first().json.TextObject_User }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
+        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<email_metadata>\nSender Name: {{ $('String Input').first().json.sender_name }}\nSender Email: {{ $('String Input').first().json.MatchValue }}\nSubject: {{ $('String Input').first().json.subject }}\n</email_metadata>\n\n<source_text>\n{{ $('String Input').first().json.TextObject_User }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -451,7 +451,9 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
-        "options": {}
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        }
       },
       "id": "78d054da-25bd-4104-ae6a-9616ba563314",
       "name": "Write_Excel",
@@ -512,6 +514,24 @@
               "id": "a1b2c3d4-aaaa-bbbb-cccc-ddddeeeeffff",
               "name": "SchemaSheetName",
               "value": "Description_hig7f6",
+              "type": "string"
+            },
+            {
+              "id": "d4e5f6a7-b8c9-0123-4567-890abcdef001",
+              "name": "sender_name",
+              "value": "={{ $json.sender_name || $json.sender || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e5f6a7b8-c9d0-1234-5678-90abcdef0012",
+              "name": "subject",
+              "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f6a7b8c9-d0e1-2345-6789-0abcdef00123",
+              "name": "existing_contact",
+              "value": "={{ $json.existing_contact || '{}' }}",
               "type": "string"
             }
           ]
@@ -588,7 +608,8 @@
         1616
       ],
       "id": "8bc29d06-c9a5-4ce5-aadf-abd33b002536",
-      "name": "Call 'contact-folder-manager'"
+      "name": "Call 'contact-folder-manager'",
+      "disabled": true
     },
     {
       "parameters": {
@@ -605,7 +626,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue;\ntry {\n  matchColumn = $('String Input').first().json.MatchColumn;\n  matchValue = $('String Input').first().json.MatchValue;\n} catch (e) {\n  // Fallback for subworkflow execution - get from first input item\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n}\n\nconst merged = {};\nlet confidenceData = null;\n\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    // Extract confidence separately\n    if (output.confidence) {\n      confidenceData = output.confidence;\n      delete output.confidence; // Don't include nested object in merged\n    }\n    Object.assign(merged, output);\n  }\n}\n\n// Add flattened confidence fields for Google Sheets\nif (confidenceData) {\n  merged.confidence_score = confidenceData.overall || 0;\n  merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n    ? confidenceData.low_confidence_fields.join(', ') \n    : '';\n  merged.confidence_reasoning = confidenceData.reasoning || '';\n  merged.review_needed = (confidenceData.overall || 0) < 70;\n}\n\n// Set email from source (sender email) if matchColumn is email\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\n\n// Add source reference for debugging\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails: combine existing extracted emails (if any)\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\nreturn [{ json: merged }];"
+        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue, existingContactStr;\ntry {\n  matchColumn = $('String Input').first().json.MatchColumn;\n  matchValue = $('String Input').first().json.MatchValue;\n  existingContactStr = $('String Input').first().json.existing_contact || '{}';\n} catch (e) {\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n  existingContactStr = '{}';\n}\n\nconst merged = {};\nlet confidenceData = null;\n\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    if (output.confidence) {\n      confidenceData = output.confidence;\n      delete output.confidence;\n    }\n    Object.assign(merged, output);\n  }\n}\n\n// Add flattened confidence fields\nif (confidenceData) {\n  merged.confidence_score = confidenceData.overall || 0;\n  merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n    ? confidenceData.low_confidence_fields.join(', ') : '';\n  merged.confidence_reasoning = confidenceData.reasoning || '';\n  merged.review_needed = (confidenceData.overall || 0) < 70;\n}\n\n// Set email from source\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\n// === DISCREPANCY CHECK ===\nconst existingContact = JSON.parse(existingContactStr);\nconst confidenceLowFields = (merged.confidence_low_fields || '').split(',').map(f => f.trim()).filter(Boolean);\nconst discrepancies = [];\nconst fieldsToSkip = ['confidence_score', 'confidence_low_fields', 'confidence_reasoning', 'review_needed', 'email', 'email_source', 'discrepancy_count', 'discrepancy_fields', 'discrepancy_report'];\n\nfor (const [field, llmValue] of Object.entries(merged)) {\n  if (fieldsToSkip.includes(field)) continue;\n  const existingValue = existingContact[field];\n  if (existingValue !== undefined && existingValue !== null && existingValue !== '') {\n    const llmStr = String(llmValue || '').toLowerCase().trim();\n    const existStr = String(existingValue).toLowerCase().trim();\n    if (llmStr !== existStr && llmStr !== '' && llmStr !== 'none') {\n      const isLowConf = confidenceLowFields.includes(field);\n      discrepancies.push({ field, llm_value: llmValue, existing_value: existingValue, action: isLowConf ? 'keep_existing' : 'use_llm' });\n      if (isLowConf) merged[field] = existingValue; // Keep existing for low-confidence\n    }\n  }\n}\n\nmerged.discrepancy_count = discrepancies.length;\nmerged.discrepancy_fields = discrepancies.map(d => d.field).join(', ');\nmerged.discrepancy_report = JSON.stringify(discrepancies);\n\n// Nest observability fields in _meta (avoids sheet pollution, keeps data in n8n)\nmerged._meta = {\n  confidence_score: merged.confidence_score,\n  confidence_low_fields: merged.confidence_low_fields,\n  confidence_reasoning: merged.confidence_reasoning,\n  review_needed: merged.review_needed,\n  discrepancy_count: merged.discrepancy_count,\n  discrepancy_fields: merged.discrepancy_fields,\n  discrepancy_report: merged.discrepancy_report\n};\ndelete merged.confidence_score;\ndelete merged.confidence_low_fields;\ndelete merged.confidence_reasoning;\ndelete merged.review_needed;\ndelete merged.discrepancy_count;\ndelete merged.discrepancy_fields;\ndelete merged.discrepancy_report;\n\nreturn [{ json: merged }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
