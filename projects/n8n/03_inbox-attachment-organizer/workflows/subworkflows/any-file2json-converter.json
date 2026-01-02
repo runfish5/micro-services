@@ -481,13 +481,27 @@
     },
     {
       "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": true\n}"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1120,
+        1360
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
         "promptType": "define",
-        "text": "Extract invoice data from this image.",
+        "text": "Extract all data from this document.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
             {
-              "message": "=You are an Invoice Data Extractor. Given an invoice image, extract all visible information directly into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Prioritize these standard keys when applicable:\n\n   *Supplier:* supplier_name, supplier_address, supplier_contact_details, supplier_tax_id, supplier_vat_number\n   *Recipient:* recipient_business_name, recipient_business_address\n   *Invoice:* invoice_number, invoice_date, purchase_order_number, internal_reference_number\n   *Payment:* due_date, payment_terms, supplier_bank_account_details, total_amount_due, currency_code, subtotal_amount, tax_amount, discount_amount\n   *Processing:* date_received, department_id, cost_center_code, approver_id, approver_name, date_paid, payment_method, payment_reference, invoice_status\n   *Other:* notes\n\n3. For labeled fields not matching standard keys, derive the key from the label (e.g., \"Invoice #:\" → `invoice_hash`)\n4. For unlabeled non-standard info, create a descriptive `snake_case` key\n5. Prefix uncertain mappings with `uncertain_`\n6. Omit keys for missing information—never invent data"
+              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
             },
             {
               "type": "HumanMessagePromptTemplate",
@@ -529,8 +543,8 @@
             {
               "id": "252dc06a-a11a-4bd5-b32d-18d700b2ab1c",
               "name": "text",
-              "value": "={{ $json.text.replace(/^(```json\\n)?(.*?)(\\n```)?$/s, '$2')}}",
-              "type": "object"
+              "value": "={{ JSON.stringify($json.output || $json) }}",
+              "type": "string"
             }
           ]
         },
@@ -858,6 +872,17 @@
           {
             "node": "Image-to-text",
             "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Image-to-text",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]
