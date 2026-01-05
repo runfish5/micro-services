@@ -2,6 +2,23 @@
 
 Automatically process email attachments (images, PDFs, documents), understand content through AI, and file to structured Google Drive folders.
 
+## 📐 Overview Diagram
+
+```mermaid
+flowchart LR
+    A[📧 Email Trigger] --> B[📎 File → Text]
+    B --> C{🤖 Classify & Route}
+    C -->|Financial| E[🤖 Attachment-organizer]
+    C -->|...| X[Other routes]
+    E --> F[📁 Save to Drive]
+    E --> G[📊 Log to Sheets]
+    F --> H[📲 Notify]
+    G --> H
+    H ~~~ I[ ]
+    classDef hidden fill:none,stroke:none,color:none
+    class I hidden
+```
+
 ## Workflow Preview
 
 <p align="center">
