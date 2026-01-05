@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    retry_of: execution.retryOf || '',\n    error_message: (error.message || JSON.stringify(error) || 'Unknown error').substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
+        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -113,6 +113,15 @@
             {
               "id": "execution_mode",
               "displayName": "execution_mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "failed_node",
+              "displayName": "failed_node",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -241,7 +250,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format Telegram Alert with Severity Emoji\n// Outputs FULL message (no truncation) - chunking handled downstream\n\nconst esc = (s) => String(s).replace(/_/g, '\\\\_');\n\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34', // Red circle\n  high: '\\uD83D\\uDFE0',     // Orange circle\n  medium: '\\uD83D\\uDFE1',   // Yellow circle\n  low: '\\uD83D\\uDFE2'       // Green circle\n};\n\nconst emoji = severityEmoji[$json.severity] || '\\u26AA'; // White circle default\n\n// Build full message without truncation\nconst msg = `${emoji} ${esc($json.error_type).toUpperCase()}\n\nWorkflow: ${esc($json.workflow_name)}\nExecution: ${$json.execution_id}\nSeverity: ${$json.severity}\nRetryable: ${$json.is_retryable ? 'Yes' : 'No'}\nAction: ${esc($json.suggested_action)}\n\nError: ${esc($json.error_message)}\n\nStack: ${esc($json.error_stack || 'N/A')}`;\n\nreturn [{\n  json: {\n    chatId: 'YOUR_TELEGRAM_CHAT_ID',\n    fullMessage: msg\n  }\n}];"
+        "jsCode": "// Format Telegram Alert with Severity Emoji\n// Outputs FULL message (no truncation) - chunking handled downstream\n\nconst esc = (s) => String(s).replace(/_/g, '\\\\_');\n\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34', // Red circle\n  high: '\\uD83D\\uDFE0',     // Orange circle\n  medium: '\\uD83D\\uDFE1',   // Yellow circle\n  low: '\\uD83D\\uDFE2'       // Green circle\n};\n\nconst emoji = severityEmoji[$json.severity] || '\\u26AA'; // White circle default\n\n// Build full message with failed node prominently displayed\nconst msg = `${emoji} ${esc($json.error_type).toUpperCase()}\n\\u274C Workflow: ${esc($json.workflow_name)}\n\\uD83D\\uDCCD Node: ${esc($json.failed_node || 'unknown')}\n---\nError: ${esc($json.error_message)}\n---\nExecution: ${$json.execution_id}\nSeverity: ${$json.severity}\nRetryable: ${$json.is_retryable ? 'Yes' : 'No'}\nAction: ${esc($json.suggested_action)}\nStack: ${esc($json.error_stack || 'N/A')}`;\n\nreturn [{\n  json: {\n    chatId: 'YOUR_TELEGRAM_CHAT_ID',\n    fullMessage: msg\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
