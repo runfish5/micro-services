@@ -36,7 +36,7 @@ Modify the **String Input** node with your text, run manually.
 
 ## Setup B: Email-CRM
 
-Copy the email pipeline from [inbox-attachment-organizer.json](../../3_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json) — all nodes from **Gmail Trigger** through **subject-classifier-LM**.
+Copy the email pipeline from [inbox-attachment-organizer.json](../../03_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json) — all nodes from **Gmail Trigger** through **subject-classifier-LM**.
 
 Two integration modes:
 
@@ -44,6 +44,14 @@ Two integration modes:
 |------|-----|
 | **All-in-one** | Paste nodes directly into your workflow |
 | **Subworkflow** | Call smart-table-fill via Execute Workflow trigger |
+
+### Apps Script Integration (Advanced)
+
+For automatic folder creation and contact management via Apps Script Execution API:
+
+**[Apps Script Execution API Setup Guide](apps-script-execution-api-setup.md)**
+
+This enables n8n to call Apps Script functions with secure OAuth authentication (no public endpoints, no tokens).
 
 ---
 

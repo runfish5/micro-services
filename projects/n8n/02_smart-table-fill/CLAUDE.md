@@ -18,15 +18,18 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 ## Where Information Lives
 
 ### Workflows
-- `workflows/smart-table-fill.n8n.json` - Main workflow (21 nodes)
-- `workflows/subworkflows/record-search.json` - Contact lookup subworkflow (4_CM:RecordSearch)
+- `workflows/smart-table-fill.n8n.json` - Main workflow (26 nodes)
+- `workflows/subworkflows/record-search.json` - Contact lookup subworkflow
 
 ### Documentation
 - `docs/mainflow.md` - Complete node breakdown, data flow diagrams
 - `docs/setup-guide.md` - Setup instructions
 
 ### Scripts
-- `scripts/AppScript-new-contact-setup.js` - Google Apps Script for auto-creating contact folders with .md files (triggers on sheet edit)
+- `scripts/AppScript-new-contact-setup.js` - Google Apps Script for contact folder management:
+  - **onEdit trigger**: Auto-creates folders when user manually edits email column in Sheets UI
+  - **writeContactData(data)**: Called via Execution API from n8n (writes data + creates folders)
+  - **Deploy as API Executable**: Apps Script editor → Deploy → New deployment → API Executable
 
 ## Key Configuration (String Input Node)
 
@@ -86,5 +89,42 @@ Call RecordSearch (lookup contact)
     ↓
 Prepare Contact Input (set node)
     ↓
-Call smart-table-fill (creates/updates contact in sheet)
+Call smart-table-fill
+  → writes data to sheet via Apps Script Execution API
+  → creates folders if needed (folder_id, emails_folder_id)
+  → returns row_number + folder IDs
 ```
+
+### Apps Script Integration
+
+The `scripts/AppScript-new-contact-setup.js` provides two entry points:
+
+**1. onEdit trigger (manual entries):**
+- Fires when user manually edits email column in Sheets UI
+- Creates: contact folder, README.md, emails/ subfolder
+- Stores BOTH `folder_id` AND `emails_folder_id` in sheet columns
+
+**2. writeContactData (n8n API entries via Execution API):**
+- Called via `https://script.googleapis.com/v1/scripts/{DEPLOYMENT_ID}:run`
+- Uses n8n's Google OAuth2 API credential (secure, no public endpoint)
+- Writes all extracted fields to sheet AND creates folders
+- Returns: `{ status, row_number, folder_id, emails_folder_id }`
+
+**Required Sheet Columns:**
+- `folder_id` - Contact folder ID
+- `emails_folder_id` - Emails subfolder ID
+
+**Required Files:**
+- `scripts/appsscript.json` - Manifest with OAuth scopes (copy to Apps Script project)
+
+**Key Points:**
+1. Use **Deployment ID** (starts with `AKfycb...`), NOT Script ID
+2. All **4 OAuth scopes** required in both `appsscript.json` AND n8n credential:
+   - `https://www.googleapis.com/auth/spreadsheets`
+   - `https://www.googleapis.com/auth/drive`
+   - `https://www.googleapis.com/auth/script.external_request`
+   - `https://www.googleapis.com/auth/script.scriptapp`
+3. Apps Script must be linked to **same GCP project** as n8n OAuth credentials
+4. Must **authorize locally first** (run test function in Apps Script) before n8n calls
+
+**Full Setup Guide:** See [docs/apps-script-execution-api-setup.md](docs/apps-script-execution-api-setup.md)

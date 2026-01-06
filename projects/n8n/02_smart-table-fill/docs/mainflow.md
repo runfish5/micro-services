@@ -1,7 +1,7 @@
-# Main Flow (21 Nodes)
+# Main Flow (20 Nodes)
 
 ## Overview
-Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run.
+Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run. Uses Apps Script to write data AND create contact folders in a single HTTP call.
 
 ## Flow Summary
 
@@ -10,8 +10,8 @@ Extracts structured data from unstructured text into Google Sheets using dynamic
 Triggers (Nodes 1-2)
 Schema Check & Creation (Nodes 3-12)
   - Fetch data headers → Check schema exists → Create if needed
-Data Extraction (Nodes 13-21)
-  - Build JSON schema → LLM extraction → Write to sheet
+Data Extraction (Nodes 13-20)
+  - Build JSON schema → LLM extraction → Write via Apps Script
 ```
 
 ### Data Flow
@@ -38,7 +38,12 @@ Trigger → String Input (config)
                                         ↓
                               LLM: Extract Data
                                         ↓
-                              Write to Data Sheet
+                              Merge Outputs
+                                        ↓
+                              Write via Apps Script (HTTP POST)
+                                  - Writes data to sheet
+                                  - Creates folder if needed
+                                  - Returns { status, row_number, folder_id, emails_folder_id }
 ```
 
 ### Lineage Tree
@@ -78,7 +83,10 @@ START: Manual Trigger / When Executed by Another Workflow
                           │
                           └→ Merge Outputs
                                │
-                               └→ Write_Excel (update data sheet)
+                               └→ Write via Apps Script (HTTP POST to doPost)
+                                    - Writes all extracted fields to sheet
+                                    - Creates folder + emails/ subfolder if needed
+                                    - Returns folder_id, emails_folder_id
 ```
 
 ## AI Model Nodes
@@ -104,7 +112,7 @@ START: Manual Trigger / When Executed by Another Workflow
 | 1 | Manual Trigger | trigger | Manual execution |
 | 2 | When Executed by Another Workflow | trigger | Subworkflow entry |
 | 3 | String Input | set | Configuration variables |
-| 4 | Fetch Data Sheet Headers | googleSheets | Get column names from data sheet |
+| 4 | Fetch Data Sheet Headers | httpRequest | Get column names from data sheet |
 | 5 | Try Fetch Schema Sheet | googleSheets | Check if schema sheet exists |
 | 6 | IF: Schema Exists? | if | Branch on schema existence |
 | 7 | HTTP: Create Sheet | httpRequest | Create schema sheet via API |
@@ -114,21 +122,20 @@ START: Manual Trigger / When Executed by Another Workflow
 | 11 | Schema Output Parser | outputParser | Parse schema JSON |
 | 12 | Split Schema Rows | code | Convert array to items |
 | 13 | Append Schema to Sheet | googleSheets | Write schema rows |
-| 14 | Merge | merge | Join schema exists/created branches |
-| 15 | Fetch Headers | googleSheets | Read schema sheet |
-| 16 | Build Output Schema | code | Build JSON schema from schema rows |
-| 17 | Extract Data from String | chainLlm | LLM data extraction |
-| 18 | LLM Processor | lmChatGroq | Language model for extraction |
-| 19 | Dynamic Output Parser | outputParser | Parse extracted data |
-| 20 | Merge Outputs | code | Merge batch outputs |
-| 21 | Write_Excel | googleSheets | Update data sheet row |
+| 14 | Fetch Headers | googleSheets | Read schema sheet |
+| 15 | Build Output Schema | code | Build JSON schema from schema rows |
+| 16 | Extract Data from String | chainLlm | LLM data extraction |
+| 17 | LLM Processor | lmChatGroq | Language model for extraction |
+| 18 | Dynamic Output Parser | outputParser | Parse extracted data |
+| 19 | Merge Outputs | code | Merge batch outputs |
+| 20 | Write via Apps Script | httpRequest | Write data + create folder via doPost |
 
 ## Notes
 - Schema sheet name `Description_hig7f6` has suffix for disambiguation
 - First run creates schema; subsequent runs skip creation
 - Edit schema sheet to customize extraction (types, descriptions, enum values)
 - BatchSize controls how many fields per LLM call
-- Write_Excel uses `appendOrUpdate` operation with `email` as matching column
+- **Apps Script handles both writing and folder creation** - no triggers needed
 
 ---
 
@@ -179,3 +186,4 @@ Called by inbox-attachment-organizer's `ContactManager-lineage` switch node:
 ```
 ContactManager-lineage → RecordSearch → Prepare Contact Input → smart-table-fill
 ```
+

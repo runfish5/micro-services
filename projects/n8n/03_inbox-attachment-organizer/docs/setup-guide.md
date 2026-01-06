@@ -98,3 +98,13 @@ This template includes:
 - Legal contracts (Contracts/ClientName/YYYY/)
 - HR documents (Personnel/EmployeeName/)
 - Project files (Projects/ProjectName/Deliverables/)
+
+---
+
+## ContactManager Integration (Advanced)
+
+To integrate with the ContactManager (smart-table-fill) for automatic contact folder creation:
+
+**[Apps Script Execution API Setup Guide](../../02_smart-table-fill/docs/apps-script-execution-api-setup.md)**
+
+This enables n8n to call Apps Script functions with secure OAuth authentication for automatic folder creation when processing contact emails.
