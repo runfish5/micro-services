@@ -52,7 +52,7 @@ Trigger → String Input (config)
                                         ↓ (true)
                               Prep Email Store Input
                                         ↓
-                              Call contact-email-store
+                              Call contact-memory-update
 ```
 
 ### Lineage Tree

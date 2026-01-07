@@ -45,13 +45,6 @@ flowchart LR
 
 Anyone converting unstructured notes into structured data — sales teams logging calls, researchers organizing notes, anyone with a messy inbox.
 
-## 🎯 Two Setup Modes
-
-| Setup | Description |
-|-------|-------------|
-| **A) Standalone** | Manual text input via String Input node |
-| **B) Email-CRM** | Auto-process incoming emails (uses nodes from [03_inbox-attachment-organizer](../03_inbox-attachment-organizer/)) |
-
 > ### Auto-Schema Discovery
 >
 > Point it at any table — the workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping needed.
@@ -59,6 +52,8 @@ Anyone converting unstructured notes into structured data — sales teams loggin
 ## ⚡ Quick Start
 - [setup-guide.md](docs/setup-guide.md)
 - [credentials-guide.md](../credentials-guide.md)
+
+> **Want a full CRM?** Combine with [03_inbox-attachment-organizer](../03_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).
 
 ## 📦 Requirements
 

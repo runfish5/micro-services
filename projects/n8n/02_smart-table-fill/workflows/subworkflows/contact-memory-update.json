@@ -1,0 +1,467 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Contact Email Store\n\nStores email as .md file in contact's emails/ folder and updates README.md profile via LLM.\n\n**Inputs:**\n- emails_folder_id: Target folder for email storage\n- folder_id: Contact folder (for README)\n- email_subject, body_core: Email content\n- sender_name, sender_email: Sender info",
+        "height": 240,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2544,
+        2832
+      ],
+      "typeVersion": 1,
+      "id": "8dc5ac71-9dc2-41b4-8f84-f97a9dd78f23",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        3024,
+        2864
+      ],
+      "id": "f515ea50-b24c-48f8-a33a-5216f4b20dbd",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        2672
+      ],
+      "id": "b8e214ab-5964-4d6b-8f71-6ca2688ea7b8",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "emails-folder-id",
+              "name": "emails_folder_id",
+              "value": "={{ $json.emails_folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "folder-id",
+              "name": "folder_id",
+              "value": "={{ $json.folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "email-subject",
+              "name": "email_subject",
+              "value": "={{ $json.email_subject || 'No Subject' }}",
+              "type": "string"
+            },
+            {
+              "id": "email-body",
+              "name": "body_core",
+              "value": "={{ $json.body_core || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "sender-name",
+              "name": "sender_name",
+              "value": "={{ $json.sender_name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "sender-email",
+              "name": "sender_email",
+              "value": "={{ $json.sender_email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "email-date",
+              "name": "email_date",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3248,
+        2768
+      ],
+      "id": "b88e4d86-dd48-43ee-a413-e5500e32d387",
+      "name": "Prepare Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build email file with YAML frontmatter and ISO datetime filename\nconst input = $input.first().json;\n\n// ISO datetime for filename (replace colons with dashes for filesystem)\nconst isoDate = input.email_date.replace(/:/g, '-').split('.')[0];\nconst subjectSlug = input.email_subject\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\nconst filename = `${isoDate}_${subjectSlug}.md`;\n\n// Build file content with YAML frontmatter\nconst fileContent = `---\nname: Email-${input.email_subject}\ndate: ${input.email_date}\nfrom: ${input.sender_email}\n---\n\n${input.body_core}\n`;\n\n// Create binary data for upload\nconst binaryData = Buffer.from(fileContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    filename: filename\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: filename\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        2768
+      ],
+      "id": "62f16b74-f66f-48e6-ba66-dc9f09383c7b",
+      "name": "Prepare Email File"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.emails_folder_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3696,
+        2768
+      ],
+      "id": "e11171e1-879a-4bba-82f6-438f4f477f7f",
+      "name": "Upload Email File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "limit": 1,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Prepare Input').first().json.folder_id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3920,
+        2768
+      ],
+      "id": "87a9ebce-59e1-440c-9196-37f739bea629",
+      "name": "Find README",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4144,
+        2768
+      ],
+      "id": "b0a1fd33-d28f-47ae-87e8-5dd5aeab2b59",
+      "name": "Download README",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract README content from binary\nconst item = $input.first();\nconst binaryData = item.binary?.data;\nlet currentContent = '';\n\nif (binaryData) {\n  currentContent = Buffer.from(binaryData.data, 'base64').toString('utf8');\n}\n\nconst inputData = $('Prepare Input').first().json;\n\nreturn [{\n  json: {\n    readme_id: $('Find README').first().json.id,\n    readme_content: currentContent,\n    email_subject: inputData.email_subject,\n    body_core: inputData.body_core,\n    email_date: inputData.email_date,\n    sender_name: inputData.sender_name,\n    sender_email: inputData.sender_email\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3248,
+        2960
+      ],
+      "id": "00f0ec20-d753-4cb5-9861-46f18fc0db00",
+      "name": "Prep LLM Input"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        3472,
+        3168
+      ],
+      "id": "c28b717e-3242-4260-8fc6-e2fdd6171357",
+      "name": "Profile LLM",
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a personal contact profile manager. Your task is to maintain a concise but lossless profile of a person based on email interactions.\n\nGiven:\n- The current README.md profile\n- A new email from/about this person\n\nUpdate the profile to:\n1. Retain all important facts 1:1 (names, roles, key dates, organizations)\n2. Update outdated information with new context\n3. Keep it concise - merge redundant info, remove fluff\n4. Preserve the YAML frontmatter structure exactly as shown\n5. Add any new relevant information from the email\n\nOutput ONLY the complete updated README.md content, no explanations.\n\n---\n\n## Current Profile:\n{{ $json.readme_content }}\n\n## New Email ({{ $json.email_date }}):\nSubject: {{ $json.email_subject }}\nFrom: {{ $json.sender_name }} <{{ $json.sender_email }}>\n\n{{ $json.body_core }}\n\n---\nOutput the updated README.md:",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3472,
+        2960
+      ],
+      "id": "e2bda909-245f-4180-bc18-a49656cc1224",
+      "name": "LLM: Update Profile"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare updated README for upload\nconst llmOutput = $input.first().json.text || $input.first().json.output || '';\nconst readmeId = $('Prep LLM Input').first().json.readme_id;\n\n// Ensure YAML frontmatter is preserved\nlet content = llmOutput.trim();\nif (!content.startsWith('---')) {\n  content = `---\\nname: ContactManager-Record\\ndescription: Most salient summary of the person that contacted me.\\n---\\n\\n${content}`;\n}\n\nconst binaryData = Buffer.from(content, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    readme_id: readmeId,\n    content_preview: content\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: 'README.md'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3696,
+        2960
+      ],
+      "id": "703513b6-1fce-4eba-a255-d482ef5bbbc5",
+      "name": "Prep README Upload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.readme_id }}",
+          "mode": "id"
+        },
+        "changeFileContent": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3920,
+        2960
+      ],
+      "id": "c6dc6382-86c9-428c-8be8-8d11b9a834b0",
+      "name": "Upload Updated README",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "email-file-id",
+              "name": "email_file_id",
+              "value": "={{ $('Upload Email File').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "email-file-name",
+              "name": "email_file_name",
+              "value": "={{ $('Prepare Email File').first().json.filename }}",
+              "type": "string"
+            },
+            {
+              "id": "readme-updated",
+              "name": "readme_updated",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4144,
+        2960
+      ],
+      "id": "4714aad9-3dbe-4b86-abb5-16fac79d7bbd",
+      "name": "Return Output"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email File": {
+      "main": [
+        [
+          {
+            "node": "Upload Email File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Email File": {
+      "main": [
+        [
+          {
+            "node": "Find README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find README": {
+      "main": [
+        [
+          {
+            "node": "Download README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download README": {
+      "main": [
+        [
+          {
+            "node": "Prep LLM Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep LLM Input": {
+      "main": [
+        [
+          {
+            "node": "LLM: Update Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Update Profile",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Update Profile": {
+      "main": [
+        [
+          {
+            "node": "Prep README Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep README Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload Updated README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Updated README": {
+      "main": [
+        [
+          {
+            "node": "Return Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

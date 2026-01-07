@@ -2,473 +2,141 @@
   "nodes": [
     {
       "parameters": {
-        "content": "Toggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
-        "height": 288,
-        "width": 200
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        6512,
-        1424
-      ],
-      "id": "4c7b8e36-3243-4004-9d63-83e203fe4c4f",
-      "name": "Sticky Note1"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1904,
-        1184
-      ],
-      "id": "8bc89b5a-d0a2-44b0-af81-0d3b5709c3d3",
-      "name": "Sticky Note - Troubleshoot"
-    },
-    {
-      "parameters": {
-        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.\n\n---\n\nOptional:\nConfidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md`",
-        "height": 328,
-        "width": 420
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        800,
-        1152
-      ],
-      "id": "bd821957-9aab-4bfd-83df-9cb9c58482fa",
-      "name": "Sticky Note - Schema Info"
-    },
-    {
-      "parameters": {
-        "inputSource": "passthrough"
-      },
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        1344,
-        1168
-      ],
-      "id": "e572f6d1-5446-47cb-b3ba-d7b50f471d61",
-      "name": "When Executed by Another Workflow"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        1344,
-        1360
-      ],
-      "id": "91e59217-1dd5-412f-8ede-4b095d52ac23",
-      "name": "Manual Trigger"
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        2592,
-        1856
-      ],
-      "id": "b822ab80-3760-41b4-889a-1ab3b209e50d",
-      "name": "LLM Processor",
-      "notesInFlow": false,
-      "credentials": {
-        "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "={{ JSON.stringify($('Build Output Schema').all()[0].json, null, \" \") }}"
-      },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        2736,
-        1792
-      ],
-      "id": "ab61eb4e-fd7b-4390-81e9-a03c9859ed6b",
-      "name": "Dynamic Output Parser"
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<email_metadata>\nSender Name: {{ $('String Input').first().json.sender_name }}\nSender Email: {{ $('String Input').first().json.email }}\nSubject: {{ $('String Input').first().json.subject }}\n</email_metadata>\n\n<source_text>\n{{ $('String Input').first().json.body_core }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
-        "hasOutputParser": true,
-        "batching": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.7,
-      "position": [
-        2592,
-        1616
-      ],
-      "id": "91b8fcfc-662c-455f-ae53-f5b734f33860",
-      "name": "Extract Data from String",
-      "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "id": "cc7ab14b-317e-4293-bca3-15fc9525a598",
-      "name": "Fetch Headers",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        2560,
-        1344
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "ColumnName": "={{ $json.ColumnName }}",
-            "Type": "={{ $json.Type }}",
-            "Description": "={{ $json.Description }}",
-            "Classes": "={{ $json.Classes }}"
-          },
-          "matchingColumns": [],
-          "schema": [
+        "assignments": {
+          "assignments": [
             {
-              "id": "ColumnName",
-              "displayName": "ColumnName",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
+              "id": "emails-folder-id",
+              "name": "emails_folder_id",
+              "value": "={{ $json.response.result.emails_folder_id }}",
+              "type": "string"
             },
             {
-              "id": "Type",
-              "displayName": "Type",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
+              "id": "folder-id",
+              "name": "folder_id",
+              "value": "={{ $json.response.result.folder_id }}",
+              "type": "string"
             },
             {
-              "id": "Description",
-              "displayName": "Description",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
+              "id": "email-subject",
+              "name": "email_subject",
+              "value": "={{ $('String Input').first().json.subject }}",
+              "type": "string"
             },
             {
-              "id": "Classes",
-              "displayName": "Classes",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
+              "id": "body-core",
+              "name": "body_core",
+              "value": "={{ $('String Input').first().json.body_core }}",
+              "type": "string"
+            },
+            {
+              "id": "sender-name",
+              "name": "sender_name",
+              "value": "={{ $('String Input').first().json.sender_name }}",
+              "type": "string"
+            },
+            {
+              "id": "sender-email",
+              "name": "sender_email",
+              "value": "={{ $('String Input').first().json.email }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "2284a88d-8491-417d-abbb-a296a6aca4ca",
-      "name": "Append Schema to Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        2224,
-        1616
+        2896,
+        176
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
+      "id": "20494853-6896-493c-aac4-55f56759c689",
+      "name": "[CRM] Prep Email Store Input",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AP7QbVnt424dz8dD",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/AP7QbVnt424dz8dD",
+          "cachedResultName": "contact-memory-update"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
         }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
       },
-      "id": "c14cf4cd-0179-4063-9ef7-27d1309c2269",
-      "name": "Split Schema Rows",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        2016,
-        1616
-      ]
-    },
-    {
-      "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {}
-      },
-      "id": "fd913b99-c8ac-4b70-94b4-a5ede799f966",
-      "name": "Schema LLM",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        1792,
-        1840
+        3120,
+        176
       ],
-      "credentials": {
-        "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
-      },
-      "id": "e9515759-4db9-4388-8636-01d668ce5340",
-      "name": "Schema Output Parser",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        1904,
-        1840
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $json.columns }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
-        "hasOutputParser": true,
-        "batching": {}
-      },
-      "id": "f95afa1a-2bab-44f1-84a4-702c5a85610b",
-      "name": "LLM: Generate Schema",
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.7,
-      "position": [
-        1792,
-        1616
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
-      },
-      "id": "e21cc0b6-0f49-4ac6-beb0-4a80a374d9d3",
-      "name": "Prep Columns for LLM",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1568,
-        1616
-      ]
+      "id": "9cdaeb6d-d2c5-494b-a026-872890ccd499",
+      "name": "[CRM] Call contact-memory-update",
+      "disabled": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.spreadsheet_id }}:batchUpdate",
+        "url": "https://script.googleapis.com/v1/scripts/AKfycbz1BgGEFC9SDuGHZkRPYzhmlDBp0gbbo1z6RgYNwTQdloW1csdXLYnjvll-NuwO3E7L:run",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "nodeCredentialType": "googleOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.schema_sheet_name }}\"\n      }\n    }\n  }]\n}",
-        "options": {}
+        "jsonBody": "={{ JSON.stringify({ function: 'writeContactData', parameters: [$json] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
       },
-      "id": "46fe86c4-5dd4-433b-b659-5cfd50017a8f",
-      "name": "HTTP: Create Sheet",
+      "id": "5688c6e5-410b-42aa-8770-c16178f30166",
+      "name": "[CRM] Write via Apps Script",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1344,
-        1616
+        2672,
+        176
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      }
+      "disabled": true
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "schema-exists-condition",
-              "leftValue": "={{ $json.ColumnName }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue;\ntry {\n  matchColumn = $('String Input').first().json.match_column;\n  matchValue = $('String Input').first().json.email;\n} catch (e) {\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n}\n\nconst merged = {};\nlet confidenceData = null;\n\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    if (output.confidence) {\n      confidenceData = output.confidence;\n      delete output.confidence;\n    }\n    Object.assign(merged, output);\n  }\n}\n\n// Add flattened confidence fields\nif (confidenceData) {\n  merged.confidence_score = confidenceData.overall || 0;\n  merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n    ? confidenceData.low_confidence_fields.join(', ') : '';\n  merged.confidence_reasoning = confidenceData.reasoning || '';\n  merged.review_needed = (confidenceData.overall || 0) < 70;\n}\n\n// Set email from source\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\n// Nest observability fields in _meta (avoids sheet pollution, keeps data in n8n)\nmerged._meta = {\n  confidence_score: merged.confidence_score,\n  confidence_low_fields: merged.confidence_low_fields,\n  confidence_reasoning: merged.confidence_reasoning,\n  review_needed: merged.review_needed\n};\ndelete merged.confidence_score;\ndelete merged.confidence_low_fields;\ndelete merged.confidence_reasoning;\ndelete merged.review_needed;\n\nreturn [{ json: merged }];"
       },
-      "id": "e96beba7-78e9-4417-aeb3-473610dc4fc2",
-      "name": "IF: Schema Exists?",
-      "type": "n8n-nodes-base.if",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2224,
-        1360
-      ]
+        2160,
+        176
+      ],
+      "id": "f03673d3-0f10-47ce-9dc4-a45febd188bd",
+      "name": "Merge Outputs"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
-          "mode": "name"
-        },
-        "options": {}
+        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n // Add confidence scoring field to schema\n properties.confidence = {\n   type: \"object\",\n   description: \"Confidence scores for extraction quality\",\n   properties: {\n     overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n     low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n     reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n   },\n   required: [\"overall\"]\n };\n requiredFields.push(\"confidence\");\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
       },
-      "id": "f6ddf6bb-5bec-4c74-8c4d-4fb10ccde34b",
-      "name": "Try Fetch Schema Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        2000,
-        1360
+        2032,
+        -48
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.spreadsheet_id }}/values/{{ encodeURIComponent($('String Input').first().json.data_sheet_name) }}!1:1",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "options": {}
-      },
-      "id": "eabba3aa-4467-4b4b-bbaa-58c2d683691d",
-      "name": "Fetch Data Sheet Headers",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1776,
-        1360
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.data_sheet_name }}",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {
-            "email": "={{ $json.email }}"
-          },
-          "matchingColumns": [
-            "email"
-          ],
-          "schema": [
-            {
-              "id": "email",
-              "displayName": "email",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "handlingExtraData": "ignoreIt"
-        }
-      },
-      "id": "dd17aca5-5aad-4288-bedc-c14bc07a6b1b",
-      "name": "Write_Excel",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        3136,
-        1456
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
-        }
-      }
+      "id": "000a973c-0bad-40a8-bafa-7239c7d0ff5d",
+      "name": "Build Output Schema"
     },
     {
       "parameters": {
@@ -535,209 +203,576 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1568,
-        1360
+        816,
+        -32
       ],
-      "id": "6ac66f3a-3c6f-4741-9647-0eb6d6cb1497",
+      "id": "44e00b84-c811-4c06-9060-3db28e8ae58f",
       "name": "String Input"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n // Add confidence scoring field to schema\n properties.confidence = {\n   type: \"object\",\n   description: \"Confidence scores for extraction quality\",\n   properties: {\n     overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n     low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n     reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n   },\n   required: [\"overall\"]\n };\n requiredFields.push(\"confidence\");\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.data_sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "email": "={{ $json.email }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        }
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "09249464-1c72-4a70-af47-22e0f1a7cbc3",
+      "name": "Write_Excel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
       "position": [
-        2784,
-        1344
+        2384,
+        176
       ],
-      "id": "4a21c71b-d54f-41aa-b4b4-f0e46a4cf1b2",
-      "name": "Build Output Schema"
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue;\ntry {\n  matchColumn = $('String Input').first().json.match_column;\n  matchValue = $('String Input').first().json.email;\n} catch (e) {\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n}\n\nconst merged = {};\nlet confidenceData = null;\n\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    if (output.confidence) {\n      confidenceData = output.confidence;\n      delete output.confidence;\n    }\n    Object.assign(merged, output);\n  }\n}\n\n// Add flattened confidence fields\nif (confidenceData) {\n  merged.confidence_score = confidenceData.overall || 0;\n  merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n    ? confidenceData.low_confidence_fields.join(', ') : '';\n  merged.confidence_reasoning = confidenceData.reasoning || '';\n  merged.review_needed = (confidenceData.overall || 0) < 70;\n}\n\n// Set email from source\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\n// Nest observability fields in _meta (avoids sheet pollution, keeps data in n8n)\nmerged._meta = {\n  confidence_score: merged.confidence_score,\n  confidence_low_fields: merged.confidence_low_fields,\n  confidence_reasoning: merged.confidence_reasoning,\n  review_needed: merged.review_needed\n};\ndelete merged.confidence_score;\ndelete merged.confidence_low_fields;\ndelete merged.confidence_reasoning;\ndelete merged.review_needed;\n\nreturn [{ json: merged }];"
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.spreadsheet_id }}/values/{{ encodeURIComponent($('String Input').first().json.data_sheet_name) }}!1:1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
+      "id": "a1f95558-65c0-412d-82fd-33abe3243d26",
+      "name": "Fetch Data Sheet Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "d8635f22-1988-415b-9895-c058dce38f88",
+      "name": "Try Fetch Schema Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1248,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "schema-exists-condition",
+              "leftValue": "={{ $json.ColumnName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9d3df30e-7c56-406d-acea-86abce09f7f0",
+      "name": "IF: Schema Exists?",
+      "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2912,
-        1616
-      ],
-      "id": "a443b156-94f6-4ba7-881d-b3f3817ba14a",
-      "name": "Merge Outputs"
+        1472,
+        -32
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://script.googleapis.com/v1/scripts/AKfycbz1BgGEFC9SDuGHZkRPYzhmlDBp0gbbo1z6RgYNwTQdloW1csdXLYnjvll-NuwO3E7L:run",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.spreadsheet_id }}:batchUpdate",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleOAuth2Api",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ function: 'writeContactData', parameters: [$json] }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
+        "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.schema_sheet_name }}\"\n      }\n    }\n  }]\n}",
+        "options": {}
       },
-      "id": "write-via-appscript",
-      "name": "Write via Apps Script",
+      "id": "4053539f-687f-413f-8bf1-ff7f86d00073",
+      "name": "HTTP: Create Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3136,
-        1616
+        592,
+        224
       ],
       "credentials": {
-        "googleOAuth2Api": {
-          "id": "UPDATE_IN_N8N_UI",
-          "name": "GoogleAppsScript"
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
+      },
+      "id": "ca226d00-d47c-4923-8adc-77cc5cdff872",
+      "name": "Prep Columns for LLM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $json.columns }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "ad73e41a-6ab8-4c4d-a78f-6abd4b54ec72",
+      "name": "LLM: Generate Schema",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1040,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
+      },
+      "id": "89b9be1a-c443-4803-b192-52a0fb4e1dcc",
+      "name": "Schema Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "id": "c47aa14c-c570-449a-b994-8a32027b13f0",
+      "name": "Schema LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        448
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
+      },
+      "id": "8318f12a-7a86-42b9-bdfe-ca363400f5ac",
+      "name": "Split Schema Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ColumnName": "={{ $json.ColumnName }}",
+            "Type": "={{ $json.Type }}",
+            "Description": "={{ $json.Description }}",
+            "Classes": "={{ $json.Classes }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ColumnName",
+              "displayName": "ColumnName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Classes",
+              "displayName": "Classes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "398fb249-5092-4a04-a4c3-7a87634eb127",
+      "name": "Append Schema to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1472,
+        224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.schema_sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "69d88a8a-5fd1-4ee8-9a26-798a25337742",
+      "name": "Fetch Headers",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1808,
+        -48
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n<email_metadata>\nSender Name: {{ $('String Input').first().json.sender_name }}\nSender Email: {{ $('String Input').first().json.email }}\nSubject: {{ $('String Input').first().json.subject }}\n</email_metadata>\n\n<source_text>\n{{ $('String Input').first().json.body_core }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1840,
+        224
+      ],
+      "id": "7266f558-8ec3-43ba-8d0b-02fda351f90b",
+      "name": "Extract Data from String",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={{ JSON.stringify($('Build Output Schema').all()[0].json, null, \" \") }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1984,
+        400
+      ],
+      "id": "af11b8e1-6a1c-4996-9f9b-b5b44673f608",
+      "name": "Dynamic Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        464
+      ],
+      "id": "618e8e59-c007-4fc6-b684-17248a214751",
+      "name": "LLM Processor",
+      "notesInFlow": false,
+      "credentials": {
+        "groqApi": {
+          "id": "sue07pcKIgrn1xhP",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -32
+      ],
+      "id": "3a756ab9-4856-4e56-834d-2df08251396e",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        -224
+      ],
+      "id": "39142160-8ec2-4197-b260-d1eefc0b85fe",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.\n\n---\n\nOptional:\nConfidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md`",
+        "height": 328,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -240
+      ],
+      "id": "e20a46d1-d029-4590-89db-da887140bc0e",
+      "name": "Sticky Note - Schema Info"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -64
+      ],
+      "id": "21e7e931-347d-4b25-8694-714e2664a794",
+      "name": "Sticky Note - Troubleshoot"
+    },
+    {
+      "parameters": {
+        "content": "## Mode B: Email-CRM Setup\nsee [inbox-organizer](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer) and [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) for details",
+        "height": 268,
+        "width": 684,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        96
+      ],
+      "id": "cd7ce6aa-5b7f-45ff-9b39-59395af1c13b",
+      "name": "Sticky - CRM Setup"
+    },
+    {
+      "parameters": {
+        "content": "## Mode A: Smart Table Fill\n\n\n\n\n\n\n\n\n\n\n\n\n\nActive by default. Writes extracted data directly to Google Sheets.\n\nToggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
+        "height": 352,
+        "width": 296
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        112
+      ],
+      "id": "8dc4eb4e-97bc-436f-9de5-d1f9ed9bda54",
+      "name": "Sticky Note1"
     }
   ],
   "connections": {
-    "When Executed by Another Workflow": {
+    "[CRM] Prep Email Store Input": {
       "main": [
         [
           {
-            "node": "String Input",
+            "node": "[CRM] Call contact-memory-update",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Manual Trigger": {
+    "[CRM] Write via Apps Script": {
       "main": [
         [
           {
-            "node": "String Input",
+            "node": "[CRM] Prep Email Store Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "LLM Processor": {
-      "ai_languageModel": [
+    "Merge Outputs": {
+      "main": [
+        [
+          {
+            "node": "[CRM] Write via Apps Script",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write_Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Output Schema": {
+      "main": [
         [
           {
             "node": "Extract Data from String",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dynamic Output Parser": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "Extract Data from String",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Data from String": {
-      "main": [
-        [
-          {
-            "node": "Merge Outputs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Headers": {
+    "String Input": {
       "main": [
         [
           {
-            "node": "Build Output Schema",
+            "node": "Fetch Data Sheet Headers",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Append Schema to Sheet": {
+    "Fetch Data Sheet Headers": {
       "main": [
         [
           {
-            "node": "Fetch Headers",
+            "node": "Try Fetch Schema Sheet",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Schema Rows": {
+    "Try Fetch Schema Sheet": {
       "main": [
         [
           {
-            "node": "Append Schema to Sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Schema LLM": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "LLM: Generate Schema",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Schema Output Parser": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "LLM: Generate Schema",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LLM: Generate Schema": {
-      "main": [
-        [
-          {
-            "node": "Split Schema Rows",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prep Columns for LLM": {
-      "main": [
-        [
-          {
-            "node": "LLM: Generate Schema",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP: Create Sheet": {
-      "main": [
-        [
-          {
-            "node": "Prep Columns for LLM",
+            "node": "IF: Schema Exists?",
             "type": "main",
             "index": 0
           }
@@ -762,74 +797,147 @@
         ]
       ]
     },
-    "Try Fetch Schema Sheet": {
+    "HTTP: Create Sheet": {
       "main": [
         [
           {
-            "node": "IF: Schema Exists?",
+            "node": "Prep Columns for LLM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Data Sheet Headers": {
+    "Prep Columns for LLM": {
       "main": [
         [
           {
-            "node": "Try Fetch Schema Sheet",
+            "node": "LLM: Generate Schema",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Write_Excel": {
-      "main": [
-        []
-      ]
-    },
-    "String Input": {
+    "LLM: Generate Schema": {
       "main": [
         [
           {
-            "node": "Fetch Data Sheet Headers",
+            "node": "Split Schema Rows",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Output Schema": {
+    "Schema Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Schema Rows": {
       "main": [
+        [
+          {
+            "node": "Append Schema to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Schema to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Fetch Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Headers": {
+      "main": [
+        [
+          {
+            "node": "Build Output Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data from String": {
+      "main": [
+        [
+          {
+            "node": "Merge Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dynamic Output Parser": {
+      "ai_outputParser": [
         [
           {
             "node": "Extract Data from String",
-            "type": "main",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "Merge Outputs": {
+    "LLM Processor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Data from String",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
       "main": [
         [
           {
-            "node": "Write_Excel",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Write via Apps Script",
+            "node": "String Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Write via Apps Script": {
+    "When Executed by Another Workflow": {
       "main": [
-        []
+        [
+          {
+            "node": "String Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
