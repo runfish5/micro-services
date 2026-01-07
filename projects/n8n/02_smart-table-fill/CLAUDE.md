@@ -35,12 +35,12 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 
 | Field | Purpose |
 |-------|---------|
-| `SpreadsheetId` | Google Sheets document ID |
-| `DataSheetName` | Your data sheet (e.g., "Entries") |
-| `SchemaSheetName` | Schema definition sheet (`Description_hig7f6`) |
-| `TextObject_User` | Raw text to extract data from |
-| `MatchColumn` / `MatchValue` | Which row to update |
-| `BatchSize` | Fields per LLM batch |
+| `spreadsheet_id` | Google Sheets document ID |
+| `data_sheet_name` | Your data sheet (e.g., "Entries") |
+| `schema_sheet_name` | Schema definition sheet (`Description_hig7f6`) |
+| `body_core` | LLM-distilled core message (semantic extraction from email) |
+| `match_column` / `match_value` | Which row to update |
+| `batch_size` | Fields per LLM batch |
 
 ## Schema Sheet Structure
 

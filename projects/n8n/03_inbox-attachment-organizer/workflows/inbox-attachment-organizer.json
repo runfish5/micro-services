@@ -52,8 +52,8 @@
       "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
       "credentials": {
         "gmailOAuth2": {
-          "id": "F3cQVIbokuyDLVR2",
-          "name": "Google_0Auth"
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
         }
       }
     },
@@ -252,7 +252,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=**document TEXT INPUT:**  \n{{ $json.cleaned_email.data[0].emailBodyTextForLLM }}\n---\n** Attachements content**\n{{ $json.attachment_check }}\n** Company profile context **\nJust regular SaaS business.",
+        "text": "=**document TEXT INPUT:**  \n{{ $json.cleaned_email.data[0].body_sanitized }}\n---\n** Attachements content**\n{{ $json.attachment_check }}\n** Company profile context **\nJust regular SaaS business.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -784,7 +784,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\n// 1. Get email text (try plain text first, fallback to HTML)\nlet rawEmailText = $('Gmail').first().json.text || '';\n\nif (!rawEmailText.trim() && $('Gmail').first().json.html) {\n const html = $('Gmail').first().json.html;\n rawEmailText = html\n   // Remove script/style blocks entirely\n   .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n   .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n   // Replace common block elements with newlines\n   .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n   .replace(/<br\\s*\\/?>/gi, '\\n')\n   // Remove all remaining HTML tags\n   .replace(/<[^>]+>/g, ' ')\n   // Decode HTML entities\n   .replace(/&nbsp;/gi, ' ')\n   .replace(/&amp;/gi, '&')\n   .replace(/&lt;/gi, '<')\n   .replace(/&gt;/gi, '>')\n   .replace(/&quot;/gi, '\"')\n   .replace(/&#\\d+;/g, ' ');\n}\n\n// 2. Clean text (enhanced from historical version)\nlet emailBodyTextForLLM = '';\nif (rawEmailText.trim()) {\n emailBodyTextForLLM = rawEmailText\n   // Unicode normalization (from historical)\n   .normalize('NFD')\n   // Control & invisible characters\n   .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n   .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n   // Special whitespace\n   .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n   // Remove image URLs completely (from historical)\n   .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n   // Replace remaining URLs\n   .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n   // Fix punctuation spacing (from historical)\n   .replace(/\\s+([.,;!?])/g, '$1')\n   // Normalize whitespace\n   .replace(/\\s+/g, ' ')\n   .trim();\n}\n\n// 3. Build attachment texts MAP (unchanged)\nconst attachmentTextsMap = {};\nconst gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n const $json = items[i].json;\n const text = $json.data?.text || $json.textForLLM || $json.text || '';\n const key = gmailBinaryKeys[i] || `attachment_${i}`;\n if (text.trim()) {\n   attachmentTextsMap[key] = text.trim();\n }\n}\n\n// 4. Return ONE item\nreturn [{\n json: {\n   data: [{\n     emailBodyTextForLLM,\n     attachmentTextsMap,\n     attachmentNames: gmailBinaryKeys,\n     hasAttachments,\n     subject: $('Gmail').first().json.subject || 'No subject',\n     from: $('Gmail').first().json.from || 'Unknown',\n     date: $('Gmail').first().json.date || new Date().toISOString()\n   }]\n },\n pairedItem: { item: 0 }\n}];\n"
+        "jsCode": "const items = $input.all();\n\n// 1. Get email text (try plain text first, fallback to HTML)\nlet rawEmailText = $('Gmail').first().json.text || '';\n\nif (!rawEmailText.trim() && $('Gmail').first().json.html) {\n const html = $('Gmail').first().json.html;\n rawEmailText = html\n   // Remove script/style blocks entirely\n   .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n   .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n   // Replace common block elements with newlines\n   .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n   .replace(/<br\\s*\\/?>/gi, '\\n')\n   // Remove all remaining HTML tags\n   .replace(/<[^>]+>/g, ' ')\n   // Decode HTML entities\n   .replace(/&nbsp;/gi, ' ')\n   .replace(/&amp;/gi, '&')\n   .replace(/&lt;/gi, '<')\n   .replace(/&gt;/gi, '>')\n   .replace(/&quot;/gi, '\"')\n   .replace(/&#\\d+;/g, ' ');\n}\n\n// 2. Clean text (enhanced from historical version)\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n body_sanitized = rawEmailText\n   // Unicode normalization (from historical)\n   .normalize('NFD')\n   // Control & invisible characters\n   .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n   .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n   // Special whitespace\n   .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n   // Remove image URLs completely (from historical)\n   .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n   // Replace remaining URLs\n   .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n   // Fix punctuation spacing (from historical)\n   .replace(/\\s+([.,;!?])/g, '$1')\n   // Normalize whitespace\n   .replace(/\\s+/g, ' ')\n   .trim();\n}\n\n// 3. Build attachment texts MAP (unchanged)\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n const $json = items[i].json;\n const text = $json.data?.text || $json.textForLLM || $json.text || '';\n const key = gmailBinaryKeys[i] || `attachment_${i}`;\n if (text.trim()) {\n   attachment_texts_map[key] = text.trim();\n }\n}\n\n// 4. Return ONE item\nreturn [{\n json: {\n   data: [{\n     body_sanitized,\n     attachment_texts_map,\n     attachmentNames: gmailBinaryKeys,\n     hasAttachments,\n     subject: $('Gmail').first().json.subject || 'No subject',\n     from: $('Gmail').first().json.from || 'Unknown',\n     date: $('Gmail').first().json.date || new Date().toISOString()\n   }]\n },\n pairedItem: { item: 0 }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -861,7 +861,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"sender\": {\n          \"type\": \"string\",\n          \"description\": \"Must be a legal person with a full name. Not allowed: companies or other suggested personal entities are not allowed.\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        },\n        \"essential_content\": {\n            \"type\": \"string\",\n            \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n       }\n\t},\n\t\"required\": [\n      \"sender\",\n      \"classification_rationale\",\n      \"essential_content\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"sender\": {\n          \"type\": \"string\",\n          \"description\": \"Must be a legal person with a full name. Not allowed: companies or other suggested personal entities are not allowed.\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        },\n        \"body_core\": {\n            \"type\": \"string\",\n            \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n       }\n\t},\n\t\"required\": [\n      \"sender\",\n      \"classification_rationale\",\n      \"body_core\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -1170,8 +1170,8 @@
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
         "gmailOAuth2": {
-          "id": "F3cQVIbokuyDLVR2",
-          "name": "Google_0Auth"
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
         }
       }
     },
@@ -1238,7 +1238,7 @@
             {
               "id": "db43a7cc-60e3-4847-af0f-0be2859b5a83",
               "name": "attachment_check",
-              "value": "={{ $json.data[0].attachmentTextsMap.attachment_0.length > 700 ? 'Length of attachment: ' + $json.data[0].attachmentTextsMap.attachment_0.length + '. Above 700 characters, Not displayed.' : 'Attachment:\\n' + $json.data[0].attachmentTextsMap.attachment_0 }}",
+              "value": "={{ $json.data[0].attachment_texts_map.attachment_0.length > 700 ? 'Length of attachment: ' + $json.data[0].attachment_texts_map.attachment_0.length + '. Above 700 characters, Not displayed.' : 'Attachment:\\n' + $json.data[0].attachment_texts_map.attachment_0 }}",
               "type": "string"
             }
           ]
@@ -1301,7 +1301,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      emailBodyTextForLLM: cleanedData.emailBodyTextForLLM || '',\n      attachmentTextForLLM: cleanedData.attachmentTextsMap?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
+        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      body_sanitized: cleanedData.body_sanitized || '',\n      attachmentTextForLLM: cleanedData.attachmentTextsMap?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1407,8 +1407,8 @@
           "assignments": [
             {
               "id": "42bc6d75-2bc9-4596-8dde-39a437b8d086",
-              "name": "TextObject_User",
-              "value": "={{ $('subject-classifier-LM').item.json.output.essential_content }}",
+              "name": "body_core",
+              "value": "={{ $('subject-classifier-LM').item.json.output.body_core }}",
               "type": "string"
             },
             {

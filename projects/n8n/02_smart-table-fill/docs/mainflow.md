@@ -50,7 +50,7 @@ Trigger → String Input (config)
 ```
 START: Manual Trigger / When Executed by Another Workflow
   │
-  └→ String Input (config: SpreadsheetId, DataSheetName, SchemaSheetName)
+  └→ String Input (config: spreadsheet_id, data_sheet_name, schema_sheet_name, body_core, match_value)
        │
        └→ Fetch Data Sheet Headers (row 1 of data sheet)
             │
