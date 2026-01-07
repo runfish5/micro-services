@@ -1,10 +1,25 @@
 {
   "nodes": [
-        {
+    {
       "parameters": {
-        "content": "## If workflow stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
-        "height": 332,
-        "width": 280
+        "content": "Toggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
+        "height": 288,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6512,
+        1424
+      ],
+      "id": "4c7b8e36-3243-4004-9d63-83e203fe4c4f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
+        "height": 80,
+        "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -17,9 +32,9 @@
     },
     {
       "parameters": {
-        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
-        "height": 296,
-        "width": 452
+        "content": "## Schema Auto-Creation\n\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.\n\n---\n\nOptional:\nConfidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md`",
+        "height": 328,
+        "width": 420
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -402,33 +417,56 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://script.googleapis.com/v1/scripts/YOUR_DEPLOYMENT_ID:run",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleOAuth2Api",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ function: 'writeContactData', parameters: [$json] }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('String Input').first().json.DataSheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "email": "={{ $json.email }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
             }
-          }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "handlingExtraData": "ignoreIt"
         }
       },
-      "id": "write-via-appscript",
-      "name": "Write via Apps Script",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "dd17aca5-5aad-4288-bedc-c14bc07a6b1b",
+      "name": "Write_Excel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
       "position": [
         3136,
-        1616
+        1456
       ],
       "credentials": {
-        "googleOAuth2Api": {
-          "id": "UPDATE_IN_N8N_UI",
-          "name": "GoogleAppsScript"
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
         }
       }
     },
@@ -537,72 +575,33 @@
     },
     {
       "parameters": {
-        "content": "**Optional:** LLM confidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md`",
-        "height": 80,
-        "width": 300,
-        "color": 6
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2400,
-        1600
-      ],
-      "id": "conf-note-002",
-      "name": "Confidence Note"
-    },
-    {
-      "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.SpreadsheetId }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('String Input').first().json.DataSheetName }}",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {
-            "email": "={{ $json.email }}"
-          },
-          "matchingColumns": [
-            "email"
-          ],
-          "schema": [
-            {
-              "id": "email",
-              "displayName": "email",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
+        "method": "POST",
+        "url": "https://script.googleapis.com/v1/scripts/AKfycbz1BgGEFC9SDuGHZkRPYzhmlDBp0gbbo1z6RgYNwTQdloW1csdXLYnjvll-NuwO3E7L:run",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ function: 'writeContactData', parameters: [$json] }) }}",
         "options": {
-          "handlingExtraData": "ignoreIt"
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
-      "id": "dd17aca5-5aad-4288-bedc-c14bc07a6b1b",
-      "name": "Write_Excel",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "id": "write-via-appscript",
+      "name": "Write via Apps Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         3136,
-        1456
+        1616
       ],
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
-          "name": "GoogleDriveMAIN"
+        "googleOAuth2Api": {
+          "id": "UPDATE_IN_N8N_UI",
+          "name": "GoogleAppsScript"
         }
       }
     }
@@ -639,9 +638,6 @@
             "index": 0
           }
         ]
-      ],
-      "main": [
-        []
       ]
     },
     "Dynamic Output Parser": {
@@ -794,6 +790,11 @@
         ]
       ]
     },
+    "Write_Excel": {
+      "main": [
+        []
+      ]
+    },
     "String Input": {
       "main": [
         [
@@ -820,12 +821,12 @@
       "main": [
         [
           {
-            "node": "Write via Apps Script",
+            "node": "Write_Excel",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Write_Excel",
+            "node": "Write via Apps Script",
             "type": "main",
             "index": 0
           }
