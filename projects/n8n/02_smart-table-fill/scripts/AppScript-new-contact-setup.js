@@ -53,6 +53,15 @@ function getColumnByHeader(sheetName, headerName) {
   return colIndex + 1; // Convert to 1-based
 }
 
+// Validate email format (basic but proper validation)
+// Accepts: user@domain.tld, user.name+tag@sub.domain.co.uk
+// Rejects: @, test@, @test, test@@test.com, spaces
+function isValidEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MENU & TRIGGER SETUP
 // ═══════════════════════════════════════════════════════════════
@@ -105,7 +114,7 @@ function onSpreadsheetEdit(e) {
   if (e.range.getColumn() !== colNum) return;
 
   const email = e.range.getValue();
-  if (email && email.toString().trim() !== '' && email.includes('@')) {
+  if (email && isValidEmail(email.toString())) {
     const row = e.range.getRow();
     // Get name from column A (for display in README)
     const name = sheet.getRange(row, 1).getValue() || '';
@@ -113,46 +122,47 @@ function onSpreadsheetEdit(e) {
   }
 }
 
-// Create folder with markdown files for a contact
+// Unified folder creation - returns { folderId, emailsFolderId }
+// Called by both onEdit trigger (createFolderForContact) and API endpoint (writeContactData)
+function createOrGetContactFolder(email, row) {
+  const targetFolder = getOrCreateFolderPath(CONFIG.folderPath);
+  const folderName = sanitizeEmailForFolder(email);
+
+  // Check if folder already exists
+  const existingFolders = targetFolder.getFoldersByName(folderName);
+  if (existingFolders.hasNext()) {
+    const existingFolder = existingFolders.next();
+    const folderId = existingFolder.getId();
+    // Find or create emails subfolder
+    const emailsFolders = existingFolder.getFoldersByName('emails');
+    let emailsFolderId = '';
+    if (emailsFolders.hasNext()) {
+      emailsFolderId = emailsFolders.next().getId();
+    } else {
+      // Create emails subfolder if missing (handles partial folder state)
+      const emailsFolder = existingFolder.createFolder('emails');
+      emailsFolderId = emailsFolder.getId();
+    }
+    storeFolderIdsInSheet(row, folderId, emailsFolderId);
+    console.log(`Folder exists for ${email}, IDs: ${folderId}, ${emailsFolderId}`);
+    return { folderId, emailsFolderId };
+  }
+
+  // Create new folder
+  const contactFolder = targetFolder.createFolder(folderName);
+  const folderId = contactFolder.getId();
+  contactFolder.createFile('README.md', createReadmeContent(), MimeType.PLAIN_TEXT);
+  const emailsFolder = contactFolder.createFolder('emails');
+  const emailsFolderId = emailsFolder.getId();
+  storeFolderIdsInSheet(row, folderId, emailsFolderId);
+  console.log(`Created folder "${folderName}" for ${email}, IDs: ${folderId}, ${emailsFolderId}`);
+  return { folderId, emailsFolderId };
+}
+
+// Wrapper for onEdit trigger (maintains backwards compatibility)
 function createFolderForContact(email, name, row) {
   try {
-    // Navigate to configured folder path
-    const targetFolder = getOrCreateFolderPath(CONFIG.folderPath);
-
-    // Folder name is sanitized email
-    const folderName = sanitizeEmailForFolder(email);
-
-    // Check if folder already exists
-    const existingFolders = targetFolder.getFoldersByName(folderName);
-    if (existingFolders.hasNext()) {
-      // Folder exists - get IDs and store in sheet
-      const existingFolder = existingFolders.next();
-      const folderId = existingFolder.getId();
-      // Find emails subfolder
-      const emailsFolders = existingFolder.getFoldersByName('emails');
-      const emailsFolderId = emailsFolders.hasNext() ? emailsFolders.next().getId() : '';
-      storeFolderIdsInSheet(row, folderId, emailsFolderId);
-      console.log(`Folder already exists for ${email}, stored IDs: ${folderId}, ${emailsFolderId}`);
-      return;
-    }
-
-    // Create new folder
-    const contactFolder = targetFolder.createFolder(folderName);
-    const folderId = contactFolder.getId();
-
-    // Create README.md (minimal YAML only)
-    const readmeContent = createReadmeContent();
-    contactFolder.createFile('README.md', readmeContent, MimeType.PLAIN_TEXT);
-
-    // Create emails subfolder
-    const emailsFolder = contactFolder.createFolder('emails');
-    const emailsFolderId = emailsFolder.getId();
-
-    // Store BOTH folder_id and emails_folder_id in the sheet
-    storeFolderIdsInSheet(row, folderId, emailsFolderId);
-
-    console.log(`Created folder "${folderName}" for ${email} with IDs: ${folderId}, ${emailsFolderId}`);
-
+    createOrGetContactFolder(email, row);
   } catch (error) {
     console.error(`Error creating folder for ${email}:`, error);
   }
@@ -217,10 +227,21 @@ function getOrCreateFolderPath(pathArray) {
 // Body: { "function": "writeContactData", "parameters": [{ email, name, ... }] }
 
 function writeContactData(data) {
+  // Acquire script-level lock to prevent race conditions (concurrent calls creating duplicate rows)
+  const lock = LockService.getScriptLock();
+  const lockAcquired = lock.tryLock(30000); // Wait up to 30 seconds
+
+  if (!lockAcquired) {
+    return {
+      status: 'error',
+      error: 'Could not acquire lock - another request is in progress. Please retry.'
+    };
+  }
+
   try {
     const email = data.email;
 
-    if (!email || !email.includes('@')) {
+    if (!email || !isValidEmail(email)) {
       throw new Error('Valid email is required');
     }
 
@@ -272,7 +293,7 @@ function writeContactData(data) {
 
     if (!folderId) {
       logToSheet('INFO', 'writeContactData', 'Creating folder', { email });
-      const result = createFolderWithEmailsId(email, rowNumber);
+      const result = createOrGetContactFolder(email, rowNumber);
       folderId = result.folderId;
       emailsFolderId = result.emailsFolderId;
     } else {
@@ -311,6 +332,9 @@ function writeContactData(data) {
       status: 'error',
       error: error.message
     };
+  } finally {
+    // Always release the lock
+    lock.releaseLock();
   }
 }
 
@@ -321,36 +345,6 @@ function testWriteContactData() {
     name: "API Test User"
   });
   console.log(JSON.stringify(result, null, 2));
-}
-
-// Version of createFolderForContact that returns both folder_id and emails_folder_id
-function createFolderWithEmailsId(email, row) {
-  const targetFolder = getOrCreateFolderPath(CONFIG.folderPath);
-  const folderName = sanitizeEmailForFolder(email);
-
-  // Check if folder already exists
-  const existingFolders = targetFolder.getFoldersByName(folderName);
-  if (existingFolders.hasNext()) {
-    const existingFolder = existingFolders.next();
-    const folderId = existingFolder.getId();
-    // Find emails subfolder
-    const emailsFolders = existingFolder.getFoldersByName('emails');
-    const emailsFolderId = emailsFolders.hasNext() ? emailsFolders.next().getId() : '';
-    // Store BOTH IDs in sheet
-    storeFolderIdsInSheet(row, folderId, emailsFolderId);
-    return { folderId, emailsFolderId };
-  }
-
-  // Create new folder
-  const contactFolder = targetFolder.createFolder(folderName);
-  const folderId = contactFolder.getId();
-  contactFolder.createFile('README.md', createReadmeContent(), MimeType.PLAIN_TEXT);
-  const emailsFolder = contactFolder.createFolder('emails');
-  const emailsFolderId = emailsFolder.getId();
-  // Store BOTH IDs in sheet
-  storeFolderIdsInSheet(row, folderId, emailsFolderId);
-
-  return { folderId, emailsFolderId };
 }
 
 // ============================================================
@@ -379,7 +373,7 @@ function processExistingContacts() {
     const name = data[i][NAME_COL];
     const email = data[i][emailColIndex];
 
-    if (email && email.toString().trim() !== '' && email.includes('@')) {
+    if (email && isValidEmail(email.toString())) {
       try {
         const targetFolder = getOrCreateFolderPath(CONFIG.folderPath);
         const folderName = sanitizeEmailForFolder(email.toString().trim());
