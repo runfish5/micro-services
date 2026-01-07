@@ -58,12 +58,16 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
   "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/script.external_request",
-    "https://www.googleapis.com/auth/script.scriptapp"
+    "https://www.googleapis.com/auth/drive"
   ]
 }
 ```
+
+**Scope breakdown:**
+| Scope | Required | Purpose |
+|-------|----------|---------|
+| `spreadsheets` | **Yes** | Read/write sheet data |
+| `drive` | **Yes** | Create contact folders |
 
 **Note:** Keep any other settings your file already has (like `webapp` or `executionApi`). Just add the `oauthScopes` array.
 
@@ -111,7 +115,7 @@ Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's do
    - Click **Allow** to grant all permissions
 4. Check Execution log - should show success response
 
-**Note:** If you see permission errors, ensure `appsscript.json` has all 4 scopes.
+**Note:** If you see permission errors, verify `appsscript.json` has the required scopes.
 
 ---
 
@@ -123,9 +127,9 @@ Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's do
    - **Name:** `Inbox-AppsScript` (or similar)
    - **Client ID:** from the GCP project in Step 1 (where you enabled Apps Script API)
    - **Client Secret:** from the same GCP project
-   - **Scope(s):** paste all 4 scopes (space-separated):
+   - **Scope(s):** paste both scopes (space-separated):
      ```
-     https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.external_request https://www.googleapis.com/auth/script.scriptapp
+     https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive
      ```
 4. Click **Save**
 5. Click **Connect** to complete OAuth flow
@@ -167,9 +171,16 @@ Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's do
 ## Key Points Summary
 
 1. Use **Deployment ID** (AKfycb...), NOT Script ID
-2. All **4 scopes required** in BOTH:
-   - `appsscript.json` manifest
-   - n8n Google OAuth2 API credential
+2. **2 OAuth scopes** required in BOTH `appsscript.json` and n8n credential:
+   - `spreadsheets` - read/write sheet data
+   - `drive` - create folders
 3. Apps Script linked to **same GCP project** as n8n OAuth
 4. **Enable Apps Script API** in GCP Console
 5. **Authorize locally first** (run test function) before n8n calls
+
+## Dataset Size Warning
+
+The Apps Script loads the entire sheet into memory to find rows:
+- Works well for sheets < 5,000 rows
+- May timeout or fail on very large sheets (10,000+ rows)
+- Apps Script has 6-minute execution limit and ~6MB heap

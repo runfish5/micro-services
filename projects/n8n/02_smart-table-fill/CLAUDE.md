@@ -18,7 +18,7 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 ## Where Information Lives
 
 ### Workflows
-- `workflows/smart-table-fill.n8n.json` - Main workflow (26 nodes)
+- `workflows/smart-table-fill.n8n.json` - Main workflow (21 nodes)
 - `workflows/subworkflows/record-search.json` - Contact lookup subworkflow
 
 ### Documentation
@@ -119,12 +119,11 @@ The `scripts/AppScript-new-contact-setup.js` provides two entry points:
 
 **Key Points:**
 1. Use **Deployment ID** (starts with `AKfycb...`), NOT Script ID
-2. All **4 OAuth scopes** required in both `appsscript.json` AND n8n credential:
-   - `https://www.googleapis.com/auth/spreadsheets`
-   - `https://www.googleapis.com/auth/drive`
-   - `https://www.googleapis.com/auth/script.external_request`
-   - `https://www.googleapis.com/auth/script.scriptapp`
+2. **2 OAuth scopes** required in both `appsscript.json` AND n8n credential:
+   - `https://www.googleapis.com/auth/spreadsheets` - read/write sheet data
+   - `https://www.googleapis.com/auth/drive` - create folders
 3. Apps Script must be linked to **same GCP project** as n8n OAuth credentials
 4. Must **authorize locally first** (run test function in Apps Script) before n8n calls
+5. **Dataset limit:** Works well < 5,000 rows; may timeout on very large sheets
 
 **Full Setup Guide:** See [docs/apps-script-execution-api-setup.md](docs/apps-script-execution-api-setup.md)

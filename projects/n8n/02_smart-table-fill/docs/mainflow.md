@@ -1,4 +1,4 @@
-# Main Flow (20 Nodes)
+# Main Flow (21 Nodes)
 
 ## Overview
 Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run. Uses Apps Script to write data AND create contact folders in a single HTTP call.
@@ -40,10 +40,19 @@ Trigger → String Input (config)
                                         ↓
                               Merge Outputs
                                         ↓
+                    ┌─────────────────────────────────────────┐
+                    │ Standalone: Write_Excel (native Sheets) │
+                    └─────────────────────────────────────────┘
+                                        │
+                                        │ (or CRM mode)
+                                        ↓
                               Write via Apps Script (HTTP POST)
-                                  - Writes data to sheet
-                                  - Creates folder if needed
-                                  - Returns { status, row_number, folder_id, emails_folder_id }
+                                        ↓
+                              IF: Apps Script Success?
+                                        ↓ (true)
+                              Prep Email Store Input
+                                        ↓
+                              Call contact-email-store
 ```
 
 ### Lineage Tree
