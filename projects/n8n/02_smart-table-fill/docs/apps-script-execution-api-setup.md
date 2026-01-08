@@ -8,16 +8,18 @@ This guide configures n8n to call Google Apps Script via the Execution API with 
 
 ## Prerequisites
 
-- Google Cloud Console access
-- n8n instance (self-hosted or cloud)
+- [Google Cloud Console](https://console.cloud.google.com) access
+- [n8n](https://n8n.io) instance (self-hosted or cloud)
 - Google Sheet with your data (e.g., "Entries" sheet)
-- 03_inbox-attachment-organizer workflow with smart-table-fill subworkflow (activate the HTTP node instead of Excel)
+- [03_inbox-attachment-organizer](../../03_inbox-attachment-organizer) workflow with [smart-table-fill subworkflow](email-crm-guide.md) (activate the HTTP node instead of Excel)
 
 ---
 
 ## Step 1: Find Your GCP Project Number & Enable API
 
 Your existing n8n Google credentials use a GCP project. We need to link Apps Script to the **same project**.
+
+> **Why this matters:** Every Apps Script is assigned a hidden, Google-managed GCP project by default. This works fine for built-in services (GmailApp, DriveApp, CalendarApp) and manual/trigger runs - the script stays "inside" Google's ecosystem. But when an *external* app like n8n calls via the Execution API, it needs OAuth credentials that match the script's project. The hidden default can't issue credentials, so you must link both to the same visible GCP project.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. In the project dropdown (top left), find the project your n8n credentials use
@@ -37,11 +39,11 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
 ### 2.2 Add the Code
 
 1. Delete any default code in `Code.gs`
-2. Copy the entire contents of `scripts/AppScript-new-contact-setup.js` from this repo
+2. Copy the entire contents of [`scripts/AppScript-new-contact-setup.js`](../scripts/AppScript-new-contact-setup.js) from this repo
 3. Paste into `Code.gs`
 4. Update `CONFIG` with your settings:
-   - `spreadsheetId`: your Google Sheet ID
-   - `folderPath`: array of folder names where contact folders are created (e.g., `['MyDrive', 'ContactManager', 'names_folders']`)
+   - `spreadsheetId`: the Google Sheet that smart-table-fill writes to
+   - `folderPath`: path where you want ContactManager to live (e.g., `['MyDrive', 'ContactManager', 'names_folders']`)
 
 ### 2.3 Add OAuth Scopes to appsscript.json
 
@@ -98,9 +100,9 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
    ```
    https://script.googleapis.com/v1/scripts/AKfycbz...your-id...:run
    ```
-3. **Copy this entire URL** - paste it directly into your n8n HTTP node
+3. **Copy this entire URL** - paste it into the "Write via Apps Script" HTTP node at the end of [smart-table-fill](../workflows/smart-table-fill.n8n.json)
 
-Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's docs mention using Script ID, but the Deployment ID `AKfycb...` in this URL is what actually works.)
+Just copy this full URL and paste it into the HTTP node. (Note: Google's docs mention using Script ID, but the Deployment ID `AKfycb...` in this URL is what actually works.)
 
 ---
 
@@ -121,6 +123,8 @@ Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's do
 
 ## Step 6: Create n8n OAuth Credential
 
+> **Why another credential?** Your existing Gmail/Drive credentials have fixed scopes you can't change. Scopes are security - only grant what's needed; Google has no "access everything" option. Here we need multiple (Sheets + Drive), so we use the generic "Google OAuth2 API" which lets you combine them. For Execution API, n8n must request the *exact same scopes* as `appsscript.json`.
+
 1. In n8n: **Settings** > **Credentials** > **Add Credential**
 2. Search for: **Google OAuth2 API**
 3. Configure:
@@ -134,17 +138,12 @@ Just copy this full URL and paste it into your n8n HTTP node. (Note: Google's do
 4. Click **Save**
 5. Click **Connect** to complete OAuth flow
 6. Grant all requested permissions (safe - it's your own script)
-
----
-
-## Step 7: Import & Configure Workflow
-
-1. Import `workflows/smart-table-fill.n8n.json` into n8n
-2. Click **Publish** to save
-3. Edit the **String Input** node: set `SpreadsheetId` to your Google Sheet ID
-4. Edit the **Write via Apps Script** HTTP node:
+7. In the **Write via Apps Script** HTTP node (if you haven't already):
    - Paste the URL from Step 4
-   - Under Credential, select your credential from Step 6
+   - Under Credential, select the credential you just created
+8. Click **Publish** to save
+
+**Almost done!** Return to [email-crm-guide.md → 6. Enable CRM Nodes](email-crm-guide.md#6-enable-crm-nodes) to finish setup.
 
 ---
 
