@@ -1,52 +1,46 @@
 # Email-CRM Setup Guide
 
-**Time:** 30 min | **Difficulty:** Intermediate | **Prerequisites:** Standalone setup complete
+**Time:** 30 min | **Difficulty:** Intermediate
 
-This guide walks you through setting up the full Email-CRM mode with automatic folder creation, email archiving, and AI-updated contact profiles.
+This guide adds contact management to your existing inbox-attachment-organizer workflow. Incoming emails automatically create/update contacts in a Google Sheet, with organized Drive folders for each contact.
 
 ---
+
+## What This Is
+
+Email-CRM is an **extension** of [inbox-attachment-organizer](../../03_inbox-attachment-organizer), not a standalone workflow.
+
+**inbox-attachment-organizer handles:** Gmail trigger, attachment extraction, AI classification
+
+**This extension adds:** Contact lookup, CRM data extraction, folder creation, email archiving
 
 ## Architecture Overview
 
 ```mermaid
 flowchart TB
-    subgraph "📧 Email Pipeline"
-        Gmail[Gmail Trigger] --> Classify[subject-classifier-LM]
+    subgraph "📧 inbox-attachment-organizer"
+        Gmail[Gmail Trigger] --> Classify[🤖 subject-classifier-LM]
+        Classify --> RecordSearch[🔍 record-search]
     end
 
-    subgraph "smart-table-fill"
-        Classify --> Extract[🤖 LLM Extract]
-        Extract --> Sheet[📊 Write to Sheet]
-        Extract -.-> AppScript[Apps Script API]
+    subgraph "📊 smart-table-fill"
+        RecordSearch --> Extract[🤖 LLM Extract]
+        Extract --> AppScript[Apps Script API]
+        AppScript --> Sheet[📝 Write to Sheet]
+        AppScript --> Folders[📁 Create Contact Folders]
     end
 
-    subgraph "contact-memory-update"
-        AppScript --> ContactFolder["📁 Contact Folder #40;GDrive#41;"]
-        ContactFolder --> StoreEmail[📄 Store Email .md]
-        ContactFolder --> UpdateProfile[🤖 Update Contact Profile]
+    subgraph "💾 contact-memory-update"
+        Folders --> StoreEmail[📄 Store Email .md]
+        Folders --> UpdateProfile[🪪 Update Contact Profile]
     end
 ```
 
-### Components
+---
 
-| Component | Purpose |
-|-----------|---------|
-| **smart-table-fill** | Core extraction workflow (both modes use this) |
-| **contact-memory-update** | Subworkflow: email archive + AI profile update |
-| **Apps Script** | Creates folders, writes to Sheet, returns row numbers |
+## Folder Structure
 
-### Why Apps Script?
-
-The direct Google Sheets API can't return the row number after writing. Apps Script handles:
-- Write data to Sheet → get row number
-- Create contact folder if new
-- Return folder IDs for downstream use
-
-All in one atomic operation.
-
-### Folder Structure
-
-For each contact, the system creates:
+For each email, the system creates or updates:
 
 ```
 📁 Contacts/
@@ -59,77 +53,162 @@ For each contact, the system creates:
 
 ---
 
-## Setup Steps
+## Phase 1: Prerequisites & Import Workflows
 
-### 1. Import All Workflows
+### 1.1 Check Email Pipeline
+
+Before starting, confirm the email pipeline in [inbox-attachment-organizer](../../03_inbox-attachment-organizer) is working.
+
+**Not set up yet?** You need the email pipeline from [inbox-attachment-organizer](../../03_inbox-attachment-organizer) — at minimum: Gmail Trigger through subject-classifier-LM and the CRM-lineage nodes. The other lineages (finance, appointments) are optional.
+
+### 1.2 Import Subworkflows
 
 Import these into n8n:
 
-- [smart-table-fill.n8n.json](../workflows/smart-table-fill.n8n.json) — Main workflow
-- [contact-memory-update.json](../workflows/subworkflows/contact-memory-update.json) — Email archive + AI profile update
-- [inbox-attachment-organizer.json](../../03_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json) — Source for email pipeline nodes
-- [subworkflow-lineage.json](../../03_inbox-attachment-organizer/workflows/subworkflows/subworkflow-lineage.json) — Email parsing subworkflow
+- [record-search.json](../workflows/subworkflows/record-search.json)
+- [contact-memory-update.json](../workflows/subworkflows/contact-memory-update.json)
+- [smart-table-fill.json](../workflows/smart-table-fill.n8n.json)
 
-**After importing:** Note each workflow's ID (visible in the URL) — you'll need these for Execute Workflow nodes.
+---
 
-### 2. Complete Standalone Setup First
+## Phase 2: Google Cloud Console
 
-Follow [setup-guide.md](setup-guide.md) to get the base workflow running.
+### 2.1 Find Your GCP Project Number
 
-### 3. Add Email Pipeline
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. In the project dropdown (top left), find the project your n8n credentials use
+3. Go to **Dashboard** and note the **Project Number** (numeric, e.g., `126925216054`)
 
-Copy the email pipeline from [inbox-attachment-organizer.json](../../03_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json) — all nodes from **Gmail Trigger** through **subject-classifier-LM**, plus their downstream lineage subworkflow call.
+> **Tip:** If unsure which project, check your n8n credential's Client ID - it contains the project info.
 
-Two integration modes:
+### 2.2 Enable Apps Script API
 
-| Mode | How |
-|------|-----|
-| **All-in-one** | Paste nodes directly into your workflow |
-| **Subworkflow** | Call smart-table-fill via Execute Workflow trigger |
+1. Go to [Apps Script API](https://console.cloud.google.com/apis/library/script.googleapis.com)
+2. Click **Enable**
 
-### 4. Add Required Sheet Columns
+---
 
-Your Google Sheet needs these columns for CRM mode (add them now before Apps Script setup):
+## Phase 3: Google Sheets Setup
+
+Create your Contacts sheet with these columns:
 
 | Column | Type | Purpose |
 |--------|------|---------|
-| `folder_id` | string | Contact's Drive folder ID |
-| `emails_folder_id` | string | Subfolder for email archives |
+| `email` | string | Primary lookup key |
+| `first_name` | string | For fuzzy matching |
+| `surname` | string | For fuzzy matching |
+| `more_emails` | string | Comma-separated additional emails |
+| `folder_id` | string | Contact's Drive folder (auto-filled) |
+| `emails_folder_id` | string | Email archive subfolder (auto-filled) |
+| *(your custom columns)* | varies | LLM will extract data based on headers |
 
-The Apps Script creates these folders automatically on first contact.
+> **How it works:** The LLM reads your column headers and extracts relevant data from each email. Add columns like `company`, `phone`, `notes` - the schema is auto-generated.
+>
+> *Want more context on how schema auto-generation works? See the [smart-table-fill guide](setup-guide.md).*
 
-### 5. Setup Apps Script
+### 3.1 Configure smart-table-fill
 
-Follow the detailed guide:
+In the **smart-table-fill** workflow, open the **String Input** node and set:
+- `spreadsheet_id`: Copy from your Sheet's URL (the long string between `/d/` and `/edit`)
+- `data_sheet_name`: Your sheet name (e.g., "Contacts")
+
+---
+
+## Phase 4: Configure smart-table-fill for Mode B
+
+### 4.1 Why Apps Script?
+
+In standalone mode (Mode A), the workflow uses n8n's built-in **Google Sheets node** to write data. But this node can't trigger Apps Script features like creating contact folders in Drive.
+
+For Email-CRM mode, we use the **Apps Script Execution API** instead — it writes to the Sheet AND creates folders in one atomic operation.
+
+### 4.2 Switch to Mode B
+
+Find the sticky note titled **"## Mode B: Email-CRM Setup"**. The 3 nodes in front of it need to be activated:
+
+1. **Activate these nodes** (right-click → Activate):
+   - `[CRM] Write via Apps Script`
+   - `[CRM] Prep Email Store Input`
+   - `[CRM] Call contact-memory-update`
+
+2. **Deactivate the Mode A node** (right-click → Deactivate):
+   - `Write_Excel`
+
+3. **Connect the flow:** Wire **Merge Outputs** → **[CRM] Write via Apps Script**
+
+4. Open **[CRM] Call contact-memory-update** node and select **contact-memory-update** from the dropdown
+
+---
+
+## Phase 5: Apps Script Setup
+
+Now configure the Apps Script that the `[CRM] Write via Apps Script` node will call.
+
+**Follow the detailed guide:**
 
 **➡️ [Apps Script Execution API Setup](apps-script-execution-api-setup.md)**
 
 This covers:
-- Creating the Apps Script project
+- Creating the script from your Sheet
+- Adding code + OAuth scopes
+- Linking to your GCP project
 - Deploying as API Executable
-- Configuring OAuth scopes (3 needed: `spreadsheets` + `drive` + `script.scriptapp`)
-- Testing the connection
+- Creating the n8n OAuth credential
 
-### 6. Enable CRM Nodes
+**When you return, you'll have:**
+- Apps Script deployment URL (starts with `https://script.googleapis.com/v1/scripts/AKfycb...`)
+- n8n OAuth credential with 3 scopes configured
 
-In `smart-table-fill`, find the four `[CRM]` nodes (greyed out):
-1. `[CRM] Write via Apps Script`
-2. `[CRM] IF: Apps Script Success?`
-3. `[CRM] Prep Email Store Input`
-4. `[CRM] Call contact-memory-update`
+**Then in smart-table-fill**, open **[CRM] Write via Apps Script** node:
+- Paste your Apps Script URL
+- Select your new OAuth credential
 
-**Do:**
-- Connect **Merge Outputs** → **[CRM] Write via Apps Script**
-- Activate all four nodes (right-click → Activate)
-- Update the subworkflow ID in `[CRM] Call contact-memory-update`
+Click **Save** and **Publish**.
 
-### 7. Test End-to-End
+---
 
-1. Trigger the workflow with a test email
-2. Check: Data appears in Sheet
-3. Check: Contact folder created in Drive
-4. Check: Email archived as `.md` file
-5. Check: `README.md` profile updated in contact folder
+## Phase 6: Connect to inbox-attachment-organizer
+
+Back in your **inbox-attachment-organizer** workflow.
+
+### 6.1 Find the Contact Manager Branch
+
+Look for this chain of 4 connected nodes:
+
+```
+ContactManager-lineage → Call 'record-search' → Prepare Contact Input → Call 'smart-table-fill'
+```
+
+### 6.2 Select the Subworkflows
+
+Open each Execute Workflow node and select the correct workflow from the dropdown:
+
+| Node | Select from dropdown |
+|------|----------------------|
+| `Call 'record-search'` | **record-search** |
+| `Call 'smart-table-fill'` | **smart-table-fill** |
+
+### 6.3 Enable the Branch
+
+- Select the **ContactManager-lineage** nodes and press your key `D` to undo the deactivation.
+
+### 6.4 Save
+
+Click **Save** and **Publish**.
+
+---
+
+## Phase 7: Test End-to-End
+
+1. Send a test email to your monitored inbox
+2. Wait for the workflow to process (~1 min)
+
+**Verify:**
+- [ ] Email classified by subject-classifier-LM
+- [ ] Contact row created/updated in Contacts sheet
+- [ ] `folder_id` and `emails_folder_id` columns populated
+- [ ] Contact folder created in Drive with `README.md`
+- [ ] Email archived as `.md` file in `emails/` subfolder
 
 ---
 
@@ -139,18 +218,13 @@ In `smart-table-fill`, find the four `[CRM]` nodes (greyed out):
 |-------|----------|
 | Apps Script returns error | Check OAuth scopes match in both Apps Script and n8n credential |
 | Folder not created | Verify `folder_id` column exists in Sheet |
-| Subworkflow not found | Update workflow ID in `[CRM] Call contact-memory-update` node |
-
----
-
-## Video Tutorials
-
-📺 *Coming soon*
+| Subworkflow not found | Open the Execute Workflow node and select the correct workflow from the dropdown |
+| Contact not matched | Check `email` column has correct value; try `more_emails` for aliases |
 
 ---
 
 ## Related Docs
 
-- [Apps Script Execution API Setup](apps-script-execution-api-setup.md) — Technical OAuth configuration
-- [setup-guide.md](setup-guide.md) — Standalone mode (simpler)
-- [credentials-guide.md](../credentials-guide.md) — Google OAuth setup
+- [Apps Script Execution API Setup](apps-script-execution-api-setup.md) — OAuth configuration details
+- [inbox-attachment-organizer](../../03_inbox-attachment-organizer) — Prerequisite workflow
+- [Standalone setup](setup-guide.md) — Mode A (simpler, no email integration)

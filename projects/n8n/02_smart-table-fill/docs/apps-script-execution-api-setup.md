@@ -147,7 +147,12 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
    - Under Credential, select the credential you just created
 8. Click **Publish** to save
 
-**Almost done!** Return to [email-crm-guide.md → 6. Enable CRM Nodes](email-crm-guide.md#6-enable-crm-nodes) to finish setup.
+**Done with Apps Script setup!** You now have:
+- Apps Script deployed and authorized
+- n8n OAuth credential configured
+- HTTP node URL ready
+
+**[Continue to Phase 5: Import & Configure Subworkflows](email-crm-guide.md#phase-5-import--configure-subworkflows)**
 
 ---
 

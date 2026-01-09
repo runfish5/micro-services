@@ -1,18 +1,18 @@
 # n8n Troubleshooting
 
-## Subworkflows: Must Republish After Changes
+## Subworkflows Not Reflecting Changes
 
-When working with subworkflows, **saving is not enough** - you must republish.
+Execution behaves differently than when you tested? You tested the subworkflow directly, not via the parent - and forgot to republish.
 
-**Fix**: Executions → Copy to Editor → Publish
+**Fix**: Republish the subworkflow.
 
----
 
-## Can't Publish Workflow (No Visible Errors)
+If publish button won't work (an error like *1 node has issues, fix them before publishing.*):
+1. Go to Executions
+2. Pick a successful run → Copy to Editor
+3. Publish
 
-Publish button doesn't work, but no fields are red and no error messages appear.
-
-**Fix**: Executions → Copy to Editor → Publish
+This works because the execution data fills in whatever n8n thinks is missing.
 
 ---
 
