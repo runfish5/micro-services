@@ -119,9 +119,10 @@ The `scripts/AppScript-new-contact-setup.js` provides two entry points:
 
 **Key Points:**
 1. Use **Deployment ID** (starts with `AKfycb...`), NOT Script ID
-2. **2 OAuth scopes** required in both `appsscript.json` AND n8n credential:
+2. **3 OAuth scopes** required in both `appsscript.json` AND n8n credential:
    - `https://www.googleapis.com/auth/spreadsheets` - read/write sheet data
    - `https://www.googleapis.com/auth/drive` - create folders
+   - `https://www.googleapis.com/auth/script.scriptapp` - trigger setup & testing from editor
 3. Apps Script must be linked to **same GCP project** as n8n OAuth credentials
 4. Must **authorize locally first** (run test function in Apps Script) before n8n calls
 5. **Dataset limit:** Works well < 5,000 rows; may timeout on very large sheets

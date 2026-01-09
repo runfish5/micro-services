@@ -107,7 +107,7 @@ Follow the detailed guide:
 This covers:
 - Creating the Apps Script project
 - Deploying as API Executable
-- Configuring OAuth scopes (only 2 needed: `spreadsheets` + `drive`)
+- Configuring OAuth scopes (3 needed: `spreadsheets` + `drive` + `script.scriptapp`)
 - Testing the connection
 
 ### 6. Enable CRM Nodes

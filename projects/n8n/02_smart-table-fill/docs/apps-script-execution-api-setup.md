@@ -60,7 +60,8 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
   "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.scriptapp"
   ]
 }
 ```
@@ -70,6 +71,7 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
 |-------|----------|---------|
 | `spreadsheets` | **Yes** | Read/write sheet data |
 | `drive` | **Yes** | Create contact folders |
+| `script.scriptapp` | **Yes** | Trigger setup & testing from Apps Script editor |
 
 **Note:** Keep any other settings your file already has (like `webapp` or `executionApi`). Just add the `oauthScopes` array.
 
@@ -131,10 +133,12 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
    - **Name:** `Inbox-AppsScript` (or similar)
    - **Client ID:** from the GCP project in Step 1 (where you enabled Apps Script API)
    - **Client Secret:** from the same GCP project
-   - **Scope(s):** paste both scopes (space-separated):
+   - **Scope(s):** paste all 3 scopes (space-separated):
      ```
-     https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive
+     https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.scriptapp
      ```
+
+     > **Note:** The third scope (`script.scriptapp`) is required for trigger setup and testing from the Apps Script editor, not just for n8n API calls.
 4. Click **Save**
 5. Click **Connect** to complete OAuth flow
 6. Grant all requested permissions (safe - it's your own script)
@@ -158,7 +162,7 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 
 - Re-run `testWriteContactData` in Apps Script editor
 - Complete the authorization flow again
-- Verify all 4 scopes in `appsscript.json`
+- Verify all 3 scopes in `appsscript.json`
 
 ### GCP Project Mismatch
 
@@ -170,9 +174,10 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 ## Key Points Summary
 
 1. Use **Deployment ID** (AKfycb...), NOT Script ID
-2. **2 OAuth scopes** required in BOTH `appsscript.json` and n8n credential:
+2. **3 OAuth scopes** required in BOTH `appsscript.json` and n8n credential:
    - `spreadsheets` - read/write sheet data
    - `drive` - create folders
+   - `script.scriptapp` - trigger setup & testing from editor
 3. Apps Script linked to **same GCP project** as n8n OAuth
 4. **Enable Apps Script API** in GCP Console
 5. **Authorize locally first** (run test function) before n8n calls
