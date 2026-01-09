@@ -66,6 +66,12 @@
               "name": "email_ID",
               "value": "={{ $json.id }}",
               "type": "string"
+            },
+            {
+              "id": "ac0b0536-a1f6-4813-9e72-8a2334935fbe",
+              "name": "owner_name",
+              "value": "David Streuli",
+              "type": "string"
             }
           ]
         },
@@ -257,7 +263,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=# Role\nYou You're an employe of a Swiss Company responsible for Invoice Classification.\n\n## TASK\nAnalyze the following invoice or financial document text and classify it accordingly.  \nDecide if each item is an **Investment** (Balance Sheet/Assets) or an **Expense** (Income Statement).\n\n## Output\nA json based on the schema with following keys:"
+              "message": "=# Role\nYou are an email classifier for {{ $('Set File ID').first().json.owner_name }}'s inbox.\n\n## CRITICAL: Identify the Contact\n- INBOX OWNER: {{ $('Set File ID').first().json.owner_name }} ({{ $('Set File ID').first().json.owner_email }})\n- EMAIL DIRECTION: {{ $('email-info-hub').first().json.direction }}\n{{ $('email-info-hub').first().json.direction === 'outbound' ? '- This is a SENT email: ' + $('Set File ID').first().json.owner_name + ' is the SENDER\\\n- The `sender` field should contain the RECIPIENT (who ' + $('Set File ID').first().json.owner_name + ' wrote to)' : '- This is a RECEIVED email: ' + $('Set File ID').first().json.owner_name + ' is the RECIPIENT\\\n- The `sender` field should contain WHO SENT this email' }}\n\n## TASK\nClassify the email and extract key information.\n\n## Output\nA JSON object with the following keys:"
             }
           ]
         },
@@ -861,7 +867,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Does this email require immediate action?\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"sender\": {\n          \"type\": \"string\",\n          \"description\": \"Must be a legal person with a full name. Not allowed: companies or other suggested personal entities are not allowed.\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        },\n        \"body_core\": {\n            \"type\": \"string\",\n            \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n       }\n\t},\n\t\"required\": [\n      \"sender\",\n      \"classification_rationale\",\n      \"body_core\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"What the document is informing the recipient about, causing a specific type of response. All documents can be considered relevant to a company's operations department or property or private events scheduling and management.\",\n            \"enum\" : [\"confirmation\", \"financial\", \"newsletter\", \"appointment\", \"marketing\", \"operational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Should the owner look at this soon (within days)? True if: unexpected outcome, problem, decision needed, upcoming deadline, or noteworthy update. False for: routine confirmations.\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"sender\": {\n          \"type\": \"string\",\n          \"description\": \"Must be a legal person with a full name. Not allowed: companies or other suggested personal entities are not allowed.\"\n        },\n        \"length_insufficient\": {\n            \"type\": \"bool\",\n\t\t\t\"description\": \"If the text is interpreted as not the correct content, missing content indicated by messages shorter than 100 chars, this flag `length_insufficient` should be false. \"\n        },\n        \"body_core\": {\n            \"type\": \"string\",\n            \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n       }\n\t},\n\t\"required\": [\n      \"sender\",\n      \"classification_rationale\",\n      \"body_core\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"type_of_document\"\n\t]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -1240,6 +1246,12 @@
               "name": "attachment_check",
               "value": "={{ $json.data[0].attachment_texts_map.attachment_0.length > 700 ? 'Length of attachment: ' + $json.data[0].attachment_texts_map.attachment_0.length + '. Above 700 characters, Not displayed.' : 'Attachment:\\n' + $json.data[0].attachment_texts_map.attachment_0 }}",
               "type": "string"
+            },
+            {
+              "id": "77709029-2c66-4334-a783-e4961fe81644",
+              "name": "direction",
+              "value": "={{ $('Gmail').first().json.labelIds.includes('SENT') ? 'outbound' : 'inbound' }}",
+              "type": "string"
             }
           ]
         },
@@ -1414,7 +1426,7 @@
             {
               "id": "c53001df-d38b-4855-a247-dee7f28eab38",
               "name": "email",
-              "value": "={{ $('Gmail').item.json.from.value[0].address }}",
+              "value": "={{ $('email-info-hub').item.json.direction === 'outbound' ? $('Gmail').item.json.to.value[0].address : $('Gmail').item.json.from.value[0].address }}",
               "type": "string"
             },
             {
@@ -1432,7 +1444,7 @@
             {
               "id": "bb62a143-9b62-4977-bb96-42b8a7e821e6",
               "name": "sender_name",
-              "value": "={{ $('subject-classifier-LM').item.json.output.sender || $('Gmail').item.json.from.value[0].name || '' }}",
+              "value": "={{ $('email-info-hub').item.json.direction === 'outbound' ? ($('Gmail').item.json.to.value[0].name || '') : ($('subject-classifier-LM').item.json.output.sender || $('Gmail').item.json.from.value[0].name || '') }}",
               "type": "string"
             },
             {
@@ -1445,6 +1457,18 @@
               "id": "837b8479-431a-4a77-84d6-64f9d52b8e39",
               "name": "subject",
               "value": "={{ $('Gmail').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "5e2e6bab-9566-4f03-a8c1-f6094f17629f",
+              "name": "direction",
+              "value": "={{ $('email-info-hub').item.json.direction }}",
+              "type": "string"
+            },
+            {
+              "id": "1f3607b9-1150-4ce3-bd86-0146eb9a88f4",
+              "name": "owner_name",
+              "value": "={{ $('Set File ID').first().json.owner_name }}",
               "type": "string"
             }
           ]

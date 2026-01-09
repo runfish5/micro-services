@@ -39,6 +39,18 @@
               "name": "sender_email",
               "value": "={{ $('String Input').first().json.email }}",
               "type": "string"
+            },
+            {
+              "id": "48ac7e66-b0b4-4012-8798-0747ebbfbaa4",
+              "name": "direction",
+              "value": "={{ $('When Executed by Another Workflow').first().json.direction }}",
+              "type": "string"
+            },
+            {
+              "id": "2251d600-66ac-4840-8d98-b4e48600b14a",
+              "name": "owner_name",
+              "value": "={{ $('When Executed by Another Workflow').first().json.owner_name }}",
+              "type": "string"
             }
           ]
         },
@@ -47,12 +59,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2896,
-        176
+        9440,
+        1776
       ],
-      "id": "20494853-6896-493c-aac4-55f56759c689",
-      "name": "[CRM] Prep Email Store Input",
-      "disabled": true
+      "id": "2ea13c04-35e2-496f-9173-8c2bda04f425",
+      "name": "[CRM] Prep Email Store Input"
     },
     {
       "parameters": {
@@ -78,12 +89,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        3120,
-        176
+        9664,
+        1776
       ],
-      "id": "9cdaeb6d-d2c5-494b-a026-872890ccd499",
-      "name": "[CRM] Call contact-memory-update",
-      "disabled": true
+      "id": "9d230dcb-4ab9-4180-876f-3440c768c8a8",
+      "name": "[CRM] Call contact-email-store"
     },
     {
       "parameters": {
@@ -102,15 +112,20 @@
           }
         }
       },
-      "id": "5688c6e5-410b-42aa-8770-c16178f30166",
+      "id": "b965d28c-21b6-4e52-b23f-69ac98076c7d",
       "name": "[CRM] Write via Apps Script",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2672,
-        176
+        9216,
+        1776
       ],
-      "disabled": true
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "1SFzu8lgX2ROOk8V",
+          "name": "AppScript-inbox-4Scope"
+        }
+      }
     },
     {
       "parameters": {
@@ -119,10 +134,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2160,
-        176
+        8704,
+        1776
       ],
-      "id": "f03673d3-0f10-47ce-9dc4-a45febd188bd",
+      "id": "8e306dac-0e63-4e45-a98f-29364d7cd5b4",
       "name": "Merge Outputs"
     },
     {
@@ -132,10 +147,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2032,
-        -48
+        8576,
+        1552
       ],
-      "id": "000a973c-0bad-40a8-bafa-7239c7d0ff5d",
+      "id": "653ec2ed-e48c-4836-991a-8203bcb76a22",
       "name": "Build Output Schema"
     },
     {
@@ -203,10 +218,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        816,
-        -32
+        7360,
+        1568
       ],
-      "id": "44e00b84-c811-4c06-9060-3db28e8ae58f",
+      "id": "a39effdc-1339-4c79-91df-3adcf270491b",
       "name": "String Input"
     },
     {
@@ -249,20 +264,21 @@
           "handlingExtraData": "ignoreIt"
         }
       },
-      "id": "09249464-1c72-4a70-af47-22e0f1a7cbc3",
+      "id": "6536b77a-7731-4c24-b55a-c1deb3242860",
       "name": "Write_Excel",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        2384,
-        176
+        8928,
+        1776
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "O03W9YZyCWUacxnv",
           "name": "GoogleDriveMAIN"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
@@ -271,13 +287,13 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "options": {}
       },
-      "id": "a1f95558-65c0-412d-82fd-33abe3243d26",
+      "id": "4bd29691-a7fa-450b-9af5-3a38a86ae810",
       "name": "Fetch Data Sheet Headers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1024,
-        -32
+        7568,
+        1568
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -300,13 +316,13 @@
         },
         "options": {}
       },
-      "id": "d8635f22-1988-415b-9895-c058dce38f88",
+      "id": "6162e68b-1dc3-44bb-898d-c9140732a2eb",
       "name": "Try Fetch Schema Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1248,
-        -32
+        7792,
+        1568
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -340,13 +356,13 @@
         },
         "options": {}
       },
-      "id": "9d3df30e-7c56-406d-acea-86abce09f7f0",
+      "id": "02de666e-fd0e-433a-8b04-3bed444b3027",
       "name": "IF: Schema Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1472,
-        -32
+        8016,
+        1568
       ]
     },
     {
@@ -360,13 +376,13 @@
         "jsonBody": "={\n  \"requests\": [{\n    \"addSheet\": {\n      \"properties\": {\n        \"title\": \"{{ $('String Input').first().json.schema_sheet_name }}\"\n      }\n    }\n  }]\n}",
         "options": {}
       },
-      "id": "4053539f-687f-413f-8bf1-ff7f86d00073",
+      "id": "60e6ac71-30a8-42ff-882c-326f32c639de",
       "name": "HTTP: Create Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        592,
-        224
+        7136,
+        1824
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -379,13 +395,13 @@
       "parameters": {
         "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
       },
-      "id": "ca226d00-d47c-4923-8adc-77cc5cdff872",
+      "id": "32fd6d9b-eabd-4d6f-a9d5-7a718b27e000",
       "name": "Prep Columns for LLM",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        816,
-        224
+        7360,
+        1824
       ]
     },
     {
@@ -395,13 +411,13 @@
         "hasOutputParser": true,
         "batching": {}
       },
-      "id": "ad73e41a-6ab8-4c4d-a78f-6abd4b54ec72",
+      "id": "9cc57e33-c200-4ebe-8397-cabe776f326c",
       "name": "LLM: Generate Schema",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1040,
-        224
+        7584,
+        1824
       ]
     },
     {
@@ -409,13 +425,13 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
       },
-      "id": "89b9be1a-c443-4803-b192-52a0fb4e1dcc",
+      "id": "4e9fffd7-077d-4d37-8674-894c431d500f",
       "name": "Schema Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1152,
-        448
+        7696,
+        2048
       ]
     },
     {
@@ -423,13 +439,13 @@
         "model": "openai/gpt-oss-120b",
         "options": {}
       },
-      "id": "c47aa14c-c570-449a-b994-8a32027b13f0",
+      "id": "d9e7f1b9-0f28-4a12-825f-29d83564e1cc",
       "name": "Schema LLM",
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        1040,
-        448
+        7584,
+        2048
       ],
       "credentials": {
         "groqApi": {
@@ -442,13 +458,13 @@
       "parameters": {
         "jsCode": "// Convert LLM output array to individual items for Google Sheets append\nconst schemaArray = $input.first().json.output;\nreturn schemaArray.map(row => ({ json: row }));"
       },
-      "id": "8318f12a-7a86-42b9-bdfe-ca363400f5ac",
+      "id": "efcf5548-561b-4b6e-8180-25a5d56f41f2",
       "name": "Split Schema Rows",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1264,
-        224
+        7808,
+        1824
       ]
     },
     {
@@ -514,13 +530,13 @@
         },
         "options": {}
       },
-      "id": "398fb249-5092-4a04-a4c3-7a87634eb127",
+      "id": "dad79c7d-996a-4bf0-a8f0-cd87a9b55730",
       "name": "Append Schema to Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1472,
-        224
+        8016,
+        1824
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -543,13 +559,13 @@
         },
         "options": {}
       },
-      "id": "69d88a8a-5fd1-4ee8-9a26-798a25337742",
+      "id": "5437e28c-9505-4164-928a-0a184d1a97b5",
       "name": "Fetch Headers",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1808,
-        -48
+        8352,
+        1552
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -568,10 +584,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1840,
-        224
+        8384,
+        1824
       ],
-      "id": "7266f558-8ec3-43ba-8d0b-02fda351f90b",
+      "id": "b94e8302-4526-4bc2-8161-abe8208d9494",
       "name": "Extract Data from String",
       "alwaysOutputData": false
     },
@@ -583,10 +599,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1984,
-        400
+        8528,
+        2000
       ],
-      "id": "af11b8e1-6a1c-4996-9f9b-b5b44673f608",
+      "id": "e327d04c-716b-4633-8d8c-53bd4d0be9bc",
       "name": "Dynamic Output Parser"
     },
     {
@@ -597,10 +613,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        1840,
-        464
+        8384,
+        2064
       ],
-      "id": "618e8e59-c007-4fc6-b684-17248a214751",
+      "id": "678e935f-f073-4af7-99d9-826d9ac899a7",
       "name": "LLM Processor",
       "notesInFlow": false,
       "credentials": {
@@ -615,10 +631,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        592,
-        -32
+        7136,
+        1568
       ],
-      "id": "3a756ab9-4856-4e56-834d-2df08251396e",
+      "id": "9af42ee7-9e8a-4626-99a2-988afbea0e5d",
       "name": "Manual Trigger"
     },
     {
@@ -628,10 +644,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        592,
-        -224
+        7136,
+        1376
       ],
-      "id": "39142160-8ec2-4197-b260-d1eefc0b85fe",
+      "id": "ca4b481f-0727-4965-bc3a-afe0890e6859",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -643,10 +659,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        48,
-        -240
+        6592,
+        1360
       ],
-      "id": "e20a46d1-d029-4590-89db-da887140bc0e",
+      "id": "09eabe66-e68d-4cf3-ac73-bb6fd82d4273",
       "name": "Sticky Note - Schema Info"
     },
     {
@@ -658,10 +674,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1248,
-        -64
+        7792,
+        1536
       ],
-      "id": "21e7e931-347d-4b25-8694-714e2664a794",
+      "id": "3a251222-bbdc-4a3d-8cdc-47780f170ecf",
       "name": "Sticky Note - Troubleshoot"
     },
     {
@@ -674,10 +690,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2624,
-        96
+        9168,
+        1696
       ],
-      "id": "cd7ce6aa-5b7f-45ff-9b39-59395af1c13b",
+      "id": "261acaf4-0f5b-4434-8bc6-c8c0b2f0fe68",
       "name": "Sticky - CRM Setup"
     },
     {
@@ -689,10 +705,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2304,
-        112
+        8848,
+        1712
       ],
-      "id": "8dc4eb4e-97bc-436f-9de5-d1f9ed9bda54",
+      "id": "780dbcf9-d414-4cbe-ba20-4230b689ed4f",
       "name": "Sticky Note1"
     }
   ],
@@ -701,7 +717,7 @@
       "main": [
         [
           {
-            "node": "[CRM] Call contact-memory-update",
+            "node": "[CRM] Call contact-email-store",
             "type": "main",
             "index": 0
           }

@@ -8,11 +8,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        2544,
-        2832
+        4048,
+        2944
       ],
       "typeVersion": 1,
-      "id": "8dc5ac71-9dc2-41b4-8f84-f97a9dd78f23",
+      "id": "2f632337-594b-4058-ad9d-8bd231539a3c",
       "name": "Sticky Note"
     },
     {
@@ -22,10 +22,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        3024,
-        2864
+        4528,
+        2976
       ],
-      "id": "f515ea50-b24c-48f8-a33a-5216f4b20dbd",
+      "id": "37bcbe68-f8aa-4c80-a2bc-b74aeafb40ca",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -33,10 +33,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        3024,
-        2672
+        4528,
+        2784
       ],
-      "id": "b8e214ab-5964-4d6b-8f71-6ca2688ea7b8",
+      "id": "134827e6-f9a5-43f9-a2b3-03fa2393cb04",
       "name": "Manual Trigger"
     },
     {
@@ -92,23 +92,23 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3248,
-        2768
+        4752,
+        2880
       ],
-      "id": "b88e4d86-dd48-43ee-a413-e5500e32d387",
+      "id": "b0b3beae-8db4-4f45-b84e-ba0ceafd40e7",
       "name": "Prepare Input"
     },
     {
       "parameters": {
-        "jsCode": "// Build email file with YAML frontmatter and ISO datetime filename\nconst input = $input.first().json;\n\n// ISO datetime for filename (replace colons with dashes for filesystem)\nconst isoDate = input.email_date.replace(/:/g, '-').split('.')[0];\nconst subjectSlug = input.email_subject\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\nconst filename = `${isoDate}_${subjectSlug}.md`;\n\n// Build file content with YAML frontmatter\nconst fileContent = `---\nname: Email-${input.email_subject}\ndate: ${input.email_date}\nfrom: ${input.sender_email}\n---\n\n${input.body_core}\n`;\n\n// Create binary data for upload\nconst binaryData = Buffer.from(fileContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    filename: filename\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: filename\n    }\n  }\n}];"
+        "jsCode": "// Build email file with YAML frontmatter and ISO datetime filename\nconst input = $input.first().json;\n\n// ISO datetime for filename (replace colons with dashes for filesystem)\nconst isoDate = input.email_date.replace(/:/g, '-').split('.')[0];\nconst subjectSlug = input.email_subject\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\nconst filename = `${isoDate}_${subjectSlug}.md`;\n\n// Build file content with YAML frontmatter\nconst directionLabel = input.direction === 'outbound' ? 'to' : 'from';\nconst fileContent = `---\nname: Email-${input.email_subject}\ndate: ${input.email_date}\ndirection: ${input.direction}\n${directionLabel}: ${input.sender_email}\n---\n\n${input.body_core}\n`;\n\n// Create binary data for upload\nconst binaryData = Buffer.from(fileContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    filename: filename\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: filename\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3472,
-        2768
+        4976,
+        2880
       ],
-      "id": "62f16b74-f66f-48e6-ba66-dc9f09383c7b",
+      "id": "0257dc8b-ac3e-4896-b2de-829fea8385ff",
       "name": "Prepare Email File"
     },
     {
@@ -129,10 +129,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        3696,
-        2768
+        5200,
+        2880
       ],
-      "id": "e11171e1-879a-4bba-82f6-438f4f477f7f",
+      "id": "02b04ee4-14d3-4b8d-9e67-f4ca5395989a",
       "name": "Upload Email File",
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -159,10 +159,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        3920,
-        2768
+        5424,
+        2880
       ],
-      "id": "87a9ebce-59e1-440c-9196-37f739bea629",
+      "id": "8749aa8a-4c4c-4935-94af-67ac2a1712e6",
       "name": "Find README",
       "alwaysOutputData": true,
       "credentials": {
@@ -185,10 +185,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        4144,
-        2768
+        5648,
+        2880
       ],
-      "id": "b0a1fd33-d28f-47ae-87e8-5dd5aeab2b59",
+      "id": "50a58c20-dcb4-4182-bd45-171648a99d1a",
       "name": "Download README",
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -199,15 +199,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract README content from binary\nconst item = $input.first();\nconst binaryData = item.binary?.data;\nlet currentContent = '';\n\nif (binaryData) {\n  currentContent = Buffer.from(binaryData.data, 'base64').toString('utf8');\n}\n\nconst inputData = $('Prepare Input').first().json;\n\nreturn [{\n  json: {\n    readme_id: $('Find README').first().json.id,\n    readme_content: currentContent,\n    email_subject: inputData.email_subject,\n    body_core: inputData.body_core,\n    email_date: inputData.email_date,\n    sender_name: inputData.sender_name,\n    sender_email: inputData.sender_email\n  }\n}];"
+        "jsCode": "// Extract README content from binary\nconst item = $input.first();\nconst binaryData = item.binary?.data;\nlet currentContent = '';\n\nif (binaryData) {\n  currentContent = Buffer.from(binaryData.data, 'base64').toString('utf8');\n}\n\nconst inputData = $('Prepare Input').first().json;\n\nreturn [{\n  json: {\n    readme_id: $('Find README').first().json.id,\n    readme_content: currentContent,\n    email_subject: inputData.email_subject,\n    body_core: inputData.body_core,\n    email_date: inputData.email_date,\n    sender_name: inputData.sender_name,\n    sender_email: inputData.sender_email,\n    direction: inputData.direction,\n    owner_name: inputData.owner_name\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3248,
-        2960
+        4752,
+        3072
       ],
-      "id": "00f0ec20-d753-4cb5-9861-46f18fc0db00",
+      "id": "14f43567-49a1-45b7-aafc-b373c786bbcb",
       "name": "Prep LLM Input"
     },
     {
@@ -218,10 +218,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        3472,
-        3168
+        4976,
+        3280
       ],
-      "id": "c28b717e-3242-4260-8fc6-e2fdd6171357",
+      "id": "1c4f8460-ddde-4efd-9043-a0953805e480",
       "name": "Profile LLM",
       "credentials": {
         "groqApi": {
@@ -233,29 +233,29 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a personal contact profile manager. Your task is to maintain a concise biographical profile of the EMAIL SENDER.\n\nCRITICAL: Profile the SENDER ({{ $json.sender_name }} <{{ $json.sender_email }}>), NOT me (the recipient).\n\nRULES:\n1. Output ONLY plain text - NO YAML frontmatter (the system adds it automatically)\n2. Write 2-4 sentences about WHO THE SENDER IS (their company, role, what they do)\n3. If sender is a company/service (e.g. Railway, Stripe, AWS), describe what that company does\n4. DO NOT describe me or my actions - only describe the sender\n5. DO NOT include operational details (support instructions, account changes, action items)\n6. Focus on durable facts: what company/person is this, what do they do, why might I interact with them\n7. Merge new information with existing profile, update outdated info\n\n---\n\n## Current Profile of Sender:\n{{ $json.readme_content }}\n\n## New Email FROM {{ $json.sender_name }} <{{ $json.sender_email }}> ({{ $json.email_date }}):\nSubject: {{ $json.email_subject }}\n\n{{ $json.body_core }}\n\n---\nOutput ONLY a biographical profile of the SENDER (2-4 sentences, no YAML):",
+        "text": "=You are managing the contact profiles for {{ $json.owner_name }}. Your task is to maintain a concise biographical profile of each contact.\n\n{{ $json.direction === 'outbound' ? 'CONTEXT: ' + $json.owner_name + ' SENT this email TO' : 'CONTEXT: ' + $json.owner_name + ' RECEIVED this email FROM' }} {{ $json.sender_name }} <{{ $json.sender_email }}>.\n\nRULES:\n1. Output ONLY plain text - NO YAML frontmatter (the system adds it automatically)\n2. Write 2-4 sentences about WHO THIS CONTACT IS (their company, role, what they do)\n3. If contact is a company/service (e.g. Railway, Stripe, AWS), describe what that company does\n4. DO NOT describe {{ $json.owner_name }} or their actions - only describe the contact\n5. DO NOT include operational details (support instructions, account changes, action items)\n6. Focus on durable facts: what company/person is this, what do they do, why might {{ $json.owner_name }} interact with them\n7. Merge new information with existing profile, update outdated info\n\n---\n\n## Current Profile:\n{{ $json.readme_content }}\n\n## {{ $json.direction === 'outbound' ? $json.owner_name + ' sent email TO' : 'Email FROM' }} {{ $json.sender_name }} <{{ $json.sender_email }}> ({{ $json.email_date }}):\nSubject: {{ $json.email_subject }}\n\n{{ $json.body_core }}\n\n---\nOutput ONLY a biographical profile of the contact (2-4 sentences, no YAML):",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        3472,
-        2960
+        4976,
+        3072
       ],
-      "id": "e2bda909-245f-4180-bc18-a49656cc1224",
+      "id": "ee9a06ed-a862-4ee0-bc30-dd57e92f8088",
       "name": "LLM: Update Profile"
     },
     {
       "parameters": {
-        "jsCode": "// Prepare updated README for upload\nconst llmOutput = $input.first().json.text || $input.first().json.output || '';\nconst readmeId = $('Prep LLM Input').first().json.readme_id;\n\n// Strip any YAML the LLM might have generated and get plain text only\nlet bioContent = llmOutput.trim();\n\n// Remove YAML frontmatter if LLM included it (it shouldn't, but safety check)\nif (bioContent.startsWith('---')) {\n  const endMarker = bioContent.indexOf('---', 3);\n  if (endMarker !== -1) {\n    bioContent = bioContent.substring(endMarker + 3).trim();\n  }\n}\n\n// Always use the fixed header\nconst fixedHeader = `---\\nname: ContactManager-Record\\ndescription: Most salient summary of the person that contacted me.\\n---`;\n\nconst content = `${fixedHeader}\\n\\n${bioContent}\\n`;\n\nconst binaryData = Buffer.from(content, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    readme_id: readmeId,\n    content_preview: content\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: 'README.md'\n    }\n  }\n}];"
+        "jsCode": "// Prepare updated README for upload\nconst llmOutput = $input.first().json.text || $input.first().json.output || '';\nconst readmeId = $('Prep LLM Input').first().json.readme_id;\n\n// Strip any YAML the LLM might have generated and get plain text only\nlet bioContent = llmOutput.trim();\n\n// Remove YAML frontmatter if LLM included it (it shouldn't, but safety check)\nif (bioContent.startsWith('---')) {\n  const endMarker = bioContent.indexOf('---', 3);\n  if (endMarker !== -1) {\n    bioContent = bioContent.substring(endMarker + 3).trim();\n  }\n}\n\n// Always use the fixed header\nconst fixedHeader = `---\\nname: ContactManager-Record\\ndescription: Most salient summary of the person that contacted me.\\n---\\n\\n`;\n\nconst content = `${fixedHeader}\\\n\\\n${bioContent}\\\n`;\n\nconst binaryData = Buffer.from(content, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    readme_id: readmeId,\n    content_preview: content\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: 'README.md'\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3696,
-        2960
+        5200,
+        3072
       ],
-      "id": "703513b6-1fce-4eba-a255-d482ef5bbbc5",
+      "id": "9dcf7110-cd06-4ae1-9568-703b251d99f9",
       "name": "Prep README Upload"
     },
     {
@@ -272,10 +272,10 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        3920,
-        2960
+        5424,
+        3072
       ],
-      "id": "c6dc6382-86c9-428c-8be8-8d11b9a834b0",
+      "id": "042ad776-130a-4fb6-a268-fcf56e8a8bf1",
       "name": "Upload Updated README",
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -319,10 +319,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        4144,
-        2960
+        5648,
+        3072
       ],
-      "id": "4714aad9-3dbe-4b86-abb5-16fac79d7bbd",
+      "id": "4f81ee7b-fc3c-42bd-9416-12d1aaa5272f",
       "name": "Return Output"
     }
   ],
