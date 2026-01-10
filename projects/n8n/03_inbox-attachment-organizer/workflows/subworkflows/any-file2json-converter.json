@@ -5,13 +5,13 @@
         "operation": "text",
         "options": {}
       },
-      "id": "e43b2a6c-e505-4aae-9e6c-569a8daa664a",
+      "id": "f72ad22b-3d49-4075-984f-7494a4ff3ab1",
       "name": "Extract Document Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        960,
-        2064
+        352,
+        624
       ],
       "alwaysOutputData": true
     },
@@ -20,13 +20,13 @@
         "operation": "pdf",
         "options": {}
       },
-      "id": "35f5f931-df7d-4877-b610-86e18e73fd09",
+      "id": "8beef502-a529-49c2-9df5-813f5d8d12c3",
       "name": "Extract PDF Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        1024,
-        1568
+        448,
+        176
       ]
     },
     {
@@ -34,13 +34,13 @@
         "aggregate": "aggregateAllItemData",
         "options": {}
       },
-      "id": "0271591b-c254-4ac2-9e82-f7027402c843",
+      "id": "ac79b3e6-6c10-410b-b7d6-759d00320cd0",
       "name": "Aggregate",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        1184,
-        2208
+        576,
+        768
       ]
     },
     {
@@ -55,13 +55,13 @@
         },
         "options": {}
       },
-      "id": "89f65d30-ae54-404a-b662-515963bea661",
+      "id": "74b4b3aa-b4d4-4e0e-91ee-633a4b786e84",
       "name": "Summarize",
       "type": "n8n-nodes-base.summarize",
       "typeVersion": 1,
       "position": [
-        1408,
-        2208
+        800,
+        768
       ]
     },
     {
@@ -80,11 +80,10 @@
                   {
                     "id": "e3a4d243-5c9e-4363-aeda-4afe1afab79e",
                     "leftValue": "={{ $binary.values()[0].mimeType }}",
-                    "rightValue": "image/jpeg",
+                    "rightValue": "image",
                     "operator": {
                       "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
+                      "operation": "startsWith"
                     }
                   }
                 ],
@@ -230,17 +229,15 @@
             }
           ]
         },
-        "options": {
-          "fallbackOutput": "extra"
-        }
+        "options": {}
       },
-      "id": "26ad52bb-287b-4197-9d28-0878b619b93d",
+      "id": "81bcbbb4-5644-4aa8-ba58-1275cf8fdb6a",
       "name": "Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        640,
-        1552
+        32,
+        160
       ]
     },
     {
@@ -248,13 +245,13 @@
         "operation": "xlsx",
         "options": {}
       },
-      "id": "818b0635-2808-4e12-8f97-76f781d271bf",
+      "id": "6f37529e-f5f8-4482-a870-00591da4cd50",
       "name": "Extract from Excel",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        960,
-        2352
+        352,
+        912
       ]
     },
     {
@@ -264,83 +261,11 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        960,
-        2208
+        352,
+        768
       ],
-      "id": "8b12ec95-ca77-48d2-ba0a-5a40cab3a016",
+      "id": "7bdd8044-470a-471f-912b-cac018ced795",
       "name": "Extract from CSV"
-    },
-    {
-      "parameters": {
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "value": "document_rows",
-          "mode": "list",
-          "cachedResultName": "document_rows"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "dataset_id": "={{ $('Set File ID').item.json.file_id }}",
-            "row_data": "={{ $json.toJsonString().replaceAll(/'/g, \"''\") }}"
-          },
-          "matchingColumns": [
-            "id"
-          ],
-          "schema": [
-            {
-              "id": "id",
-              "displayName": "id",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "dataset_id",
-              "displayName": "dataset_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "row_data",
-              "displayName": "row_data",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "object",
-              "canBeUsedToMatch": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1184,
-        2352
-      ],
-      "id": "f3af8a73-9896-4a21-bec2-ea7767111905",
-      "name": "Insert Table Rows",
-      "credentials": {
-        "postgres": {
-          "id": "rReqZb6H4chGQnSg",
-          "name": "Postgres account"
-        }
-      }
     },
     {
       "parameters": {
@@ -350,10 +275,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        176,
-        1552
+        -432,
+        160
       ],
-      "id": "13eec4d7-0898-45bd-8f81-e40f752f8634",
+      "id": "e822dc9c-d25f-4270-b60f-513dabf933ab",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -385,24 +310,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1712,
-        1568
+        1104,
+        176
       ],
-      "id": "933985ab-2ff3-4926-b0f2-80873d6346a8",
+      "id": "43e59e18-b87a-4245-969e-063a9eaa6194",
       "name": "Return node"
-    },
-    {
-      "parameters": {
-        "jsCode": "return $input.all().flatMap(item => \n    item.binary ? Object.keys(item.binary).map(key => ({\n        json: { fileName: item.binary[key].fileName },\n        binary: { data: item.binary[key] }\n    })) : []\n);\n\n// return {\n//   json: $('Edit Fields3').item.json,\n//   binary: $('Edit Fields3').item.binary\n// };"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        960,
-        1824
-      ],
-      "id": "ae7ec905-dd0d-4e1a-9cb6-673246fb2334",
-      "name": "Code"
     },
     {
       "parameters": {
@@ -410,12 +322,12 @@
         "height": 200,
         "width": 460
       },
-      "id": "28177613-d046-4d08-a22d-1ca6a5108f8f",
+      "id": "0546a7b5-ef13-42c0-ae81-2feb66891297",
       "name": "Sticky Note2",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        0,
-        1728
+        -608,
+        336
       ],
       "typeVersion": 1
     },
@@ -429,16 +341,16 @@
         },
         "options": {}
       },
-      "id": "3342e90d-7f74-4254-b24b-bd4d914b8d63",
+      "id": "b7eb4569-ef1f-437f-a5a9-10f0f1c79734",
       "name": "Download File1",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        176,
-        1760
+        -432,
+        368
       ],
       "executeOnce": true,
-      "credentials": {}
+      "disabled": true
     },
     {
       "parameters": {
@@ -446,42 +358,25 @@
         "height": 188,
         "width": 460
       },
-      "id": "99bdf819-df1e-4daa-8fc5-a6dc4cda2241",
+      "id": "7150e585-10d9-4f44-be34-bbf40800b750",
       "name": "Sticky Note3",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        0,
-        1520
+        -608,
+        128
       ],
       "typeVersion": 1
     },
     {
       "parameters": {
-        "operation": "fromJson",
-        "binaryPropertyName": "=data",
-        "destinationKey": "data.unpacked",
         "options": {}
       },
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1,
-      "position": [
-        1184,
-        1824
-      ],
-      "id": "0b6ad33c-1131-4a70-a314-055b2e82ac75",
-      "name": "Extract from File2",
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "5159416e-3874-4975-b717-0da109def82e",
+      "id": "f0f3b91a-7b54-4e67-b484-95f7aad5e736",
       "name": "Google Gemini Chat Model1",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
-        1248,
-        1360
+        640,
+        -32
       ],
       "typeVersion": 1,
       "credentials": {
@@ -496,12 +391,12 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"content_class\": {\n      \"type\": \"string\",\n      \"enum\": [\"primary_document\", \"style_element\", \"unclassified\"]\n    },\n    \"class_confidence\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\"content_class\", \"class_confidence\"],\n  \"additionalProperties\": true\n}"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "ec63c11c-dc82-4a94-b1bb-3785e8e6a02e",
       "name": "Structured Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
-        1120,
-        1360
+        512,
+        -32
       ],
       "typeVersion": 1.2
     },
@@ -522,12 +417,12 @@
           ]
         }
       },
-      "id": "c0a56f13-559e-4853-b777-2e17c0eea9b1",
+      "id": "af1c3813-8d49-4fc7-91a4-2688641ce4b1",
       "name": "Image-to-text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        1120,
-        1200
+        512,
+        -192
       ],
       "typeVersion": 1.4
     },
@@ -539,37 +434,14 @@
           "fileName": "data"
         }
       },
-      "id": "e961e777-fd52-4f94-9a55-8d268fed1b49",
+      "id": "076894c0-160f-4cb0-bbfb-46ed4c5ed234",
       "name": "conversion",
       "type": "n8n-nodes-base.editImage",
       "position": [
-        928,
-        1200
+        320,
+        -192
       ],
       "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "55b557f2-23ca-4c7e-b2fc-e122f91383a2",
-              "name": "metadata",
-              "value": "=I FACED AN ERROR",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        640,
-        1904
-      ],
-      "id": "6d417ba4-3cf1-44df-9465-dc6aab1ee991",
-      "name": "Fallback"
     },
     {
       "parameters": {
@@ -578,10 +450,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        496,
-        1552
+        -112,
+        160
       ],
-      "id": "b615ecf3-36cd-4c44-ad1b-92220006aca7",
+      "id": "1c3b43bd-557b-45ea-9528-9a05b57de1e9",
       "name": "(File-rename)"
     },
     {
@@ -602,39 +474,24 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        336,
-        1760
+        -272,
+        368
       ],
-      "id": "e26956d1-eb46-4133-8f59-ed30b48c9375",
-      "name": "Extract Binary Data"
+      "id": "9da8e8c4-be43-41d7-a056-9b7cebdc8361",
+      "name": "Extract Binary Data",
+      "disabled": true
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        16,
-        1760
+        -592,
+        368
       ],
-      "id": "4b48a4e5-e6ef-443c-9c8e-a3cdafabf887",
+      "id": "ed865f27-548d-4add-b354-73e5374cb4f8",
       "name": "Testing n8n sub-workflow",
       "disabled": true
-    },
-    {
-      "parameters": {
-        "content": "## Any-file2json \n## converter",
-        "height": 1392,
-        "width": 1264,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        640,
-        1120
-      ],
-      "typeVersion": 1,
-      "id": "a9ffd4af-243a-41bd-ba35-6181cb044249",
-      "name": "Sticky Note10"
     },
     {
       "parameters": {
@@ -646,26 +503,26 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1152,
-        1344
+        544,
+        -48
       ],
-      "id": "8af6f6d0-3f04-4fb2-9716-85cf6836f789",
+      "id": "86bbe6f1-8ee2-4d35-b82c-c3901e8e8ff5",
       "name": "Sticky Note15"
     },
     {
       "parameters": {
-        "content": "\n# · image OCR\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n\n\n\n\n```\n```\n# · json\n\n\n\n\n\n\n\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
-        "height": 1288,
+        "content": "\n# · image OCR\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n\n\n\n```\n```\n# · json\n\n\n\n\n\n\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
+        "height": 1320,
         "width": 752,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        912,
-        1136
+        304,
+        -256
       ],
-      "id": "0ff0f643-cf7e-4268-b870-7944b45f4d7b",
+      "id": "72a8ee4d-1d2e-4bc6-8c49-d289395397a0",
       "name": "Sticky Note"
     },
     {
@@ -678,11 +535,44 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1712,
-        1480
+        1104,
+        96
       ],
-      "id": "conf-note-001",
+      "id": "b1f07266-5f5a-490f-bc3a-9927ca7acc68",
       "name": "Confidence Note"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "binaryPropertyName": "=data",
+        "destinationKey": "data.unpacked",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        448,
+        384
+      ],
+      "id": "ec0401b7-c4ab-43c4-a589-35e516c2a4fa",
+      "name": "Extract from JSON",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## Any-file2json \n## converter",
+        "height": 1344,
+        "width": 1264,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        32,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "85fa3e42-f8df-477f-bf21-04e7672b604f",
+      "name": "Sticky Note10"
     }
   ],
   "connections": {
@@ -748,7 +638,7 @@
         ],
         [
           {
-            "node": "Code",
+            "node": "Extract from JSON",
             "type": "main",
             "index": 0
           }
@@ -780,13 +670,6 @@
             "type": "main",
             "index": 0
           }
-        ],
-        [
-          {
-            "node": "Fallback",
-            "type": "main",
-            "index": 0
-          }
         ]
       ]
     },
@@ -795,11 +678,6 @@
         [
           {
             "node": "Aggregate",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Insert Table Rows",
             "type": "main",
             "index": 0
           }
@@ -811,11 +689,6 @@
         [
           {
             "node": "Aggregate",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Insert Table Rows",
             "type": "main",
             "index": 0
           }
@@ -833,38 +706,11 @@
         ]
       ]
     },
-    "Return node": {
-      "main": [
-        []
-      ]
-    },
-    "Code": {
-      "main": [
-        [
-          {
-            "node": "Extract from File2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Download File1": {
       "main": [
         [
           {
             "node": "Extract Binary Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract from File2": {
-      "main": [
-        [
-          {
-            "node": "Return node",
             "type": "main",
             "index": 0
           }
@@ -947,17 +793,20 @@
           }
         ]
       ]
+    },
+    "Extract from JSON": {
+      "main": [
+        [
+          {
+            "node": "Return node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "pinData": {
-    "When Executed by Another Workflow": [
-      {
-        "binary_files": null,
-        "data": null,
-        "metadata": null
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
