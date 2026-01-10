@@ -2,7 +2,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "# Contact Email Store\n\nStores email as .md file in contact's emails/ folder and updates README.md profile via LLM.\n\n**Inputs:**\n- emails_folder_id: Target folder for email storage\n- folder_id: Contact folder (for README)\n- email_subject, body_core: Email content\n- sender_name, sender_email: Sender info",
+        "content": "# Contact Email Store\n\nStores email as .md file in contact's emails/ folder and updates README.md profile via LLM.\n\n**Inputs:**\n- emails_folder_id: Target folder for email storage\n- folder_id: Contact folder (for README)\n- email_subject, body_core: Email content\n- contact_name, contact_email: Contact info (the other party)",
         "height": 240,
         "width": 400
       },
@@ -69,14 +69,14 @@
             },
             {
               "id": "sender-name",
-              "name": "sender_name",
-              "value": "={{ $json.sender_name || '' }}",
+              "name": "contact_name",
+              "value": "={{ $json.contact_name || '' }}",
               "type": "string"
             },
             {
               "id": "sender-email",
-              "name": "sender_email",
-              "value": "={{ $json.sender_email || '' }}",
+              "name": "contact_email",
+              "value": "={{ $json.contact_email || '' }}",
               "type": "string"
             },
             {
@@ -100,7 +100,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build email file with YAML frontmatter and ISO datetime filename\nconst input = $input.first().json;\n\n// ISO datetime for filename (replace colons with dashes for filesystem)\nconst isoDate = input.email_date.replace(/:/g, '-').split('.')[0];\nconst subjectSlug = input.email_subject\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\nconst filename = `${isoDate}_${subjectSlug}.md`;\n\n// Build file content with YAML frontmatter\nconst directionLabel = input.direction === 'outbound' ? 'to' : 'from';\nconst fileContent = `---\nname: Email-${input.email_subject}\ndate: ${input.email_date}\ndirection: ${input.direction}\n${directionLabel}: ${input.sender_email}\n---\n\n${input.body_core}\n`;\n\n// Create binary data for upload\nconst binaryData = Buffer.from(fileContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    filename: filename\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: filename\n    }\n  }\n}];"
+        "jsCode": "// Build email file with YAML frontmatter and ISO datetime filename\nconst input = $input.first().json;\n\n// ISO datetime for filename (replace colons with dashes for filesystem)\nconst isoDate = input.email_date.replace(/:/g, '-').split('.')[0];\nconst subjectSlug = input.email_subject\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\nconst filename = `${isoDate}_${subjectSlug}.md`;\n\n// Build file content with YAML frontmatter\nconst directionLabel = input.direction === 'outbound' ? 'to' : 'from';\nconst fileContent = `---\nname: Email-${input.email_subject}\ndate: ${input.email_date}\ndirection: ${input.direction}\n${directionLabel}: ${input.contact_email}\n---\n\n${input.body_core}\n`;\n\n// Create binary data for upload\nconst binaryData = Buffer.from(fileContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    filename: filename\n  },\n  binary: {\n    data: {\n      data: binaryData,\n      mimeType: 'text/markdown',\n      fileName: filename\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -199,7 +199,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract README content from binary\nconst item = $input.first();\nconst binaryData = item.binary?.data;\nlet currentContent = '';\n\nif (binaryData) {\n  currentContent = Buffer.from(binaryData.data, 'base64').toString('utf8');\n}\n\nconst inputData = $('Prepare Input').first().json;\n\nreturn [{\n  json: {\n    readme_id: $('Find README').first().json.id,\n    readme_content: currentContent,\n    email_subject: inputData.email_subject,\n    body_core: inputData.body_core,\n    email_date: inputData.email_date,\n    sender_name: inputData.sender_name,\n    sender_email: inputData.sender_email,\n    direction: inputData.direction,\n    owner_name: inputData.owner_name\n  }\n}];"
+        "jsCode": "// Extract README content from binary\nconst item = $input.first();\nconst binaryData = item.binary?.data;\nlet currentContent = '';\n\nif (binaryData) {\n  currentContent = Buffer.from(binaryData.data, 'base64').toString('utf8');\n}\n\nconst inputData = $('Prepare Input').first().json;\n\nreturn [{\n  json: {\n    readme_id: $('Find README').first().json.id,\n    readme_content: currentContent,\n    email_subject: inputData.email_subject,\n    body_core: inputData.body_core,\n    email_date: inputData.email_date,\n    contact_name: inputData.contact_name,\n    contact_email: inputData.contact_email,\n    direction: inputData.direction,\n    owner_name: inputData.owner_name\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -233,7 +233,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are managing the contact profiles for {{ $json.owner_name }}. Your task is to maintain a concise biographical profile of each contact.\n\n{{ $json.direction === 'outbound' ? 'CONTEXT: ' + $json.owner_name + ' SENT this email TO' : 'CONTEXT: ' + $json.owner_name + ' RECEIVED this email FROM' }} {{ $json.sender_name }} <{{ $json.sender_email }}>.\n\nRULES:\n1. Output ONLY plain text - NO YAML frontmatter (the system adds it automatically)\n2. Write 2-4 sentences about WHO THIS CONTACT IS (their company, role, what they do)\n3. If contact is a company/service (e.g. Railway, Stripe, AWS), describe what that company does\n4. DO NOT describe {{ $json.owner_name }} or their actions - only describe the contact\n5. DO NOT include operational details (support instructions, account changes, action items)\n6. Focus on durable facts: what company/person is this, what do they do, why might {{ $json.owner_name }} interact with them\n7. Merge new information with existing profile, update outdated info\n\n---\n\n## Current Profile:\n{{ $json.readme_content }}\n\n## {{ $json.direction === 'outbound' ? $json.owner_name + ' sent email TO' : 'Email FROM' }} {{ $json.sender_name }} <{{ $json.sender_email }}> ({{ $json.email_date }}):\nSubject: {{ $json.email_subject }}\n\n{{ $json.body_core }}\n\n---\nOutput ONLY a biographical profile of the contact (2-4 sentences, no YAML):",
+        "text": "=You are managing the contact profiles for {{ $json.owner_name }}. Your task is to maintain a concise biographical profile of each contact.\n\n{{ $json.direction === 'outbound' ? 'CONTEXT: ' + $json.owner_name + ' SENT this email TO' : 'CONTEXT: ' + $json.owner_name + ' RECEIVED this email FROM' }} {{ $json.contact_name }} <{{ $json.contact_email }}>.\n\nRULES:\n1. Output ONLY plain text - NO YAML frontmatter (the system adds it automatically)\n2. Write 2-4 sentences about WHO THIS CONTACT IS (their company, role, what they do)\n3. If contact is a company/service (e.g. Railway, Stripe, AWS), describe what that company does\n4. DO NOT describe {{ $json.owner_name }} or their actions - only describe the contact\n5. DO NOT include operational details (support instructions, account changes, action items)\n6. Focus on durable facts: what company/person is this, what do they do, why might {{ $json.owner_name }} interact with them\n7. Merge new information with existing profile, update outdated info\n\n---\n\n## Current Profile:\n{{ $json.readme_content }}\n\n## {{ $json.direction === 'outbound' ? $json.owner_name + ' sent email TO' : 'Email FROM' }} {{ $json.contact_name }} <{{ $json.contact_email }}> ({{ $json.email_date }}):\nSubject: {{ $json.email_subject }}\n\n{{ $json.body_core }}\n\n---\nOutput ONLY a biographical profile of the contact (2-4 sentences, no YAML):",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",

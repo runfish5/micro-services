@@ -67,6 +67,13 @@ Email → Text Extraction → AI Classification
   Await Storage Complete → craft report note → Telegram & done / Mark as Processed1
 ```
 
+### Contact-Centric Data Model
+
+"Contact" = the other party (inbound: sender, outbound: recipient).
+
+**Clean Email object** computes `direction`, `owner_email`, `contact_email`, `contact_name` once.
+**email-info-hub** references these via `{{ $json.* }}`.
+
 ### Lineage logging
 ```
 START: Gmail Trigger
@@ -118,10 +125,11 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 
 ### 1. Classification
 - **Node**: subject-classifier-LM
-- **Input**: Email text + attachment content
-- **Output**: Document type, action required, Telegram summary
+- **Input**: Email text + attachment content + contact context from email-info-hub
+- **Output**: Document type, action required, Telegram summary, optional `contact_name_extracted`
 - **Classification Types**:
   - confirmation, financial, newsletter, appointment, marketing, operational, other
+- **Note**: `contact_name_extracted` is optional - the LLM extracts a clearer name if available in the email body (separate from header-derived `contact_name`)
 
 ### 2. Extraction
 - **Node**: Accountant-concierge-LM

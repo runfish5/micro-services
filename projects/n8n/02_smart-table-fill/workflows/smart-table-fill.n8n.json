@@ -30,14 +30,14 @@
             },
             {
               "id": "sender-name",
-              "name": "sender_name",
-              "value": "={{ $('String Input').first().json.sender_name }}",
+              "name": "contact_name",
+              "value": "={{ $('String Input').first().json.contact_name }}",
               "type": "string"
             },
             {
               "id": "sender-email",
-              "name": "sender_email",
-              "value": "={{ $('String Input').first().json.email }}",
+              "name": "contact_email",
+              "value": "={{ $('String Input').first().json.contact_email }}",
               "type": "string"
             },
             {
@@ -166,7 +166,7 @@
             {
               "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
               "name": "email",
-              "value": "={{ $json.email }}",
+              "value": "={{ $json.contact_email }}",
               "type": "string"
             },
             {
@@ -201,14 +201,20 @@
             },
             {
               "id": "d4e5f6a7-b8c9-0123-4567-890abcdef001",
-              "name": "sender_name",
-              "value": "={{ $json.sender_name || '' }}",
+              "name": "contact_name",
+              "value": "={{ $json.contact_name }}",
               "type": "string"
             },
             {
               "id": "e5f6a7b8-c9d0-1234-5678-90abcdef0012",
               "name": "subject",
               "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1d5f5798-24d9-46f6-871d-5b8e2ca44222",
+              "name": "contact_email",
+              "value": "={{ $json.contact_email }}",
               "type": "string"
             }
           ]
