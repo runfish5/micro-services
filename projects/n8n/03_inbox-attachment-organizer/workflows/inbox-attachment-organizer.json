@@ -1319,7 +1319,11 @@
       "name": "Has Attachments?"
     },
     {
-      "parameters": {},
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
@@ -1331,7 +1335,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
+        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\nconst attachmentProfiles = $('Create Attachment Profile').all();\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n  const profile = attachmentProfiles[i]?.json?.data || {};\n  \n  // Skip style elements with high confidence (logos, icons, decorative images)\n  if (profile.content_class === 'style_element' && parseFloat(profile.class_confidence) >= 0.9) {\n    continue;\n  }\n  \n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments (all filtered as style elements)' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
