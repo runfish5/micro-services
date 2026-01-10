@@ -283,7 +283,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=<parsed-document-content>\n{{ $json.attachmentTextForLLM }}\n</parsed-document-content>\n\nClassify this document and extract all available data.",
+        "text": "=<email-context>\nSubject: {{ $json.subject }}\nFrom: {{ $json.from }}\nDate: {{ $json.date }}\n\n{{ $json.body_core }}\n</email-context>\n\n<parsed-document-content>\n{{ $json.attachmentTextForLLM }}\n</parsed-document-content>\n\nClassify this document and extract all available data.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -1331,7 +1331,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      body_sanitized: cleanedData.body_sanitized || '',\n      attachmentTextForLLM: cleanedData.attachmentTextsMap?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
+        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nreturn attachmentNames.map(binaryKey => {\n  return {\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
