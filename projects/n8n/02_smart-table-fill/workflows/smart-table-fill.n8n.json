@@ -59,8 +59,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        9440,
-        1776
+        1664,
+        384
       ],
       "id": "2ea13c04-35e2-496f-9173-8c2bda04f425",
       "name": "[CRM] Prep Email Store Input"
@@ -89,8 +89,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        9664,
-        1776
+        1888,
+        384
       ],
       "id": "9d230dcb-4ab9-4180-876f-3440c768c8a8",
       "name": "[CRM] Call contact-email-store"
@@ -117,8 +117,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        9216,
-        1776
+        1440,
+        384
       ],
       "credentials": {
         "googleOAuth2Api": {
@@ -134,8 +134,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8704,
-        1776
+        928,
+        384
       ],
       "id": "8e306dac-0e63-4e45-a98f-29364d7cd5b4",
       "name": "Merge Outputs"
@@ -147,8 +147,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8576,
-        1552
+        784,
+        112
       ],
       "id": "653ec2ed-e48c-4836-991a-8203bcb76a22",
       "name": "Build Output Schema"
@@ -224,8 +224,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7360,
-        1568
+        -416,
+        128
       ],
       "id": "a39effdc-1339-4c79-91df-3adcf270491b",
       "name": "String Input"
@@ -275,8 +275,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        8928,
-        1776
+        1152,
+        384
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -298,8 +298,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7568,
-        1568
+        -208,
+        128
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -327,8 +327,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        7792,
-        1568
+        16,
+        128
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -367,8 +367,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        8016,
-        1568
+        240,
+        128
       ]
     },
     {
@@ -387,8 +387,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7136,
-        1824
+        -576,
+        384
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -396,19 +396,6 @@
           "name": "GoogleDriveMAIN"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Get column names from Sheets API response (values[0] = first row)\nconst columns = $('Fetch Data Sheet Headers').first().json.values[0];\nreturn [{ json: { columns: JSON.stringify(columns) } }];"
-      },
-      "id": "32fd6d9b-eabd-4d6f-a9d5-7a718b27e000",
-      "name": "Prep Columns for LLM",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7360,
-        1824
-      ]
     },
     {
       "parameters": {
@@ -422,8 +409,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        7584,
-        1824
+        -208,
+        384
       ]
     },
     {
@@ -436,8 +423,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        7696,
-        2048
+        -64,
+        560
       ]
     },
     {
@@ -450,8 +437,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        7584,
-        2048
+        -208,
+        560
       ],
       "credentials": {
         "groqApi": {
@@ -469,8 +456,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7808,
-        1824
+        16,
+        384
       ]
     },
     {
@@ -541,8 +528,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        8016,
-        1824
+        240,
+        384
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -570,8 +557,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        8352,
-        1552
+        560,
+        112
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -590,8 +577,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        8384,
-        1824
+        608,
+        384
       ],
       "id": "b94e8302-4526-4bc2-8161-abe8208d9494",
       "name": "Extract Data from String",
@@ -607,8 +594,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        8528,
-        2000
+        752,
+        560
       ],
       "id": "e327d04c-716b-4633-8d8c-53bd4d0be9bc",
       "name": "Dynamic Output Parser"
@@ -621,8 +608,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        8384,
-        2064
+        608,
+        624
       ],
       "id": "678e935f-f073-4af7-99d9-826d9ac899a7",
       "name": "LLM Processor",
@@ -639,8 +626,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        7136,
-        1568
+        -640,
+        128
       ],
       "id": "9af42ee7-9e8a-4626-99a2-988afbea0e5d",
       "name": "Manual Trigger"
@@ -652,8 +639,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        7136,
-        1376
+        -640,
+        -64
       ],
       "id": "ca4b481f-0727-4965-bc3a-afe0890e6859",
       "name": "When Executed by Another Workflow"
@@ -667,23 +654,23 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        6592,
-        1360
+        -1184,
+        -80
       ],
       "id": "09eabe66-e68d-4cf3-ac73-bb6fd82d4273",
       "name": "Sticky Note - Schema Info"
     },
     {
       "parameters": {
-        "content": "### If stops here\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
+        "content": "### If stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
         "height": 80,
         "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        7792,
-        1536
+        -16,
+        96
       ],
       "id": "3a251222-bbdc-4a3d-8cdc-47780f170ecf",
       "name": "Sticky Note - Troubleshoot"
@@ -692,14 +679,14 @@
       "parameters": {
         "content": "## Mode B: Email-CRM Setup\nsee [inbox-organizer](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer) and [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) for details",
         "height": 268,
-        "width": 684,
+        "width": 652,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        9168,
-        1696
+        1392,
+        304
       ],
       "id": "261acaf4-0f5b-4434-8bc6-c8c0b2f0fe68",
       "name": "Sticky - CRM Setup"
@@ -707,17 +694,61 @@
     {
       "parameters": {
         "content": "## Mode A: Smart Table Fill\n\n\n\n\n\n\n\n\n\n\n\n\n\nActive by default. Writes extracted data directly to Google Sheets.\n\nToggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
-        "height": 352,
-        "width": 296
+        "height": 416,
+        "width": 280
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        8848,
-        1712
+        1072,
+        320
       ],
       "id": "780dbcf9-d414-4cbe-ba20-4230b689ed4f",
       "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\n\nYou must put column names into 'entries' goodle sheet sheet.",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        352
+      ],
+      "id": "dd4fa546-7ae9-4cbe-bde9-741c46ecb12e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\n\nYou must delete the \"Description_hig7f6\" google sheet sheet",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        352
+      ],
+      "id": "a8ced62a-68d5-47ca-8df4-f5f089b7e3f9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        384
+      ],
+      "id": "d3579c1e-8f2e-496e-bcf8-83cf1ff4b4fd",
+      "name": "Unpack Rows"
     }
   ],
   "connections": {
@@ -825,18 +856,7 @@
       "main": [
         [
           {
-            "node": "Prep Columns for LLM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prep Columns for LLM": {
-      "main": [
-        [
-          {
-            "node": "LLM: Generate Schema",
+            "node": "Unpack Rows",
             "type": "main",
             "index": 0
           }
@@ -958,6 +978,17 @@
         [
           {
             "node": "String Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unpack Rows": {
+      "main": [
+        [
+          {
+            "node": "LLM: Generate Schema",
             "type": "main",
             "index": 0
           }
