@@ -8,6 +8,9 @@ Execution behaves differently than when you tested? You tested the subworkflow d
 
 
 If publish button won't work (an error like *1 node has issues, fix them before publishing.*):
+
+<img src="assets/trouble-shooting-publish-error1.png" width="300">
+
 1. Go to Executions
 2. Pick a successful run → Copy to Editor
 3. Publish
