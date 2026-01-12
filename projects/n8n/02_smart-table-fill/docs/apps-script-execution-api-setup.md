@@ -28,22 +28,24 @@ Your existing n8n Google credentials use a GCP project. We need to link Apps Scr
 4. Note the **Project Number** (numeric, e.g., `126925216054`) - NOT the Project ID
 5. Enable Apps Script API: Go to [Apps Script API](https://console.cloud.google.com/apis/library/script.googleapis.com) and click **Enable**
 
+<img src="../assets/setup-images/google-cloud-console-dashboard.png" alt="GCP Console Dashboard showing Project Number" style="max-width: 50%">
+
 ---
 
-## Step 2: Create Apps Script Project
+## Step 2: Create Apps Script & Configure Settings
 
 ### 2.1 Create New Script
 
 Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a script bound to your sheet (or go to [script.google.com](https://script.google.com) > **New project** and name it).
 
-### 2.2 Add the Code
+<img src="../assets/setup-images/google-cloud-AppScript-home.png" alt="Apps Script home with New project button" style="max-width: 50%">
 
-1. Delete any default code in `Code.gs`
-2. Copy the entire contents of [`scripts/AppScript-new-contact-setup.js`](../scripts/AppScript-new-contact-setup.js) from this repo
-3. Paste into `Code.gs`
-4. Update `CONFIG` with your settings:
-   - `spreadsheetId`: the Google Sheet that smart-table-fill writes to
-   - `folderPath`: path where you want ContactManager to live (e.g., `['MyDrive', 'ContactManager', 'names_folders']`)
+### 2.2 Link to GCP Project
+
+1. In Apps Script editor: **Project Settings** (gear icon)
+2. Under "Google Cloud Platform (GCP) Project", click **Change project**
+3. Enter the **Project Number** from Step 1 (numeric, NOT the Project ID)
+4. Click **Set project**
 
 ### 2.3 Add OAuth Scopes to appsscript.json
 
@@ -79,12 +81,16 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
 
 ---
 
-## Step 3: Link Apps Script to GCP Project
+## Step 3: Add the Code
 
-1. In Apps Script editor: **Project Settings** (gear icon)
-2. Under "Google Cloud Platform (GCP) Project", click **Change project**
-3. Enter the **Project Number** from Step 1 (numeric, NOT the Project ID)
-4. Click **Set project**
+1. Delete any default code in `Code.gs`
+2. Copy the entire contents of [`scripts/AppScript-new-contact-setup.js`](../scripts/AppScript-new-contact-setup.js) from this repo
+3. Paste into `Code.gs`
+4. Update `CONFIG` with your settings:
+   - `spreadsheetId`: the Google Sheet that smart-table-fill writes to
+   - `folderPath`: path where you want ContactManager to live (e.g., `['MyDrive', 'ContactManager', 'names_folders']`)
+
+<img src="../assets/setup-images/google-cloud-AppScript-code.png" alt="Apps Script editor with Code.gs" style="max-width: 50%">
 
 ---
 
@@ -94,6 +100,8 @@ Open your Google Sheet, go to **Extensions** > **Apps Script** - this creates a 
 2. Click the gear icon next to "Select type"
 3. Select **API Executable** - a new "API Executable" section appears, leave the field "Who has access as "Only myself"
 4. Click **Deploy**
+
+<img src="../assets/setup-images/google-cloud-AppScript-new-deployment.png" alt="New deployment dialog with API executable selected" style="max-width: 70%">
 
 ### Verify Your Deployment
 
@@ -111,6 +119,9 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 ## Step 5: Authorize the Script
 
 1. In Apps Script editor with `Code.gs` open, select `testWriteContactData` from the function dropdown (next to the Debug button in the toolbar)
+
+<img src="../assets/setup-images/google-cloud-AppScript-function-dropdown.png" alt="Function dropdown showing testWriteContactData" style="max-width: 70%">
+
 2. Click **Run** (play button)
 3. Authorization popup will appear:
    - Click **Review permissions**
@@ -158,26 +169,6 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 
 ## Troubleshooting
 
-### 404 "Requested resource/entity was not found"
-
-- **Most common:** You're using Script ID instead of Deployment ID
-- **Fix:** Get the Deployment ID from Deploy > Manage deployments (starts with `AKfycb...`)
-
-### Permission Errors
-
-- Re-run `testWriteContactData` in Apps Script editor
-- Complete the authorization flow again
-- Verify all 3 scopes in `appsscript.json`
-
-### GCP Project Mismatch
-
-- Apps Script must be linked to the **same** GCP project as your OAuth credentials
-- Verify Project Number (not ID) matches in both places
-
----
-
-## Key Points Summary
-
 1. Use **Deployment ID** (AKfycb...), NOT Script ID
 2. **3 OAuth scopes** required in BOTH `appsscript.json` and n8n credential:
    - `spreadsheets` - read/write sheet data
@@ -186,10 +177,3 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 3. Apps Script linked to **same GCP project** as n8n OAuth
 4. **Enable Apps Script API** in GCP Console
 5. **Authorize locally first** (run test function) before n8n calls
-
-## Dataset Size Warning
-
-The Apps Script loads the entire sheet into memory to find rows:
-- Works well for sheets < 5,000 rows
-- May timeout or fail on very large sheets (10,000+ rows)
-- Apps Script has 6-minute execution limit and ~6MB heap
