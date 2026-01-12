@@ -2,45 +2,54 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What This Is
+## Code Patterns
 
-Collection of n8n automation workflows for document processing and AI-powered data extraction. All projects are JSON-based n8n workflow exports.
+Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on Groq and Gemini free tiers.
 
-## Repository Structure
+### Repository Structure
 
 ```
 projects/n8n/
-├── 00_telegram-invoice-ocr-to-excel/  # Telegram bot → OCR → Google Sheets
-├── 01_LLM-bulk-responses/             # Batch process data rows with LLM
-├── 02_smart-table-fill/               # Text → structured data via dynamic schema
-└── 03_inbox-attachment-organizer/     # Email attachments → AI classification → Google Drive
+├── 00_telegram-invoice-ocr-to-excel/  - Photo → Telegram bot → Google Sheets
+├── 01_LLM-bulk-responses/             - Batch process spreadsheet rows with AI
+├── 02_smart-table-fill/               - Text in, structured data out
+└── 03_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
 ```
 
-## Project-Specific Documentation
+Projects 02 and 03 have their own `CLAUDE.md` files with detailed architecture documentation.
 
-Projects 2 and 3 have their own CLAUDE.md files with detailed workflow documentation:
-- `projects/n8n/02_smart-table-fill/CLAUDE.md`
-- `projects/n8n/03_inbox-attachment-organizer/CLAUDE.md`
+## n8n Workflows
 
-## Common Patterns Across Projects
+n8n workflows are JSON-based node configurations. Key practices:
 
-**mainflow.md Convention:** Always read `docs/mainflow.md` before examining workflow JSON files. Keep it updated when workflows change. If you discover discrepancies between mainflow.md and the actual JSON, notify the user.
+- **Always read `docs/mainflow.md` first** before looking at workflow JSON files. The JSON is machine-readable but difficult to understand without the documentation context.
+- **Edit in n8n UI** for logic changes (visualizes data flow), then export as JSON for version control.
+- **Use execution logs and debug mode** to trace data transformations between nodes.
+- **Replace triggers with Manual Trigger** when testing to avoid waiting for polling intervals.
+- **Republish subworkflows** after changes - parent workflows call the published version, not your draft.
 
-Structure: 🔄 **Main Flow** title (with node count) → 📋 **Overview** one-liner → 🎯 **Flow Summary** (phases, data flow diagram, lineage tree) → 🦜 **AI Model Nodes** (input/output/purpose per LLM) → 🔗 **External Workflows** (if applicable) → 📝 **Notes**.
+**mainflow.md structure**: 🔄 Main Flow (node count) → 📋 Overview → 🎯 Flow Summary (phases, data flow, lineage) → 🦜 AI Model Nodes → 🔗 External Workflows → 📝 Notes
 
-**LLM Integration:** Most workflows use Groq (free) or Gemini for AI processing. LLM nodes are documented in mainflow.md under 🦜 **AI Model Nodes**.
+**`.st.json` files**: JSON Schema examples for LLM structured output (project 01).
 
-**Structured Output:** `.st.json` files contain JSON Schema examples for LLM structured output (see project 1). These schemas define the extraction format for AI responses.
+### Common Troubleshooting
 
-**n8n Data Lineage (pairedItem):** In Code nodes, `pairedItem` preserves upstream node references so expressions like `$('Gmail').item.json` work downstream. Rules:
-- If existing code has `pairedItem`, preserve it
-- If downstream nodes reference upstream data (e.g., `$('NodeName').item`), add it
-- Not needed for simple transformations where upstream refs aren't used later
+**Subworkflow changes not reflected**: You tested the subworkflow directly but forgot to republish. Fix: Republish the subworkflow. If publish fails with "1 node has issues", go to Executions → pick a successful run → Copy to Editor → Publish.
 
-Example:
-```javascript
-return [{
-  json: { /* your data */ },
-  pairedItem: { item: 0 }  // or items.map((_, i) => ({ item: i })) for multiple
-}];
-```
+**LLM structured output errors**: Model failed to return valid JSON. Use a model with better structured output support (gpt-oss-120b recommended for open-source) or simplify the schema.
+
+### Cross-Project Patterns
+
+**Two-stage AI classification**: Cheap classifier LLM → expensive extractor LLM only for matching documents. Reduces costs.
+
+**LLM confidence scores**: Structured outputs include `confidence` or `class_confidence` fields for observability. Thresholds: 0.9+ auto-process, 0.7-0.9 log for review, <0.7 flag for human verification.
+
+**Google Apps Script integration**: n8n API writes don't trigger Sheets `onEdit`. Use Execution API to call Apps Script functions. Requires same GCP project for OAuth, local authorization first.
+
+**Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
+
+### Key Documentation
+
+- `projects/n8n/troubleshooting.md` - Common issues and fixes
+- `projects/n8n/credentials-guide.md` - Setting up API credentials
+- `projects/n8n/docs/observability-through-llm-confidence-estimate.md` - LLM confidence scoring pattern

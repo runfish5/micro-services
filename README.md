@@ -1,6 +1,6 @@
 # micro-services
 
-Small code snippets to handle life's recurring tasks — data processing, document handling, inbox management, and more. DIY-friendly, built for self-learners.
+Small code snippets to handle life's recurring tasks — inbox management, document handling, data processing, and more. DIY-friendly, built for self-learners.
 
 Projects are grouped by platform. Currently n8n workflows, with Python and JavaScript tools planned.
 
