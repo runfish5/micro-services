@@ -1509,7 +1509,7 @@
     {
       "parameters": {
         "chatId": "7582730035",
-        "text": "={{ $('subject-classifier-LM').item.json.output.type_of_document || \"<Error>\\n$('subject-classifier-LM')...type_of_document\" }}:📧 https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }}\n\\n\\n{{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? $('subject-classifier-LM').item.json.output.message : '' }}",
+        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }} \n📧 {{ $('subject-classifier-LM').item.json.output.type_of_document }} (no-log){{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? '\\n' + ($('subject-classifier-LM').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('subject-classifier-LM').item.json.output.message + ' ' + $('subject-classifier-LM').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('subject-classifier-LM').item.json.output.message : '' }}",
         "additionalFields": {
           "appendAttribution": false
         }
