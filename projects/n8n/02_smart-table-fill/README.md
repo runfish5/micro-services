@@ -2,20 +2,6 @@
 
 Extract structured data from unstructured text into any Google Sheets table — zero schema configuration required.
 
-## 📐 Overview Diagram
-
-```mermaid
-flowchart LR
-    A[📥 Text Input] --> B{Extraction rules ready?}
-    B -->|No| C[🤖 Create column instructions]
-    C --> D
-    B -->|Yes| D[🤖 Extract to columns]
-    D --> E[📊 Write to Sheet]
-    E ~~~ F[ ]
-    classDef hidden fill:none,stroke:none,color:none
-    class F hidden
-```
-
 ## Workflow Preview
 
 <p align="center">
@@ -33,6 +19,18 @@ flowchart LR
 **Out-of-the-box:** CRM entries from recurring client emails
 
 **Alternatives:** Survey answers, contact form submissions, job applications, quote requests
+
+```mermaid
+flowchart LR
+    A[📥 Text Input] --> B{Extraction rules ready?}
+    B -->|No| C[🤖 Create column instructions]
+    C --> D
+    B -->|Yes| D[🤖 Extract to columns]
+    D --> E[📊 Write to Sheet]
+    E ~~~ F[ ]
+    classDef hidden fill:none,stroke:none,color:none
+    class F hidden
+```
 
 ## What it does
 
