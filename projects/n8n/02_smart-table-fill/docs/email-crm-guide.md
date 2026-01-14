@@ -43,7 +43,7 @@ flowchart TB
 For each email, the system creates or updates:
 
 ```
-📁 Contacts/
+📁 Entries/
 └── 📁 john-doe@example.com/
     ├── 📄 README.md          (AI-maintained profile)
     └── 📁 emails/
@@ -90,7 +90,15 @@ Import these into n8n:
 
 ## Phase 3: Google Sheets Setup
 
-Create your Contacts sheet with these columns:
+Copy-paste these column headers (separated by tabs) into the first row of a Google Sheet named **"Entries"**:
+
+```
+folder_id	emails_folder_id	email	first_name	surname	more_emails	status	last_topic	last_being_contacted	last_contacted	association	groups	goal_contact_frequency	current_job	birthday	works_at	Interests_n_Expertise	address	phone	contact_created_at	contact_updated_at	notes
+```
+
+> **Note:** The default workflow batches 7 extract fields per LLM call. More columns = more LLM calls. Feel free to delete any columns you don't need, **except `email`, `folder_id`, and `emails_folder_id`** which are required.
+
+On first workflow execution, n8n auto-generates the full schema. Example output:
 
 | Column | Type | Purpose |
 |--------|------|---------|
@@ -110,7 +118,7 @@ Create your Contacts sheet with these columns:
 
 In the **smart-table-fill** workflow, open the **String Input** node and set:
 - `spreadsheet_id`: Copy from your Sheet's URL (the long string between `/d/` and `/edit`)
-- `data_sheet_name`: Your sheet name (e.g., "Contacts")
+- `data_sheet_name`: `Entries`
 
 ---
 
@@ -205,7 +213,7 @@ Click **Save** and **Publish**.
 
 **Verify:**
 - [ ] Email classified by subject-classifier-LM
-- [ ] Contact row created/updated in Contacts sheet
+- [ ] Contact row created/updated in Entries sheet
 - [ ] `folder_id` and `emails_folder_id` columns populated
 - [ ] Contact folder created in Drive with `README.md`
 - [ ] Email archived as `.md` file in `emails/` subfolder
