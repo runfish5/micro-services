@@ -1,4 +1,4 @@
-# Main Flow (21 Nodes)
+# Main Flow (20 Nodes)
 
 ## Overview
 Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run. Uses Apps Script to write data AND create contact folders in a single HTTP call.
@@ -8,9 +8,9 @@ Extracts structured data from unstructured text into Google Sheets using dynamic
 ### Phases
 ```
 Triggers (Nodes 1-2)
-Schema Check & Creation (Nodes 3-12)
+Schema Check & Creation (Nodes 3-10)
   - Fetch data headers → Check schema exists → Create if needed
-Data Extraction (Nodes 13-20)
+Data Extraction (Nodes 11-16)
   - Build JSON schema → LLM extraction → Write via Apps Script
 ```
 
@@ -23,18 +23,17 @@ Trigger → String Input (config)
     Try Fetch Schema Sheet
               ↓
          Schema Exists?
-         ├─ YES → Merge ────────────────┐
+         ├─ YES ────────────────────────┐
          └─ NO                          │
               ↓                         │
          Create Sheet (API)             │
               ↓                         │
          LLM: Generate Schema           │
               ↓                         │
-         Append Schema to Sheet ────────┘
-                                        ↓
-                              Fetch Headers (schema)
+         Create & Write Schema ─────────┘
                                         ↓
                               Build Output Schema
+                              (sources data from upstream)
                                         ↓
                               LLM: Extract Data
                                         ↓
@@ -68,23 +67,14 @@ START: Manual Trigger / When Executed by Another Workflow
                  └→ IF: Schema Exists?
                       │
                       ├─ TRUE:
-                      │  └→ Merge (input 0)
+                      │  └→ Build Output Schema (uses Try Fetch Schema Sheet data)
                       │
                       └─ FALSE:
-                         ├→ HTTP: Create Sheet (Sheets batchUpdate API)
-                         ├→ Prep Columns for LLM (extract column names)
                          ├→ LLM: Generate Schema
                          │     ├─ Schema LLM (llama-3.1-8b-instant)
                          │     └─ Schema Output Parser
-                         ├→ Split Schema Rows
-                         └→ Append Schema to Sheet
-                              └→ Merge (input 1)
-
-              Merge
-                │
-                └→ Fetch Headers (schema sheet)
-                     │
-                     └→ Build Output Schema (convert schema to JSON schema)
+                         └→ Create & Write Schema Sheet (Sheets batchUpdate API)
+                              └→ Build Output Schema (uses LLM: Generate Schema data)
                           │
                           └→ Extract Data from String
                           │     ├─ LLM Processor (gpt-oss-120b)
@@ -124,20 +114,16 @@ START: Manual Trigger / When Executed by Another Workflow
 | 4 | Fetch Data Sheet Headers | httpRequest | Get column names from data sheet |
 | 5 | Try Fetch Schema Sheet | googleSheets | Check if schema sheet exists |
 | 6 | IF: Schema Exists? | if | Branch on schema existence |
-| 7 | HTTP: Create Sheet | httpRequest | Create schema sheet via API |
-| 8 | Prep Columns for LLM | code | Format columns for LLM |
-| 9 | LLM: Generate Schema | chainLlm | Generate schema definitions |
-| 10 | Schema LLM | lmChatGroq | Language model for schema |
-| 11 | Schema Output Parser | outputParser | Parse schema JSON |
-| 12 | Split Schema Rows | code | Convert array to items |
-| 13 | Append Schema to Sheet | googleSheets | Write schema rows |
-| 14 | Fetch Headers | googleSheets | Read schema sheet |
-| 15 | Build Output Schema | code | Build JSON schema from schema rows |
-| 16 | Extract Data from String | chainLlm | LLM data extraction |
-| 17 | LLM Processor | lmChatGroq | Language model for extraction |
-| 18 | Dynamic Output Parser | outputParser | Parse extracted data |
-| 19 | Merge Outputs | code | Merge batch outputs |
-| 20 | Write via Apps Script | httpRequest | Write data + create folder via doPost |
+| 7 | LLM: Generate Schema | chainLlm | Generate schema definitions |
+| 8 | Schema LLM | lmChatGroq | Language model for schema |
+| 9 | Schema Output Parser | outputParser | Parse schema JSON |
+| 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
+| 11 | Build Output Schema | code | Build JSON schema (sources from upstream) |
+| 12 | Extract Data from String | chainLlm | LLM data extraction |
+| 13 | LLM Processor | lmChatGroq | Language model for extraction |
+| 14 | Dynamic Output Parser | outputParser | Parse extracted data |
+| 15 | Merge Outputs | code | Merge batch outputs |
+| 16 | Write via Apps Script | httpRequest | Write data + create folder via doPost |
 
 ## Notes
 - Schema sheet name `Description_hig7f6` has suffix for disambiguation
