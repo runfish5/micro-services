@@ -1,0 +1,532 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        6496,
+        1424
+      ],
+      "id": "f995fed2-f17e-4f16-99b9-e6719639a00b",
+      "name": "Every 8 Hours"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "🚩8-hour Retries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        6736,
+        1424
+      ],
+      "id": "912d98c2-aa35-4ffd-9472-ccd159488d7b",
+      "name": "Read FailedItems",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "combinator": "and"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "pending_retry",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.is_retryable }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        6976,
+        1424
+      ],
+      "id": "f4184082-c2f8-46ec-87d4-d07fe162d734",
+      "name": "Filter Retryable"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        7216,
+        1424
+      ],
+      "id": "f3bc3903-c40a-48f0-a317-9a8a34eac891",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "combinator": "and"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ Number($json.retry_count) }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7456,
+        1424
+      ],
+      "id": "8b6f3f63-489c-4f59-8006-743d37b94e20",
+      "name": "retry_count < 3?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.execution_id }}/retry",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7696,
+        1328
+      ],
+      "id": "7b7476fd-2248-4181-a16f-b612a4abc97d",
+      "name": "Execute Retry via API",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vjEcFZksIjUCKNRz",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Retry Result\n// Determines if the API retry call succeeded\n\nconst item = $('Loop Over Items').item.json;\nconst apiResponse = $json;\nconst newRetryCount = Number(item.retry_count || 0) + 1;\n\n// Check if API call succeeded (status 200 and got new execution ID)\nconst retrySuccess = apiResponse.data?.id ? true : false;\n\nreturn [{\n  json: {\n    ...item,\n    retry_count: newRetryCount,\n    last_retry_at: new Date().toISOString(),\n    retry_success: retrySuccess,\n    new_execution_id: apiResponse.data?.id || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7936,
+        1328
+      ],
+      "id": "f1e9718c-05ac-4cd9-889b-ef0cac71f9a0",
+      "name": "Check Retry Result"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "🚩8-hour Retries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "execution_id": "={{ $json.execution_id }}",
+            "retry_count": "={{ $json.retry_count }}",
+            "status": "={{ $json.retry_success ? 'resolved' : 'pending_retry' }}"
+          },
+          "matchingColumns": [
+            "execution_id"
+          ],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        8176,
+        1328
+      ],
+      "id": "7605f56e-3929-48ab-ab1a-2aa11456c675",
+      "name": "Update Retry Count",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mark as escalated - requires human intervention\nconst item = $json;\n\nreturn [{\n  json: {\n    ...item,\n    status: 'escalated',\n    escalated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7696,
+        1536
+      ],
+      "id": "8e284a62-c12c-4ced-bcc6-122b38a8e8b2",
+      "name": "Mark Escalated"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "🚩8-hour Retries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $json.status }}"
+          },
+          "matchingColumns": [
+            "execution_id"
+          ],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        7936,
+        1536
+      ],
+      "id": "8cb8ff4e-c388-47ca-8e53-1b0bdafcd691",
+      "name": "Update Status Escalated",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "=🚨 ESCALATION: 3 retries exhausted\n\nWorkflow: {{ $json.workflow_name }}\nNode: {{ $json.failed_node }}\nError: {{ $json.error_message }}\n\nExecution ID: {{ $json.execution_id }}\nError Type: {{ $json.error_type }}\n\n⚠️ Manual intervention required",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8176,
+        1536
+      ],
+      "id": "87bed0a7-8d37-4f2e-8bce-05dcfda96c67",
+      "name": "Alert: Escalation",
+      "webhookId": "7d7cb033-297e-4132-9a85-1dcb7e81273f",
+      "credentials": {
+        "telegramApi": {
+          "id": "mlZdNwRkWhIVuDdr",
+          "name": "Telegram inbox_important"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 8-hour Task Resolver\n\n**Purpose:** Auto-retry failed workflow executions logged in FailedItems sheet.\n\n**Flow:**\n1. Every 8 hours, read pending retryable items\n2. For each item with retry_count < 3:\n   - Call n8n API POST /executions/{id}/retry\n   - Check result and update retry_count in sheet\n   - If success → status='resolved'\n3. For items with retry_count >= 3:\n   - Mark as 'escalated'\n   - Send Telegram alert for human intervention\n\n**Requires:**\n- 'n8n API' credential (Header Auth with X-N8N-API-KEY)\n- Uses Railway external URL for API calls",
+        "height": 380,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6496,
+        1024
+      ],
+      "id": "8157b10a-4526-4061-8a3a-49f514b79514",
+      "name": "Overview"
+    },
+    {
+      "parameters": {
+        "content": "### Escalation Path\nretry_count >= 3\n→ Human intervention required",
+        "height": 120,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        7696,
+        1648
+      ],
+      "id": "bb8d8149-ba2d-4c86-9834-1a96c4b0a8fc",
+      "name": "Escalation Note"
+    },
+    {
+      "parameters": {
+        "content": "### Retry Path\nretry_count < 3\n→ API retry → Check result → Update sheet",
+        "height": 120,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        7696,
+        1152
+      ],
+      "id": "3c023aa9-e7cb-436d-b65f-b43390e7568e",
+      "name": "Retry Note"
+    }
+  ],
+  "connections": {
+    "Every 8 Hours": {
+      "main": [
+        [
+          {
+            "node": "Read FailedItems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read FailedItems": {
+      "main": [
+        [
+          {
+            "node": "Filter Retryable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Retryable": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "retry_count < 3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "retry_count < 3?": {
+      "main": [
+        [
+          {
+            "node": "Execute Retry via API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Retry via API": {
+      "main": [
+        [
+          {
+            "node": "Check Retry Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Retry Result": {
+      "main": [
+        [
+          {
+            "node": "Update Retry Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Retry Count": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Escalated": {
+      "main": [
+        [
+          {
+            "node": "Update Status Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Escalated": {
+      "main": [
+        [
+          {
+            "node": "Alert: Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert: Escalation": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

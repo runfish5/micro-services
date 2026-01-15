@@ -2,17 +2,32 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
+        "content": "```\nstatus         retry_count  error_type    severity  is_retryable  suggested_action   failed_node\n-------------------------------------------------------------------------------------------------------\npending_retry  0            unknown       medium    FALSE         manual_review      \npending_retry  0            unknown       medium    FALSE         manual_review      \npending_retry  0            unknown       medium    FALSE         manual_review      \npending_retry  0            unknown       medium    FALSE         manual_review      \npending_retry  0            parse_error   medium    FALSE         check_llm_output   \npending_retry  0            parse_error   medium    FALSE         check_llm_output   Accountant-concierge-LM\npending_retry  0            parse_error   medium    FALSE         check_llm_output   Accountant-concierge-LM\npending_retry  0            parse_error   medium    FALSE         check_llm_output   Accountant-concierge-LM\npending_retry  0            parse_error   medium    FALSE         check_llm_output   Call 'smart-table-fill'\npending_retry  0            parse_error   medium    FALSE         check_llm_output   Call 'smart-table-fill'\n```",
+        "height": 256,
+        "width": 1008
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        272
+      ],
+      "id": "19ff35e7-fd23-4644-8735-8457bbdd0737",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `llm_schema_error` → High, auto-retry after 8h (retryable)\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
         "height": 944,
         "width": 480
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        4432,
-        2672
+        128,
+        336
       ],
-      "id": "5d84dfab-20fb-4379-88f2-c473c75d7520",
+      "id": "f487659e-fe7e-4bd8-b6c1-8009e63b306a",
       "name": "Overview"
     },
     {
@@ -20,10 +35,10 @@
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        4976,
-        3120
+        672,
+        784
       ],
-      "id": "0271f426-0a93-496b-9d21-f29ca77c75b4",
+      "id": "893e53f1-c0bb-46bd-aba3-18586ab409c5",
       "name": "Error Trigger"
     },
     {
@@ -33,23 +48,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5216,
-        3120
+        912,
+        784
       ],
-      "id": "411b4aae-7de0-416e-8eee-a9afab0019fd",
+      "id": "bcf0a924-6097-4e4f-8183-fc2dd42a1fa5",
       "name": "Prepare Error Record"
     },
     {
       "parameters": {
-        "jsCode": "// Classify Error by Type\n// Determines severity, retryability, and suggested action\n\nconst errorMsg = ($json.error_message || '').toLowerCase();\nconst errorStack = ($json.error_stack || '').toLowerCase();\nconst errorName = ($json.error_name || '').toLowerCase();\n\nlet errorType = 'unknown';\nlet severity = 'medium';\nlet isRetryable = false;\nlet suggestedAction = 'manual_review';\n\n// Auth errors (401, 403, credential issues)\nif (errorMsg.includes('401') || errorMsg.includes('403') ||\n    errorMsg.includes('unauthorized') || errorMsg.includes('forbidden') ||\n    errorMsg.includes('credential') || errorMsg.includes('token expired') ||\n    errorMsg.includes('invalid_grant') || errorMsg.includes('authentication')) {\n  errorType = 'auth_error';\n  severity = 'critical';\n  suggestedAction = 'refresh_credentials';\n  isRetryable = false;\n}\n// Rate limits (429)\nelse if (errorMsg.includes('429') || errorMsg.includes('rate limit') ||\n         errorMsg.includes('too many requests') || errorMsg.includes('quota') ||\n         errorMsg.includes('throttl')) {\n  errorType = 'rate_limit';\n  severity = 'high';\n  suggestedAction = 'wait_and_retry';\n  isRetryable = true;\n}\n// Network/timeout errors\nelse if (errorMsg.includes('timeout') || errorMsg.includes('etimedout') ||\n         errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') ||\n         errorMsg.includes('network') || errorMsg.includes('enotfound') ||\n         errorMsg.includes('socket hang up') || errorMsg.includes('502') ||\n         errorMsg.includes('503') || errorMsg.includes('504')) {\n  errorType = 'network_error';\n  severity = 'high';\n  suggestedAction = 'retry_with_backoff';\n  isRetryable = true;\n}\n// Parse errors (JSON, schema)\nelse if (errorMsg.includes('json') || errorMsg.includes('parse') ||\n         errorMsg.includes('unexpected token') || errorMsg.includes('schema') ||\n         errorMsg.includes('syntax error') || errorName.includes('syntaxerror')) {\n  errorType = 'parse_error';\n  severity = 'medium';\n  suggestedAction = 'check_llm_output';\n  isRetryable = false;\n}\n// Validation errors\nelse if (errorMsg.includes('required') || errorMsg.includes('missing') ||\n         errorMsg.includes('invalid') || errorMsg.includes('validation') ||\n         errorMsg.includes('not found') || errorMsg.includes('does not exist')) {\n  errorType = 'validation_error';\n  severity = 'medium';\n  suggestedAction = 'check_input_data';\n  isRetryable = false;\n}\n// Resource errors\nelse if (errorMsg.includes('memory') || errorMsg.includes('disk') ||\n         errorMsg.includes('storage') || errorMsg.includes('out of space')) {\n  errorType = 'resource_error';\n  severity = 'critical';\n  suggestedAction = 'check_resources';\n  isRetryable = false;\n}\n\nreturn [{\n  json: {\n    ...($json),\n    error_type: errorType,\n    severity: severity,\n    is_retryable: isRetryable,\n    suggested_action: suggestedAction\n  }\n}];"
+        "jsCode": "// Classify Error by Type\n// Determines severity, retryability, and suggested action\n\nconst errorMsg = ($json.error_message || '').toLowerCase();\nconst errorStack = ($json.error_stack || '').toLowerCase();\nconst errorName = ($json.error_name || '').toLowerCase();\n\nlet errorType = 'unknown';\nlet severity = 'medium';\nlet isRetryable = false;\nlet suggestedAction = 'manual_review';\n\n// Auth errors (401, 403, credential issues)\nif (errorMsg.includes('401') || errorMsg.includes('403') ||\n    errorMsg.includes('unauthorized') || errorMsg.includes('forbidden') ||\n    errorMsg.includes('credential') || errorMsg.includes('token expired') ||\n    errorMsg.includes('invalid_grant') || errorMsg.includes('authentication')) {\n  errorType = 'auth_error';\n  severity = 'critical';\n  suggestedAction = 'refresh_credentials';\n  isRetryable = false;\n}\n// Rate limits (429)\nelse if (errorMsg.includes('429') || errorMsg.includes('rate limit') ||\n         errorMsg.includes('too many requests') || errorMsg.includes('quota') ||\n         errorMsg.includes('throttl')) {\n  errorType = 'rate_limit';\n  severity = 'high';\n  suggestedAction = 'wait_and_retry';\n  isRetryable = true;\n}\n// Network/timeout errors\nelse if (errorMsg.includes('timeout') || errorMsg.includes('etimedout') ||\n         errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') ||\n         errorMsg.includes('network') || errorMsg.includes('enotfound') ||\n         errorMsg.includes('socket hang up') || errorMsg.includes('502') ||\n         errorMsg.includes('503') || errorMsg.includes('504')) {\n  errorType = 'network_error';\n  severity = 'high';\n  suggestedAction = 'retry_with_backoff';\n  isRetryable = true;\n}\n// LLM Schema errors (specific pattern - retryable because LLMs are non-deterministic)\nelse if (errorMsg.includes('llm output did not match required schema')) {\n  errorType = 'llm_schema_error';\n  severity = 'high';\n  suggestedAction = 'auto_retry_8h';\n  isRetryable = true;\n}\n// Parse errors (JSON, schema) - general case, NOT retryable\nelse if (errorMsg.includes('json') || errorMsg.includes('parse') ||\n         errorMsg.includes('unexpected token') || errorMsg.includes('schema') ||\n         errorMsg.includes('syntax error') || errorName.includes('syntaxerror')) {\n  errorType = 'parse_error';\n  severity = 'medium';\n  suggestedAction = 'check_llm_output';\n  isRetryable = false;\n}\n// Validation errors\nelse if (errorMsg.includes('required') || errorMsg.includes('missing') ||\n         errorMsg.includes('invalid') || errorMsg.includes('validation') ||\n         errorMsg.includes('not found') || errorMsg.includes('does not exist')) {\n  errorType = 'validation_error';\n  severity = 'medium';\n  suggestedAction = 'check_input_data';\n  isRetryable = false;\n}\n// Resource errors\nelse if (errorMsg.includes('memory') || errorMsg.includes('disk') ||\n         errorMsg.includes('storage') || errorMsg.includes('out of space')) {\n  errorType = 'resource_error';\n  severity = 'critical';\n  suggestedAction = 'check_resources';\n  isRetryable = false;\n}\n\nreturn [{\n  json: {\n    ...($json),\n    error_type: errorType,\n    severity: severity,\n    is_retryable: isRetryable,\n    suggested_action: suggestedAction\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5456,
-        3120
+        1152,
+        784
       ],
-      "id": "c26d35bd-f647-4c62-9165-c7dfb8e1a0e5",
+      "id": "688c8863-c542-480e-86a0-f35d7bbf6d79",
       "name": "Classify Error"
     },
     {
@@ -236,10 +251,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        5696,
-        3120
+        1392,
+        784
       ],
-      "id": "7998d32b-4a00-40a8-9b5b-58c6ab2fc900",
+      "id": "e5849f6c-0d1a-4ed2-b815-2f5e6c78e1b4",
       "name": "Append to FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -255,10 +270,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5936,
-        3120
+        1632,
+        784
       ],
-      "id": "0bbba7f6-9e71-4a0b-855a-c2fbbde1323e",
+      "id": "bab08c48-f931-470d-b27c-09c7a4e97952",
       "name": "Format Telegram Alert"
     },
     {
@@ -268,10 +283,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6176,
-        3120
+        1872,
+        784
       ],
-      "id": "3dbc6801-4b2f-40e1-8698-348a9df83c77",
+      "id": "24ee289c-5387-44bc-ab68-faab46bee756",
       "name": "Split Long Message"
     },
     {
@@ -281,10 +296,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        6416,
-        3120
+        2112,
+        784
       ],
-      "id": "063ee78f-6133-4f76-a4a7-e6c07427ae4c",
+      "id": "e5934d5f-2a03-4ca6-b769-e9d0bff844b9",
       "name": "Loop Over Chunks"
     },
     {
@@ -298,10 +313,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        6656,
-        3200
+        2352,
+        864
       ],
-      "id": "ad3a4566-1808-4819-adfd-f7b5d3407c0f",
+      "id": "b6e43daa-2b81-4737-a0ca-2d770de33408",
       "name": "Send Telegram Alert",
       "webhookId": "dda13267-ca61-4073-8a48-fd2f496c5c0f",
       "credentials": {
