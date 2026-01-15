@@ -166,7 +166,7 @@
             {
               "id": "a1b2c3d4-1111-2222-3333-444455556666",
               "name": "spreadsheet_id",
-              "value": "1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ",
+              "value": "1BVSgyiH102iJPgJs6m--ZP6KNE2RCwgW70WsyTlqDQg",
               "type": "string"
             },
             {
@@ -610,10 +610,10 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "jsonBody": "={{ (() => { const id = Date.now() % 1000000; const name = $('String Input').first().json.schema_sheet_name; const rows = $input.first().json.output; return JSON.stringify({ requests: [{ addSheet: { properties: { sheetId: id, title: name } } }, { updateCells: { rows: [{ values: [\"ColumnName\",\"Type\",\"Description\",\"Classes\"].map(h => ({ userEnteredValue: { stringValue: h } })) }].concat(rows.map(r => ({ values: [\"ColumnName\",\"Type\",\"Description\",\"Classes\"].map(c => ({ userEnteredValue: { stringValue: String(r[c]||\"\") } })) }))), fields: \"userEnteredValue\", start: { sheetId: id, rowIndex: 0, columnIndex: 0 } } }] }); })() }}",
         "options": {}
       },
-      "id": "121c804a-3c42-46df-b96f-b097b233b9a1",
+      "id": "8375961a-8d9c-4cfb-8f9e-4ea3cdae33f8",
       "name": "Create & Write Schema Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -627,19 +627,6 @@
           "name": "GoogleDriveMAIN"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "const sheetId = Math.floor(Math.random() * 1000000);\nconst sheetName = $('String Input').first().json.schema_sheet_name;\nconst items = $input.first().json.output;\n\nconst headerRow = {\n  values: [\"ColumnName\", \"Type\", \"Description\", \"Classes\"].map(h => ({\n    userEnteredValue: { stringValue: h }\n  }))\n};\n\nconst dataRows = items.map(item => ({\n  values: [\"ColumnName\", \"Type\", \"Description\", \"Classes\"].map(col => ({\n    userEnteredValue: { stringValue: String(item[col] || \"\") }\n  }))\n}));\n\nreturn [{\n  json: {\n    requestBody: {\n      requests: [\n        {\n          addSheet: {\n            properties: {\n              sheetId: sheetId,\n              title: sheetName\n            }\n          }\n        },\n        {\n          updateCells: {\n            rows: [headerRow, ...dataRows],\n            fields: \"userEnteredValue\",\n            start: {\n              sheetId: sheetId,\n              rowIndex: 0,\n              columnIndex: 0\n            }\n          }\n        }\n      ]\n    }\n  }\n}];"
-      },
-      "id": "3186bc81-f268-4d95-a326-73537ed5f800",
-      "name": "Build batchUpdate Request",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        16,
-        368
-      ]
     }
   ],
   "connections": {
@@ -747,7 +734,7 @@
       "main": [
         [
           {
-            "node": "Build batchUpdate Request",
+            "node": "Create & Write Schema Sheet",
             "type": "main",
             "index": 0
           }
@@ -847,17 +834,6 @@
         [
           {
             "node": "Fetch Headers",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build batchUpdate Request": {
-      "main": [
-        [
-          {
-            "node": "Create & Write Schema Sheet",
             "type": "main",
             "index": 0
           }
