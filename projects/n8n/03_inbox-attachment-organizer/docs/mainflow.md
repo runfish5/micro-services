@@ -1,4 +1,4 @@
-# 🔄 Main Flow (30 Nodes)
+# 🔄 Main Flow (38 Nodes)
 📋 Workflow Overview
 
 This workflow automates the entire invoice processing
@@ -13,11 +13,11 @@ This workflow automates the entire invoice processing
 ```
 Email Trigger (Nodes 1-5)
 Attachment Processing (Nodes 6-10)
-Subject Classifier & Routing (Nodes 11-18)
-Deep Invoice Extraction & Storage (Nodes 19-30)
-  - LM2: Accountant-concierge-LM
+Subject Classifier & Routing (Nodes 11-19)
+Deep Invoice Extraction & Storage (Nodes 20-33)
   - Storage: Google Sheets + Google Drive
   - Notifications: Telegram & Gmail labels
+ContactManager Integration (Nodes 34-38) [disabled by default]
 Alternative Entry: When Executed by Another Workflow
 ```
 
@@ -57,11 +57,15 @@ Email → Text Extraction → AI Classification
     ↓
   email-info-hub → subject-classifier-LM (LM1)
     ↓
-  financial doc router → user_email_whitelist → whitelist validator
+  Routing branches (some disabled by default):
+    ├→ Tag Mail with 'n8n' → notify the category (Telegram)
+    ├→ [disabled] ContactManager-lineage → record-search → smart-table-fill
+    ├→ [disabled] appointment router → Trigger non-spam lineage
+    └→ [disabled] financial doc router → whitelist validator
     ↓
   Has Attachments? → Prepare Attachments → Accountant-concierge-LM (LM2)
     ↓
-  input folder lookup → Call 'Google Drive Folder ID Lookup' → save doc to folder
+  input folder lookup → Call 'gdrive-recursion' → save doc to folder
                   └→ insert doc record
     ↓
   Await Storage Complete → craft report note → Telegram & done / Mark as Processed1
@@ -94,20 +98,22 @@ START: Gmail Trigger
         └→ email-info-hub
    *11    └→ subject-classifier-LM
               │
-              ├→ financial doc router
-              ├→ Tag Mail with 'n8n' → notify rejection
-              └→ appointment router → Trigger non-spam lineage
+              ├→ Tag Mail with 'n8n' → notify the category (Telegram)
+              ├→ [disabled] ContactManager-lineage
+              │     └→ Call 'record-search'
+              │        └→ Prepare Contact Input
+              │           └→ Call 'smart-table-fill'
+              ├→ [disabled] financial doc router → whitelist validator
+              └→ [disabled] appointment router → Trigger non-spam lineage
 
-              IF FINANCIAL:
-              ├→ user_email_whitelist
-              ├→ whitelist validator
+              IF FINANCIAL (via whitelist):
               └→ Has Attachments?
                  │
                  └→ Prepare Attachments
                     └→ Accountant-concierge-LM
                        │
                        ├→ input folder lookup
-                       │  └→ Call 'Google Drive Folder ID Lookup'
+                       │  └→ Call 'gdrive-recursion'
                        │     └→ Get binary data2
                        │        └→ save doc to folder ─┐
                        │                               │
@@ -159,6 +165,18 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 - **Input**: Path components (year, month, category)
 - **Output**: Folder ID for file upload
 - **Behavior**: Self-recursive workflow—calls itself when folders don't exist, skips cache lookup on recursive calls for efficiency. Uses OR query for batch cache lookup (Google Sheets v4.7)
+
+### 3. record-search [ContactManager]
+- **Called by**: ContactManager-lineage (disabled by default)
+- **Purpose**: Tiered contact lookup before calling smart-table-fill
+- **Location**: `../02_smart-table-fill/workflows/subworkflows/record-search.json`
+- **Output**: `{ found, matchType, contact }`
+
+### 4. smart-table-fill [ContactManager]
+- **Called by**: Prepare Contact Input
+- **Purpose**: Extracts structured data from email body into contact sheet
+- **Location**: `../02_smart-table-fill/workflows/smart-table-fill.n8n.json`
+- **Note**: Uses rate-limited LLM extraction subworkflow internally
 
 💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
 
