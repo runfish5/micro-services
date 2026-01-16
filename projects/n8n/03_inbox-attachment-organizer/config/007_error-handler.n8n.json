@@ -43,7 +43,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
+        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.retryOf || execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -69,7 +69,7 @@
     },
     {
       "parameters": {
-        "operation": "append",
+        "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
           "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
@@ -87,7 +87,9 @@
         "columns": {
           "mappingMode": "autoMapInputData",
           "value": {},
-          "matchingColumns": [],
+          "matchingColumns": [
+            "execution_id"
+          ],
           "schema": [
             {
               "id": "timestamp",
@@ -123,7 +125,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "execution_mode",
@@ -251,7 +254,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1392,
+        1600,
         784
       ],
       "id": "e5849f6c-0d1a-4ed2-b815-2f5e6c78e1b4",
@@ -270,7 +273,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1632,
+        1840,
         784
       ],
       "id": "bab08c48-f931-470d-b27c-09c7a4e97952",
@@ -283,7 +286,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1872,
+        2080,
         784
       ],
       "id": "24ee289c-5387-44bc-ab68-faab46bee756",
@@ -296,7 +299,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        2112,
+        2320,
         784
       ],
       "id": "e5934d5f-2a03-4ca6-b769-e9d0bff844b9",
@@ -313,7 +316,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2352,
+        2560,
         864
       ],
       "id": "b6e43daa-2b81-4737-a0ca-2d770de33408",
