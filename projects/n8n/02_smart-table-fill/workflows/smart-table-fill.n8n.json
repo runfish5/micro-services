@@ -142,7 +142,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Detect which path and source data accordingly\nlet items;\nconst schemaSheetData = $('Try Fetch Schema Sheet').all();\nconst hasExistingSchema = schemaSheetData.length > 0 && schemaSheetData[0].json.ColumnName;\n\nif (hasExistingSchema) {\n  // TRUE path: schema already existed, use data from Try Fetch Schema Sheet\n  items = schemaSheetData;\n} else {\n  // FALSE path: schema just created, use LLM output\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  items = llmOutput.map(row => ({ json: row }));\n}\n\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n // Add confidence scoring field to schema\n properties.confidence = {\n   type: \"object\",\n   description: \"Confidence scores for extraction quality\",\n   properties: {\n     overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n     low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n     reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n   },\n   required: [\"overall\"]\n };\n requiredFields.push(\"confidence\");\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
+        "jsCode": "// Detect which path and source data accordingly\nlet items;\nconst schemaSheetData = $('Try Fetch Schema Sheet').all();\nconst hasExistingSchema = schemaSheetData.length > 0 && schemaSheetData[0].json.ColumnName;\n\nif (hasExistingSchema) {\n  // TRUE path: schema already existed, use data from Try Fetch Schema Sheet\n  items = schemaSheetData;\n} else {\n  // FALSE path: schema just created, use LLM output\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  items = llmOutput.map(row => ({ json: row }));\n}\n\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       // Map schema types to valid JSON Schema types\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n       else if (columnType === 'date') jsonType = 'string';\n       else if (columnType === 'int') jsonType = 'integer';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n       if (columnType === 'date') {\n         properties[columnName].format = 'date';\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n // Add confidence scoring field to schema\n properties.confidence = {\n   type: \"object\",\n   description: \"Confidence scores for extraction quality\",\n   properties: {\n     overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n     low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n     reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n   },\n   required: [\"overall\"]\n };\n requiredFields.push(\"confidence\");\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,7 +166,7 @@
             {
               "id": "a1b2c3d4-1111-2222-3333-444455556666",
               "name": "spreadsheet_id",
-              "value": "1BVSgyiH102iJPgJs6m--ZP6KNE2RCwgW70WsyTlqDQg",
+              "value": "1oJLYIdtQbWGV0eaU0mfQMmlP-497g_XGokePmyxQjII",
               "type": "string"
             },
             {
@@ -208,7 +208,7 @@
             {
               "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
               "name": "batch_size",
-              "value": 7,
+              "value": 10,
               "type": "number"
             },
             {
@@ -502,7 +502,7 @@
     {
       "parameters": {
         "content": "## Schema Auto-Creation\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.\n\n---\nOptional:\nConfidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md",
-        "height": 296,
+        "height": 328,
         "width": 420
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -599,6 +599,21 @@
           "name": "GoogleDriveMAIN"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        96
+      ],
+      "id": "89bfad2f-83d6-43b7-b01f-22eccaddd1db",
+      "name": "Sticky Note - Troubleshoot1"
     }
   ],
   "connections": {
