@@ -55,3 +55,20 @@ The Apps Script loads the entire sheet into memory to find rows:
 - Works well for sheets < 5,000 rows
 - May timeout or fail on very large sheets (10,000+ rows)
 - Apps Script has 6-minute execution limit and ~6MB heap
+
+---
+
+## Rate Limit Errors (HTTP 429)
+
+Error: "Rate limit exceeded" when using free-tier APIs (e.g., Groq 5 req/min).
+
+**Fix**: Add a Split In Batches + Wait loop before your LLM node. Set batch size to your API's requests-per-minute limit, wait time to 60s.
+
+**Workflow-specific:**
+
+- **smart-table-fill**:
+  1. Disconnect "Build Output Schema" → "Extract Data from String"
+  2. Add **Split In Batches** node (Batch Size: 5)
+  3. Add **Wait** node (60 seconds)
+  4. Wire: `Build Output Schema → Split In Batches → Extract Data from String → Wait → (loop back to Split In Batches)`
+  5. Connect Split In Batches **second output** (done) → "Merge Outputs"

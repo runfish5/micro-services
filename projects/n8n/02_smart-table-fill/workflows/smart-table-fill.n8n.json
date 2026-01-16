@@ -614,6 +614,21 @@
       ],
       "id": "89bfad2f-83d6-43b7-b01f-22eccaddd1db",
       "name": "Sticky Note - Troubleshoot1"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\n\nRate Limit Errors? If you're hitting API rate limits (e.g., Groq free tier 5 req/min), see:\n`../../troubleshooting.md`",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        488,
+        327
+      ],
+      "id": "d109b025-adcc-44fe-966a-8dccdac5da90",
+      "name": "Sticky Note - Rate Limit Help"
     }
   ],
   "connections": {
