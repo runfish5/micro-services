@@ -48,13 +48,6 @@ n8n workflows are JSON-based node configurations. Key practices:
 
 **Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
 
-### AI Governance
-
-- **Permissions enforced** in `.claude/settings.json` (machine-readable JSON)
-- **Project status** tracked in `AGENTS.md` (YAML frontmatter + markdown)
-- **File versions** tracked in `.claude/deployments.yaml` (audit trail)
-- AI updates AGENTS.md after significant changes (version bumps on releases only)
-- Protected files (CLAUDE.md, settings.json, credentials) blocked by deny rules
 
 ### Key Documentation
 
