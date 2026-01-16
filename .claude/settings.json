@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit(./projects/**/*.json)",
+      "Edit(./projects/**/docs/*.md)",
+      "Edit(./projects/**/README.md)",
+      "Edit(./AGENTS.md)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Edit(./CLAUDE.md)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
+      "Edit(./.claude/deployments.yaml)",
+      "Edit(./projects/n8n/credentials-guide.md)",
+      "Read(./.env*)",
+      "Read(./*secret*)",
+      "Read(./*credential*)"
+    ]
+  }
+}

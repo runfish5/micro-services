@@ -1,5 +1,7 @@
 # Main Flow (17 Nodes)
 
+> Last verified: 2025-01-16
+
 ## Overview
 Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run. Uses Apps Script to write data AND create contact folders in a single HTTP call.
 
@@ -70,7 +72,7 @@ START: Manual Trigger / When Executed by Another Workflow
                       │
                       └─ FALSE:
                          ├→ LLM: Generate Schema
-                         │     ├─ Schema LLM (openai/gpt-oss-120b via Groq)
+                         │     ├─ Schema LLM (Groq)
                          │     └─ Schema Output Parser
                          └→ Create & Write Schema Sheet (Sheets batchUpdate API)
                               └→ Build Output Schema (uses LLM: Generate Schema data)
@@ -98,14 +100,14 @@ START: Manual Trigger / When Executed by Another Workflow
 
 ### 1. Schema Generation (first run only)
 - **Node**: LLM: Generate Schema
-- **Model**: openai/gpt-oss-120b (Groq)
+- **Model**: Groq LLM (configurable)
 - **Input**: Column names from data sheet
 - **Output**: JSON array with ColumnName, Type, Description, Classes
 - **Purpose**: Intelligently infer schema from column names
 
 ### 2. Data Extraction (via subworkflow)
 - **Subworkflow**: llm-extract-rate-limited
-- **Model**: openai/gpt-oss-120b (Groq)
+- **Model**: Groq LLM (configurable)
 - **Input**: Raw text + dynamic JSON schema + rate limiting config
 - **Output**: Structured data matching schema + confidence scores
 - **Purpose**: Extract values from unstructured text with rate limiting for Groq free tier
@@ -121,7 +123,7 @@ START: Manual Trigger / When Executed by Another Workflow
 | 5 | Try Fetch Schema Sheet | googleSheets | Check if schema sheet exists |
 | 6 | IF: Schema Exists? | if | Branch on schema existence |
 | 7 | LLM: Generate Schema | chainLlm | Generate schema definitions |
-| 8 | Schema LLM | lmChatGroq | Language model for schema (gpt-oss-120b) |
+| 8 | Schema LLM | lmChatGroq | Language model for schema |
 | 9 | Schema Output Parser | outputParser | Parse schema JSON |
 | 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
 | 11 | Build Output Schema | code | Build JSON schema (sources from upstream) |
@@ -161,7 +163,7 @@ Prepare Schemas (split schemas to individual items)
 Split in Batches (batch by llm_rate_limit)
   ↓
 Extract Data from String (LLM chain)
-  ├─ LLM Processor (openai/gpt-oss-120b via Groq)
+  ├─ LLM Processor (Groq)
   └─ Dynamic Output Parser
   ↓
 Wait (llm_rate_delay seconds)
@@ -191,7 +193,7 @@ Loop back to Split in Batches (until all batches processed)
 | 4 | Prepare Schemas | code | Split schemas to items |
 | 5 | Split in Batches | splitInBatches | Batch by llm_rate_limit |
 | 6 | Extract Data from String | chainLlm | LLM extraction |
-| 7 | LLM Processor | lmChatGroq | gpt-oss-120b model |
+| 7 | LLM Processor | lmChatGroq | Extraction model |
 | 8 | Dynamic Output Parser | outputParser | Parse extracted JSON |
 | 9 | Wait | wait | Rate limit delay |
 

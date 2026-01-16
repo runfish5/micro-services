@@ -1,5 +1,8 @@
-# 🔄 Main Flow (38 Nodes)
-📋 Workflow Overview
+# Main Flow (38 Nodes)
+
+> Last verified: 2025-01-16
+
+## Overview
 
 This workflow automates the entire invoice processing
   pipeline from email receipt to organized storage with
@@ -11,13 +14,13 @@ This workflow automates the entire invoice processing
 
 ### Phases:
 ```
-Email Trigger (Nodes 1-5)
-Attachment Processing (Nodes 6-10)
-Subject Classifier & Routing (Nodes 11-19)
-Deep Invoice Extraction & Storage (Nodes 20-33)
+Email Trigger
+Attachment Processing
+Subject Classifier & Routing
+Deep Invoice Extraction & Storage
   - Storage: Google Sheets + Google Drive
   - Notifications: Telegram & Gmail labels
-ContactManager Integration (Nodes 34-38) [disabled by default]
+ContactManager Integration [disabled by default]
 Alternative Entry: When Executed by Another Workflow
 ```
 

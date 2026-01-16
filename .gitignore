@@ -19,4 +19,5 @@ Thumbs.db
 *.log
 tmp/
 
-.claude/
+# Claude Code - track governance files, ignore local settings
+.claude/settings.local.json
