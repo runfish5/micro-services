@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        6496,
-        1424
+        7184,
+        2016
       ],
-      "id": "f995fed2-f17e-4f16-99b9-e6719639a00b",
+      "id": "0b3d8852-9004-4fbb-b803-a2887a911e05",
       "name": "Every 8 Hours"
     },
     {
@@ -41,10 +41,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        6736,
-        1424
+        7424,
+        2016
       ],
-      "id": "912d98c2-aa35-4ffd-9472-ccd159488d7b",
+      "id": "1b46f4f8-c84b-4c04-a4f4-ea5669a4cdc7",
       "name": "Read FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -84,10 +84,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        6976,
-        1424
+        7664,
+        2016
       ],
-      "id": "f4184082-c2f8-46ec-87d4-d07fe162d734",
+      "id": "3f921771-0bc6-4f99-8ef2-2603dbabe781",
       "name": "Filter Retryable"
     },
     {
@@ -97,10 +97,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        7216,
-        1424
+        7904,
+        2016
       ],
-      "id": "f3bc3903-c40a-48f0-a317-9a8a34eac891",
+      "id": "1759e998-2226-4f44-9491-45462c51a512",
       "name": "Loop Over Items"
     },
     {
@@ -126,52 +126,63 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        7456,
-        1424
+        8144,
+        2016
       ],
-      "id": "8b6f3f63-489c-4f59-8006-743d37b94e20",
+      "id": "77677863-6708-40d5-a74d-f40ccf4e8203",
       "name": "retry_count < 3?"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.execution_id }}/retry",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7696,
-        1328
-      ],
-      "id": "7b7476fd-2248-4181-a16f-b612a4abc97d",
-      "name": "Execute Retry via API",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "vjEcFZksIjUCKNRz",
-          "name": "Header Auth account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Check Retry Result\n// Determines if the API retry call succeeded\n\nconst item = $('Loop Over Items').item.json;\nconst apiResponse = $json;\nconst newRetryCount = Number(item.retry_count || 0) + 1;\n\n// Check if API call succeeded (status 200 and got new execution ID)\nconst retrySuccess = apiResponse.data?.id ? true : false;\n\nreturn [{\n  json: {\n    ...item,\n    retry_count: newRetryCount,\n    last_retry_at: new Date().toISOString(),\n    retry_success: retrySuccess,\n    new_execution_id: apiResponse.data?.id || null\n  }\n}];"
+        "jsCode": "// Workflow Retry Config Dictionary\n// Maps workflow IDs to their retry input requirements\n\nconst retryConfig = {\n  // inbox-attachment-organizer: pass email_ID as 'id'\n  // Add your workflow ID here after deployment\n  // 'your-workflow-id': { inputField: 'id', sourceField: 'email_ID' }\n};\n\nconst workflowId = $json.workflow_id;\nconst retryInput = JSON.parse($json.retry_input || '{}');\nconst config = retryConfig[workflowId];\n\nlet workflowInputs = {};\n\nif (config && retryInput[config.sourceField]) {\n  // Use specific retry field from config\n  workflowInputs[config.inputField] = retryInput[config.sourceField];\n} else if (retryInput.email_ID) {\n  // Fallback: if we have email_ID, pass it as 'id' (inbox-organizer pattern)\n  workflowInputs.id = retryInput.email_ID;\n}\n// else: empty inputs → workflow runs with fresh trigger behavior\n\nreturn [{ json: { ...($json), workflowInputs } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7936,
-        1328
+        8304,
+        1920
       ],
-      "id": "f1e9718c-05ac-4cd9-889b-ef0cac71f9a0",
+      "id": "d17cd9c5-8154-456e-b819-dac570341d2c",
+      "name": "Workflow Retry Config"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.workflow_id }}",
+          "cachedResultName": "={{ $json.workflow_id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        8544,
+        1920
+      ],
+      "id": "bd1545df-3e4a-4953-8664-f7d5032dd4ac",
+      "name": "Execute Workflow Fresh"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Retry Result\n// If we reach this node, Execute Workflow succeeded (errors would stop execution)\n\nconst item = $('Loop Over Items').item.json;\nconst workflowOutput = $json;\nconst newRetryCount = Number(item.retry_count || 0) + 1;\n\n// Success = we reached this node (Execute Workflow didn't throw)\nconst retrySuccess = true;\n\nreturn [{\n  json: {\n    ...item,\n    retry_count: newRetryCount,\n    last_retry_at: new Date().toISOString(),\n    retry_success: retrySuccess,\n    status: 'resolved'  // Explicitly set resolved status here\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8784,
+        1920
+      ],
+      "id": "24e189d3-07e0-477c-9fde-f428931b73b3",
       "name": "Check Retry Result"
     },
     {
@@ -236,10 +247,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        8176,
-        1328
+        9024,
+        1920
       ],
-      "id": "7605f56e-3929-48ab-ab1a-2aa11456c675",
+      "id": "f3ea6c89-85e6-4d69-b131-11dd793ba13b",
       "name": "Update Retry Count",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -255,10 +266,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7696,
-        1536
+        8384,
+        2128
       ],
-      "id": "8e284a62-c12c-4ced-bcc6-122b38a8e8b2",
+      "id": "dfcbea6c-3d6f-4191-90fb-ad11b05de387",
       "name": "Mark Escalated"
     },
     {
@@ -312,10 +323,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        7936,
-        1536
+        8624,
+        2128
       ],
-      "id": "8cb8ff4e-c388-47ca-8e53-1b0bdafcd691",
+      "id": "0a0e0553-4e18-4cc9-997c-2df05a48062c",
       "name": "Update Status Escalated",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -335,10 +346,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        8176,
-        1536
+        8864,
+        2128
       ],
-      "id": "87bed0a7-8d37-4f2e-8bce-05dcfda96c67",
+      "id": "55c481a1-a2a0-442a-986f-ece882af1eb7",
       "name": "Alert: Escalation",
       "webhookId": "7d7cb033-297e-4132-9a85-1dcb7e81273f",
       "credentials": {
@@ -350,17 +361,17 @@
     },
     {
       "parameters": {
-        "content": "## 8-hour Task Resolver\n\n**Purpose:** Auto-retry failed workflow executions logged in FailedItems sheet.\n\n**Flow:**\n1. Every 8 hours, read pending retryable items\n2. For each item with retry_count < 3:\n   - Call n8n API POST /executions/{id}/retry\n   - Check result and update retry_count in sheet\n   - If success → status='resolved'\n3. For items with retry_count >= 3:\n   - Mark as 'escalated'\n   - Send Telegram alert for human intervention\n\n**Requires:**\n- 'n8n API' credential (Header Auth with X-N8N-API-KEY)\n- Uses Railway external URL for API calls",
+        "content": "## 8-hour Task Resolver\n\n**Purpose:** Auto-retry failed workflow executions logged in FailedItems sheet.\n\n**Flow:**\n1. Every 8 hours, read pending retryable items\n2. For each item with retry_count < 3:\n   - Look up retry config for workflow\n   - Execute workflow fresh (full restart, not partial retry)\n   - Check result and update retry_count in sheet\n   - If success → status='resolved'\n3. For items with retry_count >= 3:\n   - Mark as 'escalated'\n   - Send Telegram alert for human intervention\n\n**Full Restart vs Partial Retry:**\nUses Execute Workflow node (not API retry) to restart from scratch.\nPasses retry_input data (e.g., email_ID) to re-fetch source data.\nPrevents crashes from missing upstream node data.",
         "height": 380,
         "width": 360
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        6496,
-        1024
+        7184,
+        1616
       ],
-      "id": "8157b10a-4526-4061-8a3a-49f514b79514",
+      "id": "6155b41a-88b7-4e7f-b708-e56915e97e90",
       "name": "Overview"
     },
     {
@@ -372,25 +383,25 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        7696,
-        1648
+        8384,
+        2240
       ],
-      "id": "bb8d8149-ba2d-4c86-9834-1a96c4b0a8fc",
+      "id": "9f02d243-e8af-4470-ab75-33fd3b8676b2",
       "name": "Escalation Note"
     },
     {
       "parameters": {
-        "content": "### Retry Path\nretry_count < 3\n→ API retry → Check result → Update sheet",
+        "content": "### Retry Path\nretry_count < 3\n→ Config lookup → Execute Workflow Fresh → Check result → Update sheet",
         "height": 120,
         "width": 280
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        7696,
-        1152
+        8384,
+        1744
       ],
-      "id": "3c023aa9-e7cb-436d-b65f-b43390e7568e",
+      "id": "fcde4d5f-e075-447d-9d95-b648eaba6dad",
       "name": "Retry Note"
     }
   ],
@@ -444,7 +455,7 @@
       "main": [
         [
           {
-            "node": "Execute Retry via API",
+            "node": "Workflow Retry Config",
             "type": "main",
             "index": 0
           }
@@ -458,7 +469,18 @@
         ]
       ]
     },
-    "Execute Retry via API": {
+    "Workflow Retry Config": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow Fresh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Fresh": {
       "main": [
         [
           {

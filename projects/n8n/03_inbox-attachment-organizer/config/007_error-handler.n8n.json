@@ -9,10 +9,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1168,
-        272
+        -48,
+        80
       ],
-      "id": "19ff35e7-fd23-4644-8735-8457bbdd0737",
+      "id": "31d79e15-243e-4416-a1eb-ef083978548f",
       "name": "Sticky Note"
     },
     {
@@ -24,10 +24,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        128,
-        336
+        -1088,
+        144
       ],
-      "id": "f487659e-fe7e-4bd8-b6c1-8009e63b306a",
+      "id": "97da6e44-5c8f-4f09-b9a8-85dfd7b87899",
       "name": "Overview"
     },
     {
@@ -35,23 +35,23 @@
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        672,
-        784
+        -544,
+        592
       ],
-      "id": "893e53f1-c0bb-46bd-aba3-18586ab409c5",
+      "id": "ac4bfaba-1429-46fb-a165-c58f6302ab7a",
       "name": "Error Trigger"
     },
     {
       "parameters": {
-        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.retryOf || execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0\n  }\n}];"
+        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\n// Extract retry_input - data needed to restart workflow from scratch\n// Searches execution runData for email_ID or other identifying info\nlet retryInputData = {};\nconst runData = execution.data?.resultData?.runData || {};\n\n// Search common nodes that hold identifying data\nconst nodesToCheck = ['Set File ID', 'Gmail', 'Gmail Trigger', 'Clean Email', 'Manual Trigger'];\nfor (const nodeName of nodesToCheck) {\n  const nodeData = runData[nodeName]?.[0]?.data?.main?.[0]?.[0]?.json;\n  if (nodeData) {\n    if (nodeData.email_ID) retryInputData.email_ID = nodeData.email_ID;\n    if (nodeData.id && !retryInputData.email_ID) retryInputData.email_ID = nodeData.id;\n    if (nodeData.messageId) retryInputData.messageId = nodeData.messageId;\n    break; // Found data, stop searching\n  }\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.retryOf || execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0,\n    retry_input: JSON.stringify(retryInputData)\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        912,
-        784
+        -304,
+        592
       ],
-      "id": "bcf0a924-6097-4e4f-8183-fc2dd42a1fa5",
+      "id": "c4ae7909-8ba0-413b-babf-efff2a799d07",
       "name": "Prepare Error Record"
     },
     {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1152,
-        784
+        -64,
+        592
       ],
-      "id": "688c8863-c542-480e-86a0-f35d7bbf6d79",
+      "id": "fc3a9fa9-042f-4b1c-a01e-6dad08795d7e",
       "name": "Classify Error"
     },
     {
@@ -244,6 +244,15 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "retry_input",
+              "displayName": "retry_input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -254,10 +263,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1600,
-        784
+        384,
+        592
       ],
-      "id": "e5849f6c-0d1a-4ed2-b815-2f5e6c78e1b4",
+      "id": "44879a1e-9691-43e0-978f-2ed0026a8572",
       "name": "Append to FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -273,10 +282,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1840,
-        784
+        624,
+        592
       ],
-      "id": "bab08c48-f931-470d-b27c-09c7a4e97952",
+      "id": "e7f5d957-8e4d-49d7-a9a0-d00fc403e7f0",
       "name": "Format Telegram Alert"
     },
     {
@@ -286,10 +295,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2080,
-        784
+        864,
+        592
       ],
-      "id": "24ee289c-5387-44bc-ab68-faab46bee756",
+      "id": "fbc7df72-a695-42f1-b1a5-29f9055b93fd",
       "name": "Split Long Message"
     },
     {
@@ -299,10 +308,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        2320,
-        784
+        1104,
+        592
       ],
-      "id": "e5934d5f-2a03-4ca6-b769-e9d0bff844b9",
+      "id": "ff1ddec4-fe63-4059-ba4f-b8fb2b711ef0",
       "name": "Loop Over Chunks"
     },
     {
@@ -316,10 +325,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2560,
-        864
+        1344,
+        672
       ],
-      "id": "b6e43daa-2b81-4737-a0ca-2d770de33408",
+      "id": "cf9f8582-c986-49e3-9ddc-d35bbb196100",
       "name": "Send Telegram Alert",
       "webhookId": "dda13267-ca61-4073-8a48-fd2f496c5c0f",
       "credentials": {
@@ -421,7 +430,47 @@
       ]
     }
   },
-  "pinData": {},
+  "pinData": {
+    "Error Trigger": [
+      {
+        "execution": {
+          "id": "test-exec-123",
+          "mode": "trigger",
+          "retryOf": "",
+          "startedAt": "2025-01-16T10:00:00Z",
+          "data": {
+            "resultData": {
+              "runData": {
+                "Set File ID": [
+                  {
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "email_ID": "18d5a7b3c2e1f000"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "workflow": {
+          "id": "test-workflow-id",
+          "name": "inbox-attachment-organizer"
+        },
+        "error": {
+          "message": "429 Too Many Requests - rate limit exceeded",
+          "name": "Error"
+        }
+      }
+    ]
+  },
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
