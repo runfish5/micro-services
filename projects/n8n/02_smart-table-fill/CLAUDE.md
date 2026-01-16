@@ -22,7 +22,7 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 - `workflows/subworkflows/record-search.json` - Contact lookup subworkflow
 
 ### Documentation
-- `docs/mainflow.md` - Complete node breakdown, data flow diagrams
+- `workflows/mainflow.md` - Complete node breakdown, data flow diagrams
 - `docs/setup-guide.md` - Setup instructions
 
 ### Scripts

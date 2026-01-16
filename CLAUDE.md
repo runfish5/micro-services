@@ -22,13 +22,11 @@ Projects 02 and 03 have their own `CLAUDE.md` files with detailed architecture d
 
 n8n workflows are JSON-based node configurations. Key practices:
 
-- **Always read `docs/mainflow.md` first** before looking at workflow JSON files. The JSON is machine-readable but difficult to understand without the documentation context.
+- **Always read `workflows/mainflow.md` first** before looking at workflow JSON files. The JSON is machine-readable but difficult to understand without the documentation context.
 - **Edit in n8n UI** for logic changes (visualizes data flow), then export as JSON for version control.
 - **Use execution logs and debug mode** to trace data transformations between nodes.
 - **Replace triggers with Manual Trigger** when testing to avoid waiting for polling intervals.
 - **Republish subworkflows** after changes - parent workflows call the published version, not your draft.
-
-**mainflow.md structure**: 🔄 Main Flow (node count) → 📋 Overview → 🎯 Flow Summary (phases, data flow, lineage) → 🦜 AI Model Nodes → 🔗 External Workflows → 📝 Notes
 
 **`.st.json` files**: JSON Schema examples for LLM structured output (project 01).
 

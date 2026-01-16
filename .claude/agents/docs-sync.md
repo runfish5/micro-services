@@ -44,7 +44,7 @@ When invoked:
 3. Group nodes into logical phases by analyzing connections
 4. Trace data flow through the connections object
 5. Identify AI/LLM nodes specially (look for node types containing "langchain", "openAi", "anthropic", etc.)
-6. Generate or update mainflow.md in the workflow's docs/ directory
+6. Generate or update mainflow.md in the workflow's root directory
 
 ## Key Practices
 
