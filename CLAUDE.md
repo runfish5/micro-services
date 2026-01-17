@@ -46,6 +46,8 @@ n8n workflows are JSON-based node configurations. Key practices:
 
 **Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
 
+**Incident retry mechanism**: For workflows that retry failed executions, ALWAYS use the n8n API retry endpoint (`POST /api/v1/executions/{id}/retry`), NOT Execute Workflow nodes. API retry preserves original trigger data (Gmail messages, webhooks, etc.) while Execute Workflow starts fresh with no context. See `projects/n8n/03_inbox-attachment-organizer/config/8-hour-incident-resolver-docs.md` for rationale
+
 
 ### Key Documentation
 

@@ -5,6 +5,20 @@
 - **007_error-handler.n8n.json** - Catches failed executions, classifies errors, logs to Google Sheets, sends Telegram alerts
 - **008_8-hour-task-resolver.n8n.json** - Auto-retries failed executions every 8 hours via n8n API
 
+---
+
+## CRITICAL: Use n8n API Retry Only
+
+**DO NOT replace with Execute Workflow nodes.** The 8-hour Task Resolver uses:
+```
+POST /api/v1/executions/{execution_id}/retry
+```
+
+- **API Retry** preserves original trigger data (Gmail message, webhook payload)
+- **Execute Workflow** loses trigger context - requires manual `retry_input` passing which breaks when empty
+
+---
+
 ## Setup Steps
 
 ### 1. Create n8n API Key
