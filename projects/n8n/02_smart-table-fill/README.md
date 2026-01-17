@@ -2,6 +2,8 @@
 
 Extract structured data from unstructured text into any Google Sheets table — zero schema configuration required.
 
+> **Learning resource**: See [JSON Worksheet](docs/json-worksheet.md) for a printable introduction to JSON and structured data.
+
 ## Workflow Preview
 
 <p align="center">
