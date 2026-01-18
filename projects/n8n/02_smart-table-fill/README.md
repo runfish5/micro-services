@@ -51,6 +51,7 @@ Anyone converting unstructured notes into structured data — sales teams loggin
 
 ## ⚡ Quick Start
 - [setup-guide.md](docs/setup-guide.md)
+- [parameters.md](docs/parameters.md) - LIST MODE parameters
 - [credentials-guide.md](../credentials-guide.md)
 
 > **Want a full CRM?** Combine with [03_inbox-attachment-organizer](../03_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).

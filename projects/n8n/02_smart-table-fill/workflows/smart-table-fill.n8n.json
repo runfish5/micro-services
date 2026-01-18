@@ -129,7 +129,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const allOutputs = $input.all();\n\n// Try to get config from String Input node, fallback to input data\nlet matchColumn, matchValue;\ntry {\n  matchColumn = $('String Input').first().json.match_column;\n  matchValue = $('String Input').first().json.email;\n} catch (e) {\n  const firstInput = $input.first().json;\n  matchColumn = firstInput.MatchColumn || 'email';\n  matchValue = firstInput.MatchValue || firstInput.email || '';\n}\n\nconst merged = {};\nlet confidenceData = null;\n\nfor (const item of allOutputs) {\n  const output = item.json.output;\n  if (output) {\n    if (output.confidence) {\n      confidenceData = output.confidence;\n      delete output.confidence;\n    }\n    Object.assign(merged, output);\n  }\n}\n\n// Add flattened confidence fields\nif (confidenceData) {\n  merged.confidence_score = confidenceData.overall || 0;\n  merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n    ? confidenceData.low_confidence_fields.join(', ') : '';\n  merged.confidence_reasoning = confidenceData.reasoning || '';\n  merged.review_needed = (confidenceData.overall || 0) < 70;\n}\n\n// Set email from source\nif (matchColumn === 'email' && matchValue) {\n  merged.email = matchValue;\n}\nif (matchColumn && matchValue) {\n  merged[matchColumn + '_source'] = matchValue;\n}\n\n// Merge more_emails\nif (Array.isArray(merged.extracted_emails)) {\n  const allEmails = [...new Set([matchValue, ...merged.extracted_emails].filter(Boolean))];\n  merged.email = allEmails[0];\n  merged.more_emails = allEmails.slice(1).join(', ');\n}\n\n// Nest observability fields in _meta (avoids sheet pollution, keeps data in n8n)\nmerged._meta = {\n  confidence_score: merged.confidence_score,\n  confidence_low_fields: merged.confidence_low_fields,\n  confidence_reasoning: merged.confidence_reasoning,\n  review_needed: merged.review_needed\n};\ndelete merged.confidence_score;\ndelete merged.confidence_low_fields;\ndelete merged.confidence_reasoning;\ndelete merged.review_needed;\n\nreturn [{ json: merged }];"
+        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Get original items from Build Output Schema (has row_id, match_column, etc.)\n// LLM chain doesn't pass through input fields, so we retrieve them by index\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {\n  // Fallback for backward compat\n}\n\n// Get config from String Input\nlet matchColumn, matchSameRow, rowNumber, textColumn;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  matchSameRow = $('String Input').first().json.match_same_row;\n  rowNumber = $('String Input').first().json.row_number;\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n} catch (e) {\n  matchColumn = 'email';\n  matchSameRow = true;\n  rowNumber = null;\n  textColumn = 'Text_to_interpret';\n}\n\n// Group outputs by row_id (for list mode) or treat as single row (for single mode)\n// KEY FIX: Use index as fallback to ensure each item gets unique row_id\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  // Get row_id from Build Output Schema by index (n8n maintains item order)\n  const originalItem = buildOutputItems[i]?.json || {};\n  // Use index as fallback - ensures N outputs even when Build Output Schema not available (e.g., pinned data)\n  const rowId = originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowId]) {\n    rowGroups[rowId] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowId].items.push(item);\n}\n\n// Merge batches within each row\nconst results = [];\nfor (const [rowId, group] of Object.entries(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;  // Actual match column value (null if using index fallback)\n  const merged = {};\n  let confidenceData = null;\n\n  for (const item of items) {\n    const output = item.json.output;\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  // Add flattened confidence fields\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // Set match column value from stored matchValue (only if we have actual value, not index fallback)\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n  }\n\n  // Add original text column value for row matching\n  if (group.bodyCore) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Merge more_emails (only use matchValue if it's a real email, not index fallback)\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Nest observability fields in _meta\n  merged._meta = {\n    confidence_score: merged.confidence_score,\n    confidence_low_fields: merged.confidence_low_fields,\n    confidence_reasoning: merged.confidence_reasoning,\n    review_needed: merged.review_needed\n  };\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Pass through match_same_row and row_number for downstream nodes\n  merged._match_same_row = matchSameRow;\n  merged._row_number = rowNumber;\n\n  results.push({ json: merged });\n}\n\nreturn results;  // Returns N items, one per row"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -142,7 +142,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Detect which path and source data accordingly\nlet items;\nconst schemaSheetData = $('Try Fetch Schema Sheet').all();\nconst hasExistingSchema = schemaSheetData.length > 0 && schemaSheetData[0].json.ColumnName;\n\nif (hasExistingSchema) {\n  // TRUE path: schema already existed, use data from Try Fetch Schema Sheet\n  items = schemaSheetData;\n} else {\n  // FALSE path: schema just created, use LLM output\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  items = llmOutput.map(row => ({ json: row }));\n}\n\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Group items into batches\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n batches.push(items.slice(i, i + batchSize));\n}\n\n// Build one schema per batch\nconst results = batches.map(batch => {\n const properties = {};\n const requiredFields = [];\n\n for (const item of batch) {\n   const columnName = item.json.ColumnName;\n   const columnType = item.json.Type;\n   const columnDescr = item.json.Description;\n\n   if (columnName && columnType) {\n     if (columnType === 'class') {\n       properties[columnName] = {\n         type: \"string\",\n         description: columnDescr,\n         enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n       };\n     } else {\n       // Map schema types to valid JSON Schema types\n       let jsonType = columnType;\n       if (columnType === 'str') jsonType = 'string';\n       else if (columnType === 'list') jsonType = 'array';\n       else if (columnType === 'date') jsonType = 'string';\n       else if (columnType === 'int') jsonType = 'integer';\n\n       properties[columnName] = {\n         type: jsonType,\n         description: columnDescr\n       };\n\n       if (jsonType === 'array') {\n         properties[columnName].items = { type: \"string\" };\n       }\n       if (columnType === 'date') {\n         properties[columnName].format = 'date';\n       }\n     }\n     requiredFields.push(columnName);\n   }\n }\n\n // Add confidence scoring field to schema\n properties.confidence = {\n   type: \"object\",\n   description: \"Confidence scores for extraction quality\",\n   properties: {\n     overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n     low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n     reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n   },\n   required: [\"overall\"]\n };\n requiredFields.push(\"confidence\");\n\n return {\n   json: {\n     type: \"object\",\n     properties,\n     required: requiredFields\n   }\n };\n});\n\nreturn results;"
+        "jsCode": "// LIST MODE: Output N_rows × M_batches items for parallel processing\n// Each output item carries: schema (for this batch), body_core, row_id, context\n\n// Get all input rows from String Input (N items in list mode, 1 in single mode)\nconst inputRows = $('String Input').all();\nconst textColumn = $('String Input').first().json.text_column;\nconst matchColumn = $('String Input').first().json.match_column || 'email';\nconst batchSize = $('String Input').first().json.batch_size;\n\n// Detect which path and source data accordingly\nlet schemaItems;\nconst schemaSheetData = $('Try Fetch Schema Sheet').all();\nconst hasExistingSchema = schemaSheetData.length > 0 && schemaSheetData[0].json.ColumnName;\n\nif (hasExistingSchema) {\n  schemaItems = schemaSheetData;\n} else {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  schemaItems = llmOutput.map(row => ({ json: row }));\n}\n\n// Filter out text_column from schema (we don't want to extract it back)\nconst filteredSchema = schemaItems.filter(item => item.json.ColumnName !== textColumn);\n\n// Create column batches (existing batching logic)\nconst batches = [];\nfor (let i = 0; i < filteredSchema.length; i += batchSize) {\n  batches.push(filteredSchema.slice(i, i + batchSize));\n}\n\n// Helper: build JSON schema from a batch of column definitions\nfunction buildSchemaFromBatch(batch) {\n  const properties = {};\n  const requiredFields = [];\n\n  for (const item of batch) {\n    const columnName = item.json.ColumnName;\n    const columnType = item.json.Type;\n    const columnDescr = item.json.Description;\n\n    if (columnName && columnType) {\n      if (columnType === 'class') {\n        properties[columnName] = {\n          type: \"string\",\n          description: columnDescr,\n          enum: item.json.Classes ? item.json.Classes.split(',').map(s => s.trim()) : []\n        };\n      } else {\n        let jsonType = columnType;\n        if (columnType === 'str') jsonType = 'string';\n        else if (columnType === 'list') jsonType = 'array';\n        else if (columnType === 'date') jsonType = 'string';\n        else if (columnType === 'int') jsonType = 'integer';\n\n        properties[columnName] = {\n          type: jsonType,\n          description: columnDescr\n        };\n\n        if (jsonType === 'array') {\n          properties[columnName].items = { type: \"string\" };\n        }\n        if (columnType === 'date') {\n          properties[columnName].format = 'date';\n        }\n      }\n      requiredFields.push(columnName);\n    }\n  }\n\n  // Add confidence scoring field\n  properties.confidence = {\n    type: \"object\",\n    description: \"Confidence scores for extraction quality\",\n    properties: {\n      overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n      low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n      reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n    },\n    required: [\"overall\"]\n  };\n  requiredFields.push(\"confidence\");\n\n  return {\n    type: \"object\",\n    properties,\n    required: requiredFields\n  };\n}\n\n// Output N_rows × M_batches items\nconst results = [];\nfor (const row of inputRows) {\n  const rowId = row.json[matchColumn] || row.json.email;\n  const bodyCore = row.json.body_core;\n\n  for (const batch of batches) {\n    const schema = buildSchemaFromBatch(batch);\n    results.push({\n      json: {\n        schema: schema,\n        body_core: bodyCore,\n        row_id: rowId,\n        match_column: matchColumn,\n        // Pass through context for LLM prompt\n        contact_name: row.json.contact_name,\n        contact_email: row.json.contact_email,\n        subject: row.json.subject\n      }\n    });\n  }\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -158,15 +158,21 @@
         "assignments": {
           "assignments": [
             {
+              "id": "c7d8e9f0-1234-5678-9abc-def012345678",
+              "name": "text_column",
+              "value": "={{ $json.text_column || 'Text_to_interpret' }}",
+              "type": "string"
+            },
+            {
               "id": "17f1ff39-06cb-441e-ba35-2e83ec5a79d1",
               "name": "body_core",
-              "value": "={{ $json.body_core }}",
+              "value": "={{ $json[$json.text_column || 'Text_to_interpret'] || $json.body_core }}",
               "type": "string"
             },
             {
               "id": "a1b2c3d4-1111-2222-3333-444455556666",
               "name": "spreadsheet_id",
-              "value": "1oJLYIdtQbWGV0eaU0mfQMmlP-497g_XGokePmyxQjII",
+              "value": "1xGxyFu3pIpasYjA2nSPymQmtSj0EPumFd78VB8s54JE",
               "type": "string"
             },
             {
@@ -216,6 +222,18 @@
               "name": "schema_sheet_name",
               "value": "Description_hig7f6",
               "type": "string"
+            },
+            {
+              "id": "f1a2b3c4-1234-5678-90ab-cdef01234567",
+              "name": "match_same_row",
+              "value": "={{ $json.match_same_row !== false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f1a2b3c4-2345-6789-0abc-def012345678",
+              "name": "row_number",
+              "value": "={{ $json.row_number || null }}",
+              "type": "number"
             }
           ]
         },
@@ -232,7 +250,7 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
+        "operation": "={{ $json._match_same_row ? 'appendOrUpdate' : 'append' }}",
         "documentId": {
           "__rl": true,
           "value": "={{ $('String Input').first().json.spreadsheet_id }}",
@@ -424,7 +442,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n{{ ($('String Input').first().json.contact_name || $('String Input').first().json.contact_email || $('String Input').first().json.subject) ? '<context>\\nContact: ' + ($('String Input').first().json.contact_name || '') + '\\nEmail: ' + ($('String Input').first().json.contact_email || '') + '\\nSubject: ' + ($('String Input').first().json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $('String Input').first().json.body_core }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
+        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n{{ ($json.contact_name || $json.contact_email || $json.subject) ? '<context>\\nContact: ' + ($json.contact_name || '') + '\\nEmail: ' + ($json.contact_email || '') + '\\nSubject: ' + ($json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $json.body_core }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use appropriate the default: None\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -443,7 +461,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "={{ JSON.stringify($('Build Output Schema').all()[0].json, null, \" \") }}"
+        "inputSchema": "={{ JSON.stringify($json.schema, null, \" \") }}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -480,11 +498,44 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -640,
+        -864,
         128
       ],
       "id": "9af42ee7-9e8a-4626-99a2-988afbea0e5d",
       "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M",
+          "mode": "list",
+          "cachedResultName": "survey_replies",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -640,
+        128
+      ],
+      "id": "1d25ead0-0e4a-4426-bd11-7f78ea8d1ab2",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
     },
     {
       "parameters": {
@@ -799,6 +850,17 @@
       ]
     },
     "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
       "main": [
         [
           {

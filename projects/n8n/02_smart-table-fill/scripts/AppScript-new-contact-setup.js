@@ -240,12 +240,13 @@ function writeContactData(data) {
 
   try {
     const email = data.email;
+    const matchSameRow = data.match_same_row !== false;  // Default: true (match existing rows)
 
     if (!email || !isValidEmail(email)) {
       throw new Error('Valid email is required');
     }
 
-    logToSheet('INFO', 'writeContactData', 'Request received', { email, fieldCount: Object.keys(data).length });
+    logToSheet('INFO', 'writeContactData', 'Request received', { email, fieldCount: Object.keys(data).length, matchSameRow });
 
     const sheet = getSpreadsheet().getSheetByName(CONFIG.sheetName);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -256,19 +257,28 @@ function writeContactData(data) {
       throw new Error('email column not found in sheet headers');
     }
 
-    const allData = sheet.getDataRange().getValues();
-    let rowIndex = allData.findIndex((row, i) => i > 0 && row[emailColIndex] === email);
     let rowNumber;
     let action;
 
-    if (rowIndex === -1) {
+    if (!matchSameRow) {
+      // Append mode: always create new row at end
       rowNumber = sheet.getLastRow() + 1;
-      action = 'created';
-      logToSheet('INFO', 'writeContactData', 'Creating new row', { rowNumber });
+      action = 'appended';
+      logToSheet('INFO', 'writeContactData', 'Append mode - creating new row', { rowNumber });
     } else {
-      rowNumber = rowIndex + 1;
-      action = 'updated';
-      logToSheet('INFO', 'writeContactData', 'Updating existing row', { rowNumber });
+      // Match mode: find existing row by email or create new
+      const allData = sheet.getDataRange().getValues();
+      const rowIndex = allData.findIndex((row, i) => i > 0 && row[emailColIndex] === email);
+
+      if (rowIndex === -1) {
+        rowNumber = sheet.getLastRow() + 1;
+        action = 'created';
+        logToSheet('INFO', 'writeContactData', 'Creating new row', { rowNumber });
+      } else {
+        rowNumber = rowIndex + 1;
+        action = 'updated';
+        logToSheet('INFO', 'writeContactData', 'Updating existing row', { rowNumber });
+      }
     }
 
     // 2. Write all fields to matching columns
