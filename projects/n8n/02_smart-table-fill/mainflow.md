@@ -1,6 +1,6 @@
 # Main Flow (17 Nodes)
 
-> Last verified: 2025-01-16
+> Last verified: 2025-01-18
 
 ## Overview
 Extracts structured data from unstructured text into Google Sheets using dynamic schema with auto-creation on first run. Uses Apps Script to write data AND create contact folders in a single HTTP call.
@@ -141,6 +141,16 @@ START: Manual Trigger / When Executed by Another Workflow
 - `batch_size` controls how many fields per LLM call (batching within subworkflow)
 - **Rate limiting**: Configure `llm_rate_limit` (requests before pause) and `llm_rate_delay` (seconds to wait) for Groq free tier
 - **Apps Script handles both writing and folder creation** - no triggers needed (CRM mode)
+
+### Update-or-Append Logic (Merge Outputs)
+
+The Merge Outputs node handles row matching for the Write_Excel node:
+
+1. **Dynamic match column**: Sets `merged[matchColumn]` from the `match_column` config
+2. **Write_Excel compatibility**: Always copies match value to `merged.email` (Write_Excel hardcoded to match on "email" column)
+3. **Overwrite prevention**: Only sets `merged[textColumn]` if `textColumn !== matchColumn` to prevent the text body from overwriting the match value
+
+This ensures rows UPDATE at correct positions instead of appending new rows when `match_column` is set to a non-email field like `Text_to_interpret`.
 
 ---
 
