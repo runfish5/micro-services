@@ -38,3 +38,6 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 - [credentials-guide.md](credentials-guide.md) — Setting up API credentials
 - [troubleshooting.md](troubleshooting.md) — Common issues and fixes
+
+
+> **Privacy:** LLM providers often have lenient data policies to improve their services. If you're concerned about privacy, review provider policies first. You can configure privacy settings at the provider level when creating your API key. See [PRIVACY.md](PRIVACY.md).

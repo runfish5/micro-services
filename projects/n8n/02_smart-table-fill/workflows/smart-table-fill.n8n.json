@@ -246,7 +246,8 @@
         128
       ],
       "id": "a39effdc-1339-4c79-91df-3adcf270491b",
-      "name": "String Input"
+      "name": "String Input",
+      "notes": "body_core default: {{ $json[$json.text_column || 'Text_to_interpret'] || $json.body_core }}"
     },
     {
       "parameters": {
@@ -668,7 +669,7 @@
     },
     {
       "parameters": {
-        "content": "### If stops here\n\nRate Limit Errors? If you're hitting API rate limits (e.g., Groq free tier 5 req/min), see:\n`../../troubleshooting.md`",
+        "content": "### If stops here\n\nRate Limit Errors? If you're hitting API rate limits (e.g., Groq free tier 5 requests/min), see:\n[troubleshooting.md](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md)",
         "height": 80,
         "width": 150
       },
