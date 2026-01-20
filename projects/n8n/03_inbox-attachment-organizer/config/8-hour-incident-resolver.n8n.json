@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        7280,
-        1792
+        8192,
+        1856
       ],
-      "id": "0b32b621-556f-488d-af7b-9158efb35baa",
+      "id": "1cd5af1d-3a4b-4b16-815e-25711f261b0a",
       "name": "Every 8 Hours"
     },
     {
@@ -41,10 +41,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        7520,
-        1792
+        8432,
+        1856
       ],
-      "id": "02ab8c65-2ddc-42ba-a95d-d85b0e8abf62",
+      "id": "86f34bc2-21cb-4e1e-9559-519059e878f2",
       "name": "Read FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -84,10 +84,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        7760,
-        1792
+        8672,
+        1856
       ],
-      "id": "49422025-05b0-43e3-9b25-44e7f874ece2",
+      "id": "8c812765-719d-46f0-87ed-5a2665660a38",
       "name": "Filter Retryable"
     },
     {
@@ -97,10 +97,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        8000,
-        1792
+        8912,
+        1856
       ],
-      "id": "bec87bea-1edb-4dad-9131-d59eb21b8a56",
+      "id": "0e25f3e3-d415-4075-b602-5a454a86d9e5",
       "name": "Loop Over Items"
     },
     {
@@ -126,11 +126,38 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        8240,
-        1792
+        9152,
+        1856
       ],
-      "id": "fea74f4a-14d4-4fa8-8e10-1e69c23ff865",
+      "id": "d63b6b8f-47c1-470d-8811-a3097e647921",
       "name": "retry_count < 3?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Retry Delay based on expected Groq requests\n// Groq has 5 req/min limit - this is the bottleneck\n// Google calls happen in parallel with separate limit, so we ignore them\n\n// Parse LLM cost estimate from JSON column\nconst llmCost = JSON.parse($json.retry_params || '{}');\nconst expectedGroq = Number(llmCost.groq) || 3;\nconst GROQ_REQUESTS_PER_MINUTE = 5;\n\n// Time needed for Groq calls + 20% safety margin\n// Formula: (expected_calls / rate_limit) * 60 seconds * 1.2 safety\nconst delaySeconds = Math.max(60, Math.round((expectedGroq / GROQ_REQUESTS_PER_MINUTE) * 60 * 1.2));\n\nreturn [{\n  json: {\n    ...$json,\n    delay_seconds: delaySeconds\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9392,
+        1824
+      ],
+      "id": "a1b57935-45b2-4efa-9d04-e4edb4eb286a",
+      "name": "Calculate Retry Delay"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delay_seconds }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        9600,
+        1824
+      ],
+      "id": "c5b4b9f3-1205-478e-bff7-690bacb38c2b",
+      "name": "Wait Before Retry",
+      "webhookId": "ae1b59ed-4fda-41cf-86af-d4d498e1b321"
     },
     {
       "parameters": {
@@ -149,10 +176,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        8480,
-        1696
+        9792,
+        1824
       ],
-      "id": "b22c5b55-0bf9-4f73-8b2e-c3833aefc0f9",
+      "id": "4c1ed191-fad3-4f79-9f91-a341b8f1a23a",
       "name": "Execute Retry via API",
       "credentials": {
         "httpHeaderAuth": {
@@ -168,10 +195,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8880,
-        1696
+        10000,
+        1824
       ],
-      "id": "99cba8d8-bacc-4a57-8894-acd2c7d2da8b",
+      "id": "99d68a72-4545-41df-ab8f-9d008d8f5e5d",
       "name": "Check Retry Result"
     },
     {
@@ -236,10 +263,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        9120,
-        1696
+        10208,
+        1824
       ],
-      "id": "d352f53f-4afc-40e7-b0bd-941893addc4f",
+      "id": "acdde3e9-2b00-487e-b766-0789058ef8cf",
       "name": "Update Retry Count",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -255,10 +282,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8480,
-        1904
+        9392,
+        2032
       ],
-      "id": "e3002ff4-cf40-4f2f-ab3c-2515f65b6f8d",
+      "id": "4e5238b8-31d9-4e34-b985-231002f0faf3",
       "name": "Mark Escalated"
     },
     {
@@ -312,10 +339,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        8720,
-        1904
+        9632,
+        2032
       ],
-      "id": "b9e8de8a-4417-41d3-96ee-484419cff5d7",
+      "id": "38d80c96-f267-4c20-8b6a-8ae3c13926f7",
       "name": "Update Status Escalated",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -335,10 +362,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        8960,
-        1904
+        9872,
+        2032
       ],
-      "id": "d50a8f12-d797-4c73-90fb-45263973c4f5",
+      "id": "d1a7a098-f9b0-49a6-836f-f51f1f72ef03",
       "name": "Alert: Escalation",
       "webhookId": "7d7cb033-297e-4132-9a85-1dcb7e81273f",
       "credentials": {
@@ -357,41 +384,41 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        7280,
-        1392
+        8192,
+        1456
       ],
-      "id": "ffeba6ed-40e6-4449-9427-acc26c973c1f",
+      "id": "0a7ce17e-e228-41f3-bf24-6dbec6edba42",
       "name": "Overview"
     },
     {
       "parameters": {
-        "content": "### Escalation Path\nretry_count >= 3\n→ Human intervention required",
-        "height": 120,
-        "width": 280
+        "content": "### Retry Path\nretry_count < 3\n→ Calculate Delay (based on Groq calls)\n→ Wait (dynamic, 30-187s)\n→ Execute Retry via API\n→ Check result → Update sheet",
+        "height": 184,
+        "width": 424
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        8480,
-        2016
+        8896,
+        1648
       ],
-      "id": "1e2357b2-63f1-4535-8620-59115cbd379b",
-      "name": "Escalation Note"
+      "id": "999910c9-e401-4db0-a249-ff69d10ad1ac",
+      "name": "Retry Note1"
     },
     {
       "parameters": {
-        "content": "### Retry Path\nretry_count < 3\n→ Execute Retry via API → Check result → Update sheet",
-        "height": 120,
-        "width": 280
+        "content": "### Escalation Path\nretry_count >= 3\n→ Human intervention required",
+        "height": 152,
+        "width": 424
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        8480,
-        1520
+        8912,
+        2032
       ],
-      "id": "8a0f4b77-74d4-441c-88be-e4835691c52c",
-      "name": "Retry Note"
+      "id": "fd62c1a1-9971-46a6-a31d-dd97a201e66b",
+      "name": "Escalation Note"
     }
   ],
   "connections": {
@@ -444,7 +471,7 @@
       "main": [
         [
           {
-            "node": "Execute Retry via API",
+            "node": "Calculate Retry Delay",
             "type": "main",
             "index": 0
           }
@@ -452,6 +479,28 @@
         [
           {
             "node": "Mark Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Retry Delay": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Retry": {
+      "main": [
+        [
+          {
+            "node": "Execute Retry via API",
             "type": "main",
             "index": 0
           }
