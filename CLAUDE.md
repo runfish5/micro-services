@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Home Lab Context
+
+This repository supports a **home lab automation setup**. Key infrastructure:
+
+- **n8n instance**: Hosted on Railway at `primary-production-2e961.up.railway.app`
+- **Claude's role**: Supervisor - monitors executions, debugs failures, retries workflows       
+- **API credentials**: Stored in `.claude/n8n-api.env`
+
+
+### n8n Access Methods
+
+Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for details):
+
+| Task | Use |
+|------|-----|
+| Search/view/execute workflows | **MCP tools** (built-in auth) |
+| Fetch execution logs, debug, retry | **REST API** (requires API key) |
+
+**Skill**: `/n8n-executions` - Fetch recent execution logs
+
 ## Code Patterns
 
 Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on Groq and Gemini free tiers.
@@ -22,6 +42,7 @@ Projects 02 and 03 have their own `CLAUDE.md` files with detailed architecture d
 
 n8n workflows are JSON-based node configurations. Key practices:
 
+- **Minimize node additions**: When modifying workflows, prefer expression changes in existing nodes over adding new nodes. Use n8n's expression language (ternaries, context variables like `$('NodeName').context['currentRunIndex']`) to add conditional logic without structural changes.
 - **Always read `workflows/mainflow.md` first** before looking at workflow JSON files. The JSON is machine-readable but difficult to understand without the documentation context.
 - **Edit in n8n UI** for logic changes (visualizes data flow), then export as JSON for version control.
 - **Use execution logs and debug mode** to trace data transformations between nodes.
@@ -54,3 +75,5 @@ n8n workflows are JSON-based node configurations. Key practices:
 - `projects/n8n/troubleshooting.md` - Common issues and fixes
 - `projects/n8n/credentials-guide.md` - Setting up API credentials
 - `projects/n8n/docs/observability-through-llm-confidence-estimate.md` - LLM confidence scoring pattern
+- `.claude/skills/n8n-executions/skill.md` - When to use MCP vs REST API
+- `projects/n8n/docs/row-index-pattern.md` - Batch table operations pattern
