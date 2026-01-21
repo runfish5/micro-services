@@ -77,3 +77,4 @@ n8n workflows are JSON-based node configurations. Key practices:
 - `projects/n8n/docs/observability-through-llm-confidence-estimate.md` - LLM confidence scoring pattern
 - `.claude/skills/n8n-executions/skill.md` - When to use MCP vs REST API
 - `projects/n8n/docs/row-index-pattern.md` - Batch table operations pattern
+- `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
