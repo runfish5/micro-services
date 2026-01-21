@@ -55,40 +55,16 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "version": 2,
-            "combinator": "and"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.status }}",
-              "rightValue": "pending_retry",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            },
-            {
-              "leftValue": "={{ $json.is_retryable }}",
-              "rightValue": "true",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "// Prepare Items: assign indices, filter, sort DESC\nconst items = $input.all().map((item, index) => ({\n  json: {\n    ...item.json,\n    _rowIndex: index + 2  // row 1 = header\n  }\n}));\n\n// Filter: status=pending_retry AND is_retryable=true (handles string or boolean)\nconst filtered = items.filter(item =>\n  item.json.status === 'pending_retry' &&\n  (item.json.is_retryable === 'true' || item.json.is_retryable === true)\n);\n\n// Sort by _rowIndex DESC (prevent row shift on delete)\nreturn filtered.sort((a, b) => b.json._rowIndex - a.json._rowIndex);"
       },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        8672,
+        8552,
         1856
       ],
-      "id": "8c812765-719d-46f0-87ed-5a2665660a38",
-      "name": "Filter Retryable"
+      "id": "prepare-items-node-001",
+      "name": "Prepare Items"
     },
     {
       "parameters": {
@@ -147,7 +123,7 @@
     },
     {
       "parameters": {
-        "amount": "={{ $json.delay_seconds }}"
+        "amount": "={{ $('Loop Over Items').context['currentRunIndex'] === 0 ? 0 : $json.delay_seconds }}"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -190,7 +166,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Check Retry Result\n// Determines if the API retry call succeeded\n\nconst item = $('Loop Over Items').item.json;\nconst apiResponse = $json;\nconst newRetryCount = Number(item.retry_count || 0) + 1;\n\n// Check if API call succeeded (status 200 and got new execution ID)\nconst retrySuccess = apiResponse.data?.id ? true : false;\n\nreturn [{\n  json: {\n    ...item,\n    retry_count: newRetryCount,\n    last_retry_at: new Date().toISOString(),\n    retry_success: retrySuccess,\n    new_execution_id: apiResponse.data?.id || null\n  }\n}];"
+        "jsCode": "// Extract ID - Step 1 of polling sequence\n// Extracts execution ID from API response and initializes polling state\n// No credentials needed - just data manipulation\n\nconst item = $('Loop Over Items').item.json;\nconst apiResponse = $input.first().json;\nconst newRetryCount = Number(item.retry_count || 0) + 1;\n\n// Retry API returns id at root level, not inside data\nconst newExecutionId = apiResponse.id;\n\nreturn [{\n  json: {\n    ...item,\n    retry_count: newRetryCount,\n    last_retry_at: new Date().toISOString(),\n    new_execution_id: newExecutionId || null,\n    api_call_succeeded: !!newExecutionId,\n    poll_count: 0,\n    is_done: !newExecutionId  // If no ID, we're done (failed to start)\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -198,8 +174,239 @@
         10000,
         1824
       ],
-      "id": "99d68a72-4545-41df-ab8f-9d008d8f5e5d",
-      "name": "Check Retry Result"
+      "id": "extract-id-wait-node-001",
+      "name": "Extract ID"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.new_execution_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10208,
+        1824
+      ],
+      "id": "poll-execution-status-node-001",
+      "name": "Poll Execution Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vjEcFZksIjUCKNRz",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate Poll - Check if execution is finished and increment counter\n// Sets is_done flag for loop control\n\nconst itemData = $('Extract ID').item.json;\nconst pollResponse = $input.first().json;\nconst currentPollCount = Number(itemData.poll_count) || 0;\n\n// If API call failed (no execution ID), preserve the failed state\nif (!itemData.api_call_succeeded) {\n  return [{\n    json: {\n      ...itemData,\n      poll_count: currentPollCount + 1,\n      is_done: true,\n      execution_status: 'api_failed',\n      execution_finished: false\n    }\n  }];\n}\n\n// Check if execution is finished (success, error, or finished flag)\nconst executionStatus = pollResponse.status || 'unknown';\nconst isFinished = pollResponse.finished === true;\nconst isDone = executionStatus === 'success' || executionStatus === 'error' || isFinished;\n\nreturn [{\n  json: {\n    ...itemData,\n    poll_count: currentPollCount + 1,\n    is_done: isDone,\n    execution_status: executionStatus,\n    execution_finished: isFinished\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10416,
+        1824
+      ],
+      "id": "evaluate-poll-node-001",
+      "name": "Evaluate Poll"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "continue-polling-condition-1",
+              "leftValue": "={{ $json.is_done }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "continue-polling-condition-2",
+              "leftValue": "={{ $json.poll_count }}",
+              "rightValue": 30,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        10624,
+        1824
+      ],
+      "id": "should-continue-polling-node-001",
+      "name": "Should Continue Polling?"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        10624,
+        1640
+      ],
+      "id": "wait-10s-node-001",
+      "name": "Wait 10s",
+      "webhookId": "polling-wait-10s-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate Result - Final evaluation before routing to success/failure\n// Determines retry_success based on final execution status\n\nconst itemData = $json;\n\n// Check if retry truly succeeded\nconst executionStatus = itemData.execution_status || 'unknown';\nconst isFinished = itemData.execution_finished === true;\nconst retrySuccess = executionStatus === 'success' && isFinished;\n\n// Handle timeout case (30 polls = 5 minutes)\nconst timedOut = itemData.poll_count >= 30 && !itemData.is_done;\nconst finalStatus = timedOut ? 'timeout' : executionStatus;\n\nreturn [{\n  json: {\n    ...itemData,\n    retry_success: retrySuccess,\n    execution_status: finalStatus\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10832,
+        1920
+      ],
+      "id": "evaluate-result-node-001",
+      "name": "Evaluate Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b2f3a4c5-retry-success-condition",
+              "leftValue": "={{ $json.execution_status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        11040,
+        1920
+      ],
+      "id": "b2f3a4c5-6d7e-8f9a-0b1c-2d3e4f5a6b7c",
+      "name": "If Retry Success?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Archive Record for All-Time Logs\nconst item = $json;\nconst errorTimestamp = new Date(item.timestamp);\nconst resolvedTimestamp = new Date(item.last_retry_at);\nconst timeDiffMs = resolvedTimestamp - errorTimestamp;\nconst timeToResolutionHours = Math.round((timeDiffMs / (1000 * 60 * 60)) * 100) / 100;\n\nreturn [{\n  json: {\n    archived_at: new Date().toISOString(),\n    timestamp: item.timestamp,\n    workflow_id: item.workflow_id,\n    workflow_name: item.workflow_name,\n    execution_id: item.execution_id,\n    failed_node: item.failed_node,\n    error_type: item.error_type,\n    error_message: item.error_message,\n    severity: item.severity,\n    retry_count: item.retry_count,\n    new_execution_id: item.new_execution_id,\n    resolved_at: item.last_retry_at,\n    time_to_resolution_hours: timeToResolutionHours,\n    retry_params: item.retry_params,\n    // Row index for reliable delete (assigned at fetch time)\n    _rowIndex: item._rowIndex\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11248,
+        1776
+      ],
+      "id": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+      "name": "Prepare Archive Record"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1EuwgFyv-WnXmlDslGT6OhxVGl3qNV5-jQCYQLFx6CC8",
+          "mode": "list",
+          "cachedResultName": "🚩All-Time Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1EuwgFyv-WnXmlDslGT6OhxVGl3qNV5-jQCYQLFx6CC8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1EuwgFyv-WnXmlDslGT6OhxVGl3qNV5-jQCYQLFx6CC8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        11456,
+        1776
+      ],
+      "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+      "name": "Append to All-Time Logs",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "🚩8-hour Retries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "options": {
+          "startRowNumber": "={{ $('Prepare Archive Record').first().json._rowIndex }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        11664,
+        1776
+      ],
+      "id": "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+      "name": "Delete from FailedItems",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
     },
     {
       "parameters": {
@@ -223,7 +430,7 @@
           "value": {
             "execution_id": "={{ $json.execution_id }}",
             "retry_count": "={{ $json.retry_count }}",
-            "status": "={{ $json.retry_success ? 'resolved' : 'pending_retry' }}"
+            "status": "=pending_retry"
           },
           "matchingColumns": [
             "execution_id"
@@ -263,8 +470,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        10208,
-        1824
+        11040,
+        2112
       ],
       "id": "acdde3e9-2b00-487e-b766-0789058ef8cf",
       "name": "Update Retry Count",
@@ -377,8 +584,8 @@
     },
     {
       "parameters": {
-        "content": "## 8-hour Task Resolver\n\n**Purpose:** Auto-retry failed workflow executions logged in FailedItems sheet.\n\n**Flow:**\n1. Every 8 hours, read pending retryable items\n2. For each item with retry_count < 3:\n   - Call n8n API retry endpoint\n   - Check result and update retry_count in sheet\n   - If success → status='resolved'\n3. For items with retry_count >= 3:\n   - Mark as 'escalated'\n   - Send Telegram alert for human intervention\n\n**n8n API Retry:**\nUses POST /api/v1/executions/{id}/retry to re-run original execution.\nPreserves original trigger data (e.g., Gmail message).\nNo need to pass inputs - n8n handles context automatically.",
-        "height": 380,
+        "content": "## 8-hour Task Resolver\n\n**Purpose:** Auto-retry failed workflow executions logged in FailedItems sheet.\n\n**Flow:**\n1. Every 8 hours, read pending retryable items\n2. For each item with retry_count < 3:\n   - Call n8n API retry endpoint\n   - Poll execution status every 10s (up to 5 min)\n   - If success → archive to All-Time Logs\n   - If failed → update retry_count, keep in queue\n3. For items with retry_count >= 3:\n   - Mark as 'escalated'\n   - Send Telegram alert for human intervention\n\n**Key Fix:** Robust polling loop handles fast and slow workflows",
+        "height": 420,
         "width": 360
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -392,15 +599,15 @@
     },
     {
       "parameters": {
-        "content": "### Retry Path\nretry_count < 3\n→ Calculate Delay (based on Groq calls)\n→ Wait (dynamic, 30-187s)\n→ Execute Retry via API\n→ Check result → Update sheet",
-        "height": 184,
+        "content": "### Retry Path\nretry_count < 3\n→ Calculate Delay (based on Groq calls)\n→ Wait (dynamic, 60-187s)\n→ Execute Retry via API\n→ Extract ID (initialize polling state)\n→ Polling Loop (see Polling Note)",
+        "height": 208,
         "width": 424
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         8896,
-        1648
+        1616
       ],
       "id": "999910c9-e401-4db0-a249-ff69d10ad1ac",
       "name": "Retry Note1"
@@ -419,6 +626,21 @@
       ],
       "id": "fd62c1a1-9971-46a6-a31d-dd97a201e66b",
       "name": "Escalation Note"
+    },
+    {
+      "parameters": {
+        "content": "### Robust Polling Loop (10s intervals)\n\n**Flow:**\n```\nExtract ID → Poll Execution Status → Evaluate Poll\n               ↑                          ↓\n          Wait 10s  ←←←  Should Continue Polling?\n                              ↓ (FALSE)\n                         Evaluate Result → If Retry Success?\n```\n\n**Why polling loop?**\n- Fast executions: exits immediately when done\n- Slow executions: waits up to 5 min (30 polls × 10s)\n- Old 30s fixed wait was fragile\n\n**Nodes:**\n1. **Extract ID**: Get exec ID, init poll_count=0, is_done=false\n2. **Poll Execution Status**: HTTP GET (uses httpHeaderAuth)\n3. **Evaluate Poll**: Check if done, increment counter\n4. **Should Continue Polling?**: !is_done && poll_count < 30\n5. **Wait 10s**: Loop delay (TRUE branch loops back)\n6. **Evaluate Result**: Final status for routing",
+        "height": 424,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10000,
+        1360
+      ],
+      "id": "b8c9d0e1-2f3a-4b5c-6d7e-8f9a0b1c2d3e",
+      "name": "Polling Note"
     }
   ],
   "connections": {
@@ -437,14 +659,14 @@
       "main": [
         [
           {
-            "node": "Filter Retryable",
+            "node": "Prepare Items",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter Retryable": {
+    "Prepare Items": {
       "main": [
         [
           {
@@ -511,18 +733,131 @@
       "main": [
         [
           {
-            "node": "Check Retry Result",
+            "node": "Extract ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Retry Result": {
+    "Extract ID": {
       "main": [
         [
           {
+            "node": "Poll Execution Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Execution Status": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Poll": {
+      "main": [
+        [
+          {
+            "node": "Should Continue Polling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Continue Polling?": {
+      "main": [
+        [
+          {
+            "node": "Wait 10s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10s": {
+      "main": [
+        [
+          {
+            "node": "Poll Execution Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Result": {
+      "main": [
+        [
+          {
+            "node": "If Retry Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Retry Success?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Archive Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Update Retry Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Archive Record": {
+      "main": [
+        [
+          {
+            "node": "Append to All-Time Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to All-Time Logs": {
+      "main": [
+        [
+          {
+            "node": "Delete from FailedItems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete from FailedItems": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }

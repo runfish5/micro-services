@@ -1,91 +1,102 @@
-# 007 Error Handler & 008 Task Resolver Setup
+# 8-Hour Task Resolver
 
-## Overview
+Auto-retries failed workflow executions logged in FailedItems sheet every 8 hours.
 
-- **007_error-handler.n8n.json** - Catches failed executions, classifies errors, logs to Google Sheets, sends Telegram alerts
-- **008_8-hour-task-resolver.n8n.json** - Auto-retries failed executions every 8 hours via n8n API
+## Flow
+
+```
+Every 8 Hours → Read FailedItems → Prepare Items → Loop Over Items
+                                        ↓
+                              (assign _rowIndex, filter pending_retry, sort DESC)
+```
+
+**Per item in loop:**
+```
+retry_count < 3?
+├─ YES → Calculate Delay → Wait → Execute Retry via API → Poll Loop → If Success?
+│                                                              ├─ YES → Archive → Delete → Loop
+│                                                              └─ NO  → Update retry_count → Loop
+└─ NO  → Mark Escalated → Update Sheet → Telegram Alert → Loop
+```
+
+## Row Index Pattern (v6)
+
+**Why `_rowIndex`?** Google Sheets delete shifts rows up. Without tracking original row numbers, deleting row 5 makes former row 6 become new row 5, causing wrong deletions.
+
+**Solution:**
+1. Assign `_rowIndex` at fetch time (data row = JS index + 2, since row 1 is header)
+2. Sort DESC before processing (delete row 10 first, then row 5)
+3. Use `startRowNumber` in delete operation
+
+The "Prepare Items" node does all three: assigns indices, filters, and sorts in one step.
 
 ---
 
 ## CRITICAL: Use n8n API Retry Only
 
-**DO NOT replace with Execute Workflow nodes.** The 8-hour Task Resolver uses:
+**DO NOT replace with Execute Workflow nodes.** The resolver uses:
 ```
 POST /api/v1/executions/{execution_id}/retry
 ```
 
 - **API Retry** preserves original trigger data (Gmail message, webhook payload)
-- **Execute Workflow** loses trigger context - requires manual `retry_input` passing which breaks when empty
+- **Execute Workflow** loses trigger context - the retry would start with empty input
 
 ---
 
-## Setup Steps
+## Setup
 
 ### 1. Create n8n API Key
 
-1. Open n8n Settings (user icon bottom left → Settings)
-2. Navigate to "n8n API" section (or go to `http://localhost:5678/settings/api`)
-3. Click "Create an API Key"
-4. Name it (e.g., "8-hour-resolver")
-5. **Copy the key immediately** - you'll only see it once
+1. n8n Settings → n8n API → Create an API Key
+2. Copy the key immediately (shown only once)
 
 ### 2. Create Header Auth Credential
 
-1. Go to Credentials in n8n sidebar
-2. Click "+ Add Credential"
-3. Search for and select "Header Auth"
-4. Configure:
+1. Credentials → Add Credential → Header Auth
+2. Configure:
    - **Name:** `n8n API`
    - **Name (header field):** `X-N8N-API-KEY`
-   - **Value:** `<paste your API key here>`
-5. Save
+   - **Value:** `<your API key>`
 
-### 3. Import Workflows
+### 3. Link Credential
 
-Import both workflows into n8n:
-- `007_error-handler.n8n.json`
-- `008_8-hour-task-resolver.n8n.json`
+Open workflow and select the "n8n API" credential in both HTTP Request nodes:
+- "Execute Retry via API"
+- "Poll Execution Status"
 
-### 4. Link Credential to Workflow
+### 4. Set Error Handler as Default
 
-1. Open the 8-hour-task-resolver workflow
-2. Click the "Execute Retry via API" node
-3. In Credentials dropdown, select the "n8n API" credential you created
-
-### 5. Set Error Handler as Default
-
-1. Go to n8n Settings → Error Workflow
-2. Select "Error Handler" workflow
+Settings → Error Workflow → Select "Error Handler"
 
 ---
 
-## Networking Note
+## Networking
 
-The 8-hour resolver calls the n8n API to retry executions. The URL depends on your hosting:
+| Setup | URL |
+|-------|-----|
+| **Railway / Cloud** | External URL (e.g., `https://your-app.up.railway.app`) |
+| Docker Desktop | `http://host.docker.internal:5678` |
+| Docker Linux | `http://172.17.0.1:5678` |
+| Native install | `http://localhost:5678` |
 
-| Setup | URL to use |
-|-------|------------|
-| **Railway / Cloud platforms** | Your external URL (e.g., `https://your-app.up.railway.app`) |
-| Docker Desktop (Windows/Mac) | `http://host.docker.internal:5678` |
-| Docker on Linux | `http://172.17.0.1:5678` |
-| Native install (no Docker) | `http://localhost:5678` |
-
-**Current config uses:** Railway external URL (`https://primary-production-2e961.up.railway.app`)
-
-If you get `ECONNREFUSED` or `ETIMEDOUT` errors, the URL doesn't match your setup. Edit the "Execute Retry via API" node URL directly in n8n.
+**Current:** Railway (`https://primary-production-2e961.up.railway.app`)
 
 ---
 
 ## Troubleshooting
 
 ### "ECONNREFUSED ::1:5678"
-n8n is in Docker but trying to reach `localhost`. Change URL to `host.docker.internal:5678`.
-
-### "$env is not defined" or expression errors
-`$env` requires n8n paid plan. The URL is now hardcoded - no env variables needed.
+n8n is in Docker but URL uses localhost. Change to `host.docker.internal:5678`.
 
 ### API returns 401 Unauthorized
-API key is invalid or credential not linked. Recreate the API key and credential.
+API key invalid or credential not linked. Recreate API key and re-link credential.
+
+### Execution times out (30 polls = 5 min)
+Increase threshold in "Should Continue Polling?" node (e.g., `poll_count < 60` for 10 min).
 
 ### Retry starts but fails again
-The retry re-runs the original execution with the same input. If the underlying issue isn't resolved (e.g., external API still down), it will fail again. Check the new execution's error.
+Underlying issue not resolved. Check the new execution's error for root cause.
+
+### Items incorrectly archived (pre-v6)
+If items were deleted despite failed retry, check All-Time Logs for `execution_status: "error"` entries - these were incorrectly archived due to earlier bugs.
