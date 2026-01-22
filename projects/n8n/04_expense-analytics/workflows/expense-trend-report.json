@@ -1,0 +1,240 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtDay": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === USER CONFIGURATION ===\n// Edit these values to customize the report\nreturn [{\n  json: {\n    // Rolling period lookback (months)\n    MONTHS_BACK: 6,\n    \n    // Number of vendors shown in chart\n    TOP_N_VENDORS: 6,\n    \n    // Display currency symbol\n    CURRENCY_SYMBOL: '\u20ac',\n    \n    // ISO currency code for filtering (if multi-currency)\n    CURRENCY_CODE: 'EUR',\n    \n    // Alert if MoM change exceeds this percentage\n    VARIANCE_ALERT_PCT: 20,\n    \n    // Threshold for large expense alerts (future use)\n    LARGE_EXPENSE_THRESHOLD: 500,\n    \n    // Telegram chat ID for notifications\n    CHAT_ID: '7582730035',\n    \n    // Google Sheets document ID (2505_Invoices)\n    SHEET_ID: '1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94',\n    \n    // Sheet name within the document\n    SHEET_NAME: 'Sheet1'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.SHEET_NAME }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        40,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Read Invoices",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Load config from first node\nconst config = $('Config').first().json;\nconst { MONTHS_BACK, TOP_N_VENDORS, CURRENCY_SYMBOL, VARIANCE_ALERT_PCT } = config;\n\nconst invoices = $input.all();\nconst now = new Date();\n\n// Build rolling period labels\nconst months = [];\nfor (let i = MONTHS_BACK - 1; i >= 0; i--) {\n  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);\n  months.push({\n    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,\n    label: d.toLocaleDateString('en', { month: 'short', year: '2-digit' })\n  });\n}\n\n// Also get same month last year for YoY comparison\nconst sameMonthLastYear = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}`;\n\n// Group by month and vendor\nconst data = {}; // { \"2025-01\": { \"Vendor A\": 100 }, ... }\nconst vendorTotals = {};\n\nfor (const item of invoices) {\n  const row = item.json;\n  const date = new Date(row.invoice_date);\n  if (isNaN(date.getTime())) continue; // Skip invalid dates\n  \n  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;\n  const amount = parseFloat(row.total_amount_due) || 0;\n  const vendor = (row.supplier_name || 'Unknown').slice(0, 15);\n\n  if (!data[monthKey]) data[monthKey] = {};\n  if (!data[monthKey][vendor]) data[monthKey][vendor] = 0;\n  data[monthKey][vendor] += amount;\n\n  // Only count vendors in rolling period for top-N\n  if (months.some(m => m.key === monthKey)) {\n    if (!vendorTotals[vendor]) vendorTotals[vendor] = 0;\n    vendorTotals[vendor] += amount;\n  }\n}\n\n// Get top N vendors by total spend\nconst topVendors = Object.entries(vendorTotals)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, TOP_N_VENDORS)\n  .map(([name]) => name);\n\n// Chart.js color palette\nconst colors = [\n  'rgba(54, 162, 235, 0.8)',  // blue\n  'rgba(255, 99, 132, 0.8)',  // red\n  'rgba(255, 206, 86, 0.8)',  // yellow\n  'rgba(75, 192, 192, 0.8)',  // teal\n  'rgba(153, 102, 255, 0.8)', // purple\n  'rgba(255, 159, 64, 0.8)',  // orange\n  'rgba(199, 199, 199, 0.8)', // gray\n  'rgba(83, 102, 255, 0.8)'   // indigo\n];\n\nconst datasets = topVendors.map((vendor, i) => ({\n  label: vendor,\n  data: months.map(m => Math.round(data[m.key]?.[vendor] || 0)),\n  backgroundColor: colors[i % colors.length]\n}));\n\n// === VARIANCE ANALYSIS ===\nconst monthTotals = months.map(m =>\n  Object.values(data[m.key] || {}).reduce((sum, v) => sum + v, 0)\n);\nconst currentMonth = monthTotals[MONTHS_BACK - 1];\nconst prevMonth = monthTotals[MONTHS_BACK - 2] || 0;\nconst invoiceCount = invoices.filter(i => {\n  const d = new Date(i.json.invoice_date);\n  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();\n}).length;\n\n// MoM variance\nconst momChange = prevMonth > 0 ? ((currentMonth - prevMonth) / prevMonth * 100) : 0;\nconst momTrend = momChange > 0 ? `\\u2191${momChange.toFixed(0)}%` : momChange < 0 ? `\\u2193${Math.abs(momChange).toFixed(0)}%` : '\\u2192 0%';\n\n// YoY variance (if data exists)\nconst yoyTotal = Object.values(data[sameMonthLastYear] || {}).reduce((sum, v) => sum + v, 0);\nconst yoyChange = yoyTotal > 0 ? ((currentMonth - yoyTotal) / yoyTotal * 100) : null;\nconst yoyTrend = yoyChange !== null ? (yoyChange > 0 ? `\\u2191${yoyChange.toFixed(0)}%` : `\\u2193${Math.abs(yoyChange).toFixed(0)}%`) : 'N/A';\n\n// Build insights caption\nconst lines = [\n  `${months[MONTHS_BACK - 1].label}: ${CURRENCY_SYMBOL}${currentMonth.toFixed(0)}`,\n  `MoM: ${momTrend} vs ${months[MONTHS_BACK - 2]?.label || 'N/A'}`,\n  `YoY: ${yoyTrend}`,\n  `${invoiceCount} invoices`\n];\n\n// Alert flag if variance exceeds threshold\nconst alert = Math.abs(momChange) > VARIANCE_ALERT_PCT ? ' \\u26A0\\uFE0F' : '';\n\n// Build QuickChart config\nconst chartConfig = {\n  type: 'bar',\n  data: { labels: months.map(m => m.label), datasets },\n  options: {\n    plugins: {\n      title: { display: true, text: `Expense Trend (${MONTHS_BACK}mo Rolling)` },\n      legend: { position: 'bottom' }\n    },\n    scales: {\n      x: { stacked: true },\n      y: { stacked: true, ticks: { callback: (v) => CURRENCY_SYMBOL + v } }\n    }\n  }\n};\n\nreturn [{\n  json: {\n    chartConfig,\n    insights: lines.join(' | ') + alert,\n    monthTotals,\n    momChange,\n    yoyChange,\n    currentMonth,\n    prevMonth,\n    invoiceCount\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Build Chart Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://quickchart.io/chart",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chart: $json.chartConfig, width: 700, height: 450, format: 'png' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "QuickChart API"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Config').first().json.CHAT_ID }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $('Build Chart Data').first().json.insights }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "Send Chart to Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        100
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000007",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## Expense Trend Report\n\nMonthly expense analytics with:\n- Rolling period analysis (configurable)\n- MoM and YoY variance tracking\n- Top vendor concentration\n- Stacked bar chart visualization\n\n**Edit Config node** to customize:\n- MONTHS_BACK: Rolling period\n- TOP_N_VENDORS: Chart categories\n- VARIANCE_ALERT_PCT: Alert threshold",
+        "height": 260,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        60
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000008",
+      "name": "Sticky Note - Overview"
+    },
+    {
+      "parameters": {
+        "content": "### Data Source\n\nReads from `2505_Invoices` sheet.\n\n**Required columns:**\n- supplier_name\n- invoice_date\n- total_amount_due",
+        "height": 140,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        20,
+        180
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000009",
+      "name": "Sticky Note - Data Source"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Invoices": {
+      "main": [
+        [
+          {
+            "node": "Build Chart Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chart Data": {
+      "main": [
+        [
+          {
+            "node": "QuickChart API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QuickChart API": {
+      "main": [
+        [
+          {
+            "node": "Send Chart to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
