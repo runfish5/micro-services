@@ -127,7 +127,7 @@ The disabled `SO` node shows a simpler schema focusing on:
 
 ### Best Practices
 1. Test with small ranges first (e.g., rows 11-12 using Select Range1)
-2. Monitor LLM rate limits (Groq free tier: 30 requests/minute)
+2. Monitor LLM rate limits (Groq free tier: varies by model, use 5 req/min as safe default for batch processing)
 3. Use `reset: false` in Loop1 to continue from last position if workflow fails
 4. Verify `Response_ID` column exists in your sheet for matching
 

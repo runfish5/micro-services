@@ -214,7 +214,7 @@ The subworkflow implements a batch + wait pattern:
 2. Waits `llm_rate_delay` seconds after each batch (default: 60)
 3. Loops until all schemas are processed
 
-This prevents hitting Groq's free tier rate limits (typically 30 requests/minute).
+This prevents hitting Groq's free tier rate limits (varies by model; use 5 req/min as safe default for batch processing).
 
 ---
 
