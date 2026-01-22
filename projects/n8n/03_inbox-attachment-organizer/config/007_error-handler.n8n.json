@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `llm_schema_error` → High, auto-retry after 8h (retryable)\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
+        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**CODE RED Alert:**\nIf the failing workflow is \"8-hour Task Resolver\", sends immediate CODE RED Telegram alert before normal processing. This catches the watchdog-failure scenario where the error handler itself is down.\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `llm_schema_error` → High, auto-retry after 8h (retryable)\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
         "height": 944,
         "width": 480
       },
@@ -48,7 +48,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -304,
+        -320,
         592
       ],
       "id": "c4ae7909-8ba0-413b-babf-efff2a799d07",
@@ -61,7 +61,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -64,
+        -96,
         592
       ],
       "id": "fc3a9fa9-042f-4b1c-a01e-6dad08795d7e",
@@ -263,7 +263,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        384,
+        128,
         592
       ],
       "id": "44879a1e-9691-43e0-978f-2ed0026a8572",
@@ -282,7 +282,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        624,
+        352,
         592
       ],
       "id": "e7f5d957-8e4d-49d7-a9a0-d00fc403e7f0",
@@ -295,7 +295,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
+        576,
         592
       ],
       "id": "fbc7df72-a695-42f1-b1a5-29f9055b93fd",
@@ -308,7 +308,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1104,
+        800,
         592
       ],
       "id": "ff1ddec4-fe63-4059-ba4f-b8fb2b711ef0",
@@ -325,12 +325,69 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1344,
-        672
+        1024,
+        592
       ],
       "id": "cf9f8582-c986-49e3-9ddc-d35bbb196100",
       "name": "Send Telegram Alert",
       "webhookId": "dda13267-ca61-4073-8a48-fd2f496c5c0f",
+      "credentials": {
+        "telegramApi": {
+          "id": "mlZdNwRkWhIVuDdr",
+          "name": "Telegram inbox_important"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "resolver-failure-check",
+              "leftValue": "={{ $json.workflow_name }}",
+              "rightValue": "8-hour Task Resolver",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        976
+      ],
+      "id": "300a706d-0ff2-4945-ae32-b1b0efcbd59e",
+      "name": "Is Resolver Failure?"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "=🚨🚨🚨 CODE RED 🚨🚨🚨\n\n⚠️ ERROR HANDLER DOWN ⚠️\n\nThe 8-hour Task Resolver has FAILED!\nThis means automatic error recovery is broken.\n\nFailed Node: {{ $json.failed_node }}\nError: {{ $json.error_message }}\nExecution: {{ $json.execution_id }}\n\n🔥 IMMEDIATE ATTENTION REQUIRED 🔥",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        784
+      ],
+      "id": "ac4c8411-3c5f-4d31-bd8e-6d108fe297f3",
+      "name": "CODE RED Alert",
+      "webhookId": "85b3bace-ff10-43ee-a533-9cf5b2323157",
       "credentials": {
         "telegramApi": {
           "id": "mlZdNwRkWhIVuDdr",
@@ -366,7 +423,7 @@
       "main": [
         [
           {
-            "node": "Append to FailedItems",
+            "node": "Is Resolver Failure?",
             "type": "main",
             "index": 0
           }
@@ -428,9 +485,59 @@
           }
         ]
       ]
+    },
+    "Is Resolver Failure?": {
+      "main": [
+        [
+          {
+            "node": "CODE RED Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append to FailedItems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "pinData": {},
+  "pinData": {
+    "Error Trigger": [
+      {
+        "execution": {
+          "id": "36155",
+          "url": "https://primary-production-2e961.up.railway.app/workflow/WUOHyjdXfHdaL_oxpgtsY/executions/36155",
+          "error": {
+            "level": "warning",
+            "shouldReport": false,
+            "description": "Your Code node task was not matched to a runner within the timeout period. This indicates that the task runner is currently down, or not ready, or at capacity, so it cannot service your task.<br/><br/>If you are repeatedly executing Code nodes with long-running tasks across your instance, please space them apart to give the runner time to catch up. If this does not describe your use case, please open a GitHub issue or reach out to support.<br/><br/>If needed, you can increase the timeout using the N8N_RUNNERS_TASK_REQUEST_TIMEOUT environment variable.",
+            "tags": {},
+            "message": "Task request timed out after 60 seconds",
+            "stack": "Error: Task request timed out after 60 seconds\n    at LocalTaskRequester.requestExpired (/usr/local/lib/node_modules/n8n/src/task-runners/task-managers/task-requester.ts:304:17)\n    at LocalTaskRequester.onMessage (/usr/local/lib/node_modules/n8n/src/task-runners/task-managers/task-requester.ts:272:10)\n    at TaskBroker.handleRequestTimeout (/usr/local/lib/node_modules/n8n/src/task-runners/task-broker/task-broker.service.ts:115:50)\n    at Timeout.<anonymous> (/usr/local/lib/node_modules/n8n/src/task-runners/task-broker/task-broker.service.ts:102:9)\n    at listOnTimeout (node:internal/timers:588:17)\n    at processTimers (node:internal/timers:523:7)"
+          },
+          "lastNodeExecuted": "Calculate Retry Delay",
+          "mode": "trigger",
+          "executionContext": {
+            "version": 1,
+            "establishedAt": 1769086831075,
+            "source": "trigger",
+            "triggerNode": {
+              "name": "Every 8 Hours",
+              "type": "n8n-nodes-base.scheduleTrigger"
+            }
+          }
+        },
+        "workflow": {
+          "id": "WUOHyjdXfHdaL_oxpgtsY",
+          "name": "8-hour Task Resolver"
+        }
+      }
+    ]
+  },
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
