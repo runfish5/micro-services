@@ -30,14 +30,14 @@ Create a Google Sheet named **"2505_Invoices"** with these exact column headers:
 **Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet. The tabs will automatically create separate columns.
 
 ```
-invoice_number	supplier_name	invoice_date	total_amount_due	currency_code	subtotal_amount	payment_method	supplier_address	recipient_business_name	payment_reference	date_paid	due_date	invoice_status	purchase_order_number	tax_amount	payment_terms	date_received	supplier_vat_number	supplier_tax_id	discount_amount	approver_id	approver_name	department_id	cost_center_code	supplier_contact_details	supplier_bank_account_details	internal_reference_number	recipient_business_address
+accounting_category	invoice_number	supplier_name	invoice_date	total_amount_due	currency_code	subtotal_amount	payment_method	supplier_address	recipient_business_name	payment_reference	date_paid	due_date	invoice_status	purchase_order_number	tax_amount	payment_terms	date_received	supplier_vat_number	supplier_tax_id	discount_amount	approver_id	approver_name	department_id	cost_center_code	supplier_contact_details	supplier_bank_account_details	internal_reference_number	recipient_business_address
 ```
 
 **Example of the sheet structure:**
 
 ![2505_Invoices Sheet Structure](../assets/invoices-table-schema-columns-path-folder-id.png)
 
-*The sheet stores comprehensive invoice data with 28 columns for full accounting tracking.*
+*The sheet stores comprehensive invoice data with 29 columns for full accounting tracking.*
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/2505_Invoices`)
 

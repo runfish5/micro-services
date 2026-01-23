@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === USER CONFIGURATION ===\n// Edit these values to customize the report\nreturn [{\n  json: {\n    // Rolling period lookback (months)\n    MONTHS_BACK: 6,\n    \n    // Number of vendors shown in chart\n    TOP_N_VENDORS: 6,\n    \n    // Display currency symbol\n    CURRENCY_SYMBOL: '\u20ac',\n    \n    // ISO currency code for filtering (if multi-currency)\n    CURRENCY_CODE: 'EUR',\n    \n    // Alert if MoM change exceeds this percentage\n    VARIANCE_ALERT_PCT: 20,\n    \n    // Threshold for large expense alerts (future use)\n    LARGE_EXPENSE_THRESHOLD: 500,\n    \n    // Telegram chat ID for notifications\n    CHAT_ID: '7582730035',\n    \n    // Google Sheets document ID (2505_Invoices)\n    SHEET_ID: '1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94',\n    \n    // Sheet name within the document\n    SHEET_NAME: 'Sheet1'\n  }\n}];"
+        "jsCode": "// === USER CONFIGURATION ===\n// Edit these values to customize the report\nreturn [{\n  json: {\n    // Rolling period lookback (months)\n    MONTHS_BACK: 6,\n    \n    // Number of vendors shown in chart\n    TOP_N_VENDORS: 6,\n    \n    // Target currency for report (all amounts converted to this)\n    CURRENCY_SYMBOL: '$',\n    CURRENCY_CODE: 'USD',\n    \n    // Alert if MoM change exceeds this percentage\n    VARIANCE_ALERT_PCT: 20,\n    \n    // Threshold for large expense alerts (future use)\n    LARGE_EXPENSE_THRESHOLD: 500,\n    \n    // Telegram chat ID for notifications\n    CHAT_ID: '7582730035',\n    \n    // Google Sheets document ID (2505_Invoices)\n    SHEET_ID: '1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94',\n    \n    // Sheet name within the document\n    SHEET_NAME: 'Sheet1'\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -35,14 +35,29 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "https://api.frankfurter.app/latest?base=USD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        300
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000010",
+      "name": "Fetch Exchange Rates"
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "={{ $json.SHEET_ID }}",
+          "value": "={{ $('Config').first().json.SHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": "={{ $json.SHEET_NAME }}",
+          "value": "={{ $('Config').first().json.SHEET_NAME }}",
           "mode": "name"
         },
         "options": {}
@@ -50,7 +65,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        40,
+        260,
         300
       ],
       "id": "a1b2c3d4-0001-0001-0001-000000000003",
@@ -64,12 +79,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Load config from first node\nconst config = $('Config').first().json;\nconst { MONTHS_BACK, TOP_N_VENDORS, CURRENCY_SYMBOL, VARIANCE_ALERT_PCT } = config;\n\nconst invoices = $input.all();\nconst now = new Date();\n\n// Build rolling period labels\nconst months = [];\nfor (let i = MONTHS_BACK - 1; i >= 0; i--) {\n  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);\n  months.push({\n    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,\n    label: d.toLocaleDateString('en', { month: 'short', year: '2-digit' })\n  });\n}\n\n// Also get same month last year for YoY comparison\nconst sameMonthLastYear = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}`;\n\n// Group by month and vendor\nconst data = {}; // { \"2025-01\": { \"Vendor A\": 100 }, ... }\nconst vendorTotals = {};\n\nfor (const item of invoices) {\n  const row = item.json;\n  const date = new Date(row.invoice_date);\n  if (isNaN(date.getTime())) continue; // Skip invalid dates\n  \n  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;\n  const amount = parseFloat(row.total_amount_due) || 0;\n  const vendor = (row.supplier_name || 'Unknown').slice(0, 15);\n\n  if (!data[monthKey]) data[monthKey] = {};\n  if (!data[monthKey][vendor]) data[monthKey][vendor] = 0;\n  data[monthKey][vendor] += amount;\n\n  // Only count vendors in rolling period for top-N\n  if (months.some(m => m.key === monthKey)) {\n    if (!vendorTotals[vendor]) vendorTotals[vendor] = 0;\n    vendorTotals[vendor] += amount;\n  }\n}\n\n// Get top N vendors by total spend\nconst topVendors = Object.entries(vendorTotals)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, TOP_N_VENDORS)\n  .map(([name]) => name);\n\n// Chart.js color palette\nconst colors = [\n  'rgba(54, 162, 235, 0.8)',  // blue\n  'rgba(255, 99, 132, 0.8)',  // red\n  'rgba(255, 206, 86, 0.8)',  // yellow\n  'rgba(75, 192, 192, 0.8)',  // teal\n  'rgba(153, 102, 255, 0.8)', // purple\n  'rgba(255, 159, 64, 0.8)',  // orange\n  'rgba(199, 199, 199, 0.8)', // gray\n  'rgba(83, 102, 255, 0.8)'   // indigo\n];\n\nconst datasets = topVendors.map((vendor, i) => ({\n  label: vendor,\n  data: months.map(m => Math.round(data[m.key]?.[vendor] || 0)),\n  backgroundColor: colors[i % colors.length]\n}));\n\n// === VARIANCE ANALYSIS ===\nconst monthTotals = months.map(m =>\n  Object.values(data[m.key] || {}).reduce((sum, v) => sum + v, 0)\n);\nconst currentMonth = monthTotals[MONTHS_BACK - 1];\nconst prevMonth = monthTotals[MONTHS_BACK - 2] || 0;\nconst invoiceCount = invoices.filter(i => {\n  const d = new Date(i.json.invoice_date);\n  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();\n}).length;\n\n// MoM variance\nconst momChange = prevMonth > 0 ? ((currentMonth - prevMonth) / prevMonth * 100) : 0;\nconst momTrend = momChange > 0 ? `\\u2191${momChange.toFixed(0)}%` : momChange < 0 ? `\\u2193${Math.abs(momChange).toFixed(0)}%` : '\\u2192 0%';\n\n// YoY variance (if data exists)\nconst yoyTotal = Object.values(data[sameMonthLastYear] || {}).reduce((sum, v) => sum + v, 0);\nconst yoyChange = yoyTotal > 0 ? ((currentMonth - yoyTotal) / yoyTotal * 100) : null;\nconst yoyTrend = yoyChange !== null ? (yoyChange > 0 ? `\\u2191${yoyChange.toFixed(0)}%` : `\\u2193${Math.abs(yoyChange).toFixed(0)}%`) : 'N/A';\n\n// Build insights caption\nconst lines = [\n  `${months[MONTHS_BACK - 1].label}: ${CURRENCY_SYMBOL}${currentMonth.toFixed(0)}`,\n  `MoM: ${momTrend} vs ${months[MONTHS_BACK - 2]?.label || 'N/A'}`,\n  `YoY: ${yoyTrend}`,\n  `${invoiceCount} invoices`\n];\n\n// Alert flag if variance exceeds threshold\nconst alert = Math.abs(momChange) > VARIANCE_ALERT_PCT ? ' \\u26A0\\uFE0F' : '';\n\n// Build QuickChart config\nconst chartConfig = {\n  type: 'bar',\n  data: { labels: months.map(m => m.label), datasets },\n  options: {\n    plugins: {\n      title: { display: true, text: `Expense Trend (${MONTHS_BACK}mo Rolling)` },\n      legend: { position: 'bottom' }\n    },\n    scales: {\n      x: { stacked: true },\n      y: { stacked: true, ticks: { callback: (v) => CURRENCY_SYMBOL + v } }\n    }\n  }\n};\n\nreturn [{\n  json: {\n    chartConfig,\n    insights: lines.join(' | ') + alert,\n    monthTotals,\n    momChange,\n    yoyChange,\n    currentMonth,\n    prevMonth,\n    invoiceCount\n  }\n}];"
+        "jsCode": "// Load config and exchange rates\nconst config = $('Config').first().json;\nconst { MONTHS_BACK, TOP_N_VENDORS, CURRENCY_SYMBOL, CURRENCY_CODE, VARIANCE_ALERT_PCT } = config;\n\n// Get exchange rates (base=USD, so rates show how much of each currency = 1 USD)\nconst ratesData = $('Fetch Exchange Rates').first().json;\nconst rates = ratesData.rates || {};\n// Add USD itself for completeness\nrates['USD'] = 1;\n\n// Convert amount to target currency (USD)\nfunction convertToUSD(amount, fromCurrency) {\n  if (!fromCurrency || fromCurrency === 'USD') return amount;\n  const rate = rates[fromCurrency.toUpperCase()];\n  if (!rate) return amount; // Unknown currency, return as-is\n  return amount / rate; // e.g., 100 CHF / 0.89 = ~112 USD\n}\n\nconst invoices = $input.all();\nconst now = new Date();\n\n// === DATE PARSING WITH EUROPEAN FORMAT SUPPORT ===\nfunction parseDate(dateStr) {\n  if (!dateStr) return null;\n  \n  // European format: DD.MM.YYYY or D.M.YYYY\n  const euMatch = String(dateStr).match(/^(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})$/);\n  if (euMatch) {\n    return new Date(parseInt(euMatch[3]), parseInt(euMatch[2]) - 1, parseInt(euMatch[1]));\n  }\n  \n  // ISO or other formats\n  const d = new Date(dateStr);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// Build rolling period labels\nconst allMonths = [];\nfor (let i = MONTHS_BACK - 1; i >= 0; i--) {\n  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);\n  allMonths.push({\n    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,\n    label: d.toLocaleDateString('en', { month: 'short', year: '2-digit' })\n  });\n}\n\n// Also get same month last year for YoY comparison\nconst sameMonthLastYear = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}`;\n\n// Group by month and vendor\nconst data = {}; // { \"2025-01\": { \"Vendor A\": 100 }, ... }\nconst vendorTotals = {};\n\nfor (const item of invoices) {\n  const row = item.json;\n\n  // Filter: only process expenses (backwards-compatible with legacy data)\n  const category = (row.accounting_category || '').toLowerCase();\n  if (category && category !== 'expense') continue;\n\n  const date = parseDate(row.invoice_date);\n  if (!date) continue; // Skip invalid dates\n  \n  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;\n  \n  // Get amount and convert to USD\n  const rawAmount = parseFloat(row.total_amount_due) || 0;\n  const currency = (row.currency || 'EUR').toUpperCase(); // Default to EUR if no currency column\n  const amount = convertToUSD(rawAmount, currency);\n  \n  const vendor = (row.supplier_name || 'Unknown').slice(0, 15);\n\n  if (!data[monthKey]) data[monthKey] = {};\n  if (!data[monthKey][vendor]) data[monthKey][vendor] = 0;\n  data[monthKey][vendor] += amount;\n\n  // Only count vendors in rolling period for top-N\n  if (allMonths.some(m => m.key === monthKey)) {\n    if (!vendorTotals[vendor]) vendorTotals[vendor] = 0;\n    vendorTotals[vendor] += amount;\n  }\n}\n\n// === TRIM EMPTY LEADING MONTHS FROM CHART ===\nconst firstDataIndex = allMonths.findIndex(m => \n  data[m.key] && Object.values(data[m.key]).reduce((s, v) => s + v, 0) > 0\n);\nconst displayMonths = firstDataIndex >= 0 \n  ? allMonths.slice(firstDataIndex) \n  : allMonths.slice(-1); // Show at least current month if no data\n\n// Get top N vendors by total spend\nconst topVendors = Object.entries(vendorTotals)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, TOP_N_VENDORS)\n  .map(([name]) => name);\n\n// Chart.js color palette\nconst colors = [\n  'rgba(54, 162, 235, 0.8)',  // blue\n  'rgba(255, 99, 132, 0.8)',  // red\n  'rgba(255, 206, 86, 0.8)',  // yellow\n  'rgba(75, 192, 192, 0.8)',  // teal\n  'rgba(153, 102, 255, 0.8)', // purple\n  'rgba(255, 159, 64, 0.8)',  // orange\n  'rgba(199, 199, 199, 0.8)', // gray\n  'rgba(83, 102, 255, 0.8)'   // indigo\n];\n\nconst datasets = topVendors.map((vendor, i) => ({\n  label: vendor,\n  data: displayMonths.map(m => Math.round(data[m.key]?.[vendor] || 0)),\n  backgroundColor: colors[i % colors.length]\n}));\n\n// === VARIANCE ANALYSIS ===\nconst monthTotals = allMonths.map(m =>\n  Object.values(data[m.key] || {}).reduce((sum, v) => sum + v, 0)\n);\nconst currentMonth = monthTotals[MONTHS_BACK - 1];\nconst prevMonth = monthTotals[MONTHS_BACK - 2] || 0;\nconst invoiceCount = invoices.filter(i => {\n  const d = parseDate(i.json.invoice_date);\n  return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();\n}).length;\n\n// MoM variance\nconst momChange = prevMonth > 0 ? ((currentMonth - prevMonth) / prevMonth * 100) : 0;\n\n// YoY variance (if data exists)\nconst yoyTotal = Object.values(data[sameMonthLastYear] || {}).reduce((sum, v) => sum + v, 0);\nconst yoyChange = yoyTotal > 0 ? ((currentMonth - yoyTotal) / yoyTotal * 100) : null;\n\n// === ENHANCED SUMMARY WITH PER-MONTH VENDOR BREAKDOWN ===\nconst summaryLines = displayMonths.map(m => {\n  const monthData = data[m.key] || {};\n  const total = Object.values(monthData).reduce((s, v) => s + v, 0);\n  \n  if (total === 0) {\n    return `\\uD83D\\uDCCA ${m.label}: ${CURRENCY_SYMBOL}0 - No expenses`;\n  }\n  \n  // Top 3 vendors for this month\n  const topVendorsMonth = Object.entries(monthData)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 3)\n    .map(([name, amt]) => `${name} ${CURRENCY_SYMBOL}${Math.round(amt)}`)\n    .join(', ');\n  \n  return `\\uD83D\\uDCCA ${m.label}: ${CURRENCY_SYMBOL}${Math.round(total)} (${topVendorsMonth})`;\n});\n\nif (summaryLines.length === 0) {\n  summaryLines.push('\\uD83D\\uDCCA No expense data in the last ' + MONTHS_BACK + ' months');\n}\n\n// Add exchange rate info at the bottom\nconst rateInfo = `\\n\\uD83D\\uDCB1 Rates: 1 USD = ${rates.CHF?.toFixed(2) || '?'} CHF, ${rates.EUR?.toFixed(2) || '?'} EUR`;\n\n// Alert flag if variance exceeds threshold\nconst alert = Math.abs(momChange) > VARIANCE_ALERT_PCT ? ' \\u26A0\\uFE0F' : '';\n\n// Build QuickChart config\nconst chartConfig = {\n  type: 'bar',\n  data: { labels: displayMonths.map(m => m.label), datasets },\n  options: {\n    plugins: {\n      title: { display: true, text: `Expense Trend (${displayMonths.length}mo) - All amounts in USD` },\n      legend: { position: 'bottom' }\n    },\n    scales: {\n      x: { stacked: true },\n      y: { stacked: true, ticks: { callback: (v) => CURRENCY_SYMBOL + v } }\n    }\n  }\n};\n\nreturn [{\n  json: {\n    chartConfig,\n    insights: summaryLines.join('\\n') + rateInfo + alert,\n    monthTotals,\n    momChange,\n    yoyChange,\n    currentMonth,\n    prevMonth,\n    invoiceCount,\n    exchangeRates: rates\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        260,
+        480,
         300
       ],
       "id": "a1b2c3d4-0001-0001-0001-000000000004",
@@ -81,7 +96,7 @@
         "url": "https://quickchart.io/chart",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chart: $json.chartConfig, width: 700, height: 450, format: 'png' }) }}",
+        "jsonBody": "={{ JSON.stringify({ chart: $json.chartConfig, width: 700, height: 450, format: 'png', version: '3' }) }}",
         "options": {
           "response": {
             "response": {
@@ -93,7 +108,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        480,
+        700,
         300
       ],
       "id": "a1b2c3d4-0001-0001-0001-000000000005",
@@ -111,7 +126,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        700,
+        920,
         300
       ],
       "id": "a1b2c3d4-0001-0001-0001-000000000006",
@@ -136,8 +151,8 @@
     },
     {
       "parameters": {
-        "content": "## Expense Trend Report\n\nMonthly expense analytics with:\n- Rolling period analysis (configurable)\n- MoM and YoY variance tracking\n- Top vendor concentration\n- Stacked bar chart visualization\n\n**Edit Config node** to customize:\n- MONTHS_BACK: Rolling period\n- TOP_N_VENDORS: Chart categories\n- VARIANCE_ALERT_PCT: Alert threshold",
-        "height": 260,
+        "content": "## Expense Trend Report\n\nMonthly expense analytics with:\n- Rolling period analysis (configurable)\n- MoM and YoY variance tracking\n- Top vendor concentration\n- Stacked bar chart visualization\n- **Multi-currency support** (auto-converts to USD)\n\n**Edit Config node** to customize:\n- MONTHS_BACK: Rolling period\n- TOP_N_VENDORS: Chart categories\n- VARIANCE_ALERT_PCT: Alert threshold",
+        "height": 280,
         "width": 280
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -151,7 +166,22 @@
     },
     {
       "parameters": {
-        "content": "### Data Source\n\nReads from `2505_Invoices` sheet.\n\n**Required columns:**\n- supplier_name\n- invoice_date\n- total_amount_due",
+        "content": "### Data Source\n\nReads from `2505_Invoices` sheet.\n\n**Required columns:**\n- supplier_name\n- invoice_date\n- total_amount_due\n\n**Optional:**\n- currency (CHF, EUR, USD)\n  Defaults to EUR if missing",
+        "height": 180,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        160
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000009",
+      "name": "Sticky Note - Data Source"
+    },
+    {
+      "parameters": {
+        "content": "### Exchange Rates\n\nFetches live rates from\nfrankfurter.app (free, no key)\n\nBase: USD\nConverts CHF, EUR → USD",
         "height": 140,
         "width": 200
       },
@@ -159,10 +189,10 @@
       "typeVersion": 1,
       "position": [
         20,
-        180
+        160
       ],
-      "id": "a1b2c3d4-0001-0001-0001-000000000009",
-      "name": "Sticky Note - Data Source"
+      "id": "a1b2c3d4-0001-0001-0001-000000000011",
+      "name": "Sticky Note - Rates"
     }
   ],
   "connections": {
@@ -178,6 +208,17 @@
       ]
     },
     "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Exchange Rates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Exchange Rates": {
       "main": [
         [
           {
