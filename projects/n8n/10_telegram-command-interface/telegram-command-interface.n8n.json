@@ -1,0 +1,923 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Telegram Command Interface\n\n**Purpose:** Command-line style interface via Telegram for monitoring the home lab automation system.\n\n**Commands:**\n- `/help` - List available commands\n- `/status` - Show recent execution status\n- `/failures` - List failures from FailedItems sheet\n- `/retry <execution_id>` - Retry a failed execution\n- `/search <query>` - Search invoices by supplier\n\n**Security:** Chat ID whitelist check before processing commands.\n\n**Message Handling:** Long responses (>4000 chars) are automatically split into multiple Telegram messages with part numbers.",
+        "height": 360,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        -200
+      ],
+      "id": "overview-sticky-note",
+      "name": "Overview"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        200
+      ],
+      "id": "telegram-trigger-node",
+      "name": "Telegram Trigger",
+      "webhookId": "tg-cmd-interface-webhook",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "whitelist-check-condition",
+              "leftValue": "={{ ['7582730035', '7281469586'].includes(String($json.message.chat.id)) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        120,
+        200
+      ],
+      "id": "whitelist-check-node",
+      "name": "Whitelist Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Command\n// Extracts command name and arguments from Telegram message\n\nconst text = ($json.message.text || '').trim();\nconst chatId = String($json.message.chat.id);\n\n// Match /command or /command args\nconst match = text.match(/^\\/([\\w]+)(?:\\s+(.*))?$/);\n\nif (match) {\n  return [{\n    json: {\n      chatId: chatId,\n      command: match[1].toLowerCase(),\n      args: (match[2] || '').trim(),\n      rawText: text\n    }\n  }];\n}\n\n// Not a command - return fallback\nreturn [{\n  json: {\n    chatId: chatId,\n    command: '_not_a_command',\n    args: '',\n    rawText: text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        200
+      ],
+      "id": "parse-command-node",
+      "name": "Parse Command"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "failures",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "failures"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "retry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "retry"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        560,
+        200
+      ],
+      "id": "command-router-node",
+      "name": "Command Router"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Help Message\nconst chatId = $json.chatId;\n\nconst helpText = `*Available Commands*\n\n/help - Show this help message\n/status - Show recent workflow executions\n/failures - List pending failures from FailedItems\n/retry <id> - Retry a failed execution by ID\n/search <query> - Search invoices by supplier name\n\n_Examples:_\n\\`/status\\`\n\\`/retry 36001\\`\n\\`/search Acme\\``;\n\nreturn [{\n  json: {\n    chatId: chatId,\n    response: helpText\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -80
+      ],
+      "id": "help-handler-node",
+      "name": "Format Help"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://primary-production-2e961.up.railway.app/api/v1/executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        80
+      ],
+      "id": "status-api-node",
+      "name": "Get Executions",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vjEcFZksIjUCKNRz",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Status Response\nconst chatId = $('Parse Command').item.json.chatId;\nconst apiResponse = $json;\n\n// Handle API errors\nif (apiResponse.message && apiResponse.code) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: `Error fetching executions: ${apiResponse.message}`\n    }\n  }];\n}\n\nconst executions = apiResponse.data || [];\n\nif (executions.length === 0) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: 'No recent executions found.'\n    }\n  }];\n}\n\n// Status emoji mapping\nconst statusEmoji = {\n  success: '\\u2705',   // Green check\n  error: '\\u274C',     // Red X\n  running: '\\u23F3',   // Hourglass\n  waiting: '\\u23F8',   // Pause\n  canceled: '\\u26D4'   // No entry\n};\n\nlet lines = ['*Recent Executions*', ''];\n\nfor (const exec of executions.slice(0, 10)) {\n  const emoji = statusEmoji[exec.status] || '\\u2753';\n  const workflow = exec.workflowData?.name || exec.workflowId || 'Unknown';\n  const id = exec.id;\n  const status = exec.status;\n  const startedAt = exec.startedAt ? new Date(exec.startedAt).toLocaleString() : 'N/A';\n  \n  lines.push(`${emoji} \\`${id}\\` ${workflow}`);\n  lines.push(`   ${status} | ${startedAt}`);\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    response: lines.join('\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        80
+      ],
+      "id": "format-status-node",
+      "name": "Format Status"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "mode": "list",
+          "cachedResultName": "007_Error-handler.n8n-sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FailedItems",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        800,
+        240
+      ],
+      "id": "read-failures-node",
+      "name": "Read FailedItems",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Failures Response\nconst chatId = $('Parse Command').item.json.chatId;\nconst items = $input.all();\n\nif (!items || items.length === 0) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: 'No failures in FailedItems sheet.'\n    }\n  }];\n}\n\n// Filter for pending_retry and escalated only\nconst failures = items\n  .map(i => i.json)\n  .filter(f => f.status === 'pending_retry' || f.status === 'escalated')\n  .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))\n  .slice(0, 10);\n\nif (failures.length === 0) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: 'No pending failures.'\n    }\n  }];\n}\n\n// Severity emoji mapping\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34',\n  high: '\\uD83D\\uDFE0',\n  medium: '\\uD83D\\uDFE1',\n  low: '\\uD83D\\uDFE2'\n};\n\nlet lines = ['*Pending Failures*', ''];\n\nfor (const f of failures) {\n  const emoji = severityEmoji[f.severity] || '\\u26AA';\n  const escalatedMarker = f.status === 'escalated' ? ' \\u26A0\\uFE0F ESCALATED' : '';\n  \n  lines.push(`${emoji} \\`${f.execution_id}\\`${escalatedMarker}`);\n  lines.push(`   ${f.workflow_name || 'Unknown workflow'}`);\n  lines.push(`   ${f.error_type}: ${(f.error_message || '').substring(0, 60)}...`);\n  lines.push(`   Retries: ${f.retry_count || 0} | ${f.timestamp || 'N/A'}`);\n  lines.push('');\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    response: lines.join('\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        240
+      ],
+      "id": "format-failures-node",
+      "name": "Format Failures"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-exec-id-condition",
+              "leftValue": "={{ $json.args }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        400
+      ],
+      "id": "retry-has-id-check",
+      "name": "Has Execution ID?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Missing execution ID error\nreturn [{\n  json: {\n    chatId: $json.chatId,\n    response: 'Usage: /retry <execution_id>\\n\\nExample: /retry 36001'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        480
+      ],
+      "id": "retry-missing-id-node",
+      "name": "Retry Missing ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.args }}/retry",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        360
+      ],
+      "id": "execute-retry-node",
+      "name": "Execute Retry",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vjEcFZksIjUCKNRz",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Retry Response\nconst chatId = $('Parse Command').item.json.chatId;\nconst originalId = $('Parse Command').item.json.args;\nconst apiResponse = $json;\n\n// Check if retry started successfully\nif (apiResponse.id) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: `\\u2705 Retry started!\\n\\nOriginal: \\`${originalId}\\`\\nNew execution: \\`${apiResponse.id}\\`\\nStatus: ${apiResponse.status}\\n\\n_Use /status to check progress_`\n    }\n  }];\n}\n\n// Error case\nconst errorMsg = apiResponse.message || 'Unknown error';\nreturn [{\n  json: {\n    chatId: chatId,\n    response: `\\u274C Retry failed for \\`${originalId}\\`\\n\\nError: ${errorMsg}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        360
+      ],
+      "id": "format-retry-node",
+      "name": "Format Retry"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-search-query-condition",
+              "leftValue": "={{ $json.args }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        560
+      ],
+      "id": "search-has-query-check",
+      "name": "Has Search Query?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Missing search query error\nreturn [{\n  json: {\n    chatId: $json.chatId,\n    response: 'Usage: /search <supplier_name>\\n\\nExample: /search Acme'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        640
+      ],
+      "id": "search-missing-query-node",
+      "name": "Search Missing Query"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
+          "mode": "list",
+          "cachedResultName": "2505_Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1020,
+        520
+      ],
+      "id": "read-invoices-node",
+      "name": "Read Invoices",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "O03W9YZyCWUacxnv",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Search Response\nconst chatId = $('Parse Command').item.json.chatId;\nconst query = $('Parse Command').item.json.args.toLowerCase();\nconst items = $input.all();\n\nif (!items || items.length === 0) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: 'No invoices found in database.'\n    }\n  }];\n}\n\n// Filter by supplier_name (case-insensitive partial match)\nconst matches = items\n  .map(i => i.json)\n  .filter(inv => {\n    const supplier = (inv.supplier_name || '').toLowerCase();\n    return supplier.includes(query);\n  })\n  .slice(0, 10);\n\nif (matches.length === 0) {\n  return [{\n    json: {\n      chatId: chatId,\n      response: `No invoices found for \"${query}\".`\n    }\n  }];\n}\n\nlet lines = [`*Search Results for \"${query}\"*`, ''];\n\nfor (const inv of matches) {\n  lines.push(`\\uD83D\\uDCDD ${inv.supplier_name || 'Unknown'}`);\n  lines.push(`   Date: ${inv.invoice_date || 'N/A'}`);\n  lines.push(`   Amount: ${inv.total_amount_due || 'N/A'} ${inv.currency_code || ''}`);\n  if (inv.invoice_number) lines.push(`   Invoice #: ${inv.invoice_number}`);\n  lines.push('');\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    response: lines.join('\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        520
+      ],
+      "id": "format-search-node",
+      "name": "Format Search"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback for unknown commands\nconst chatId = $json.chatId;\nconst command = $json.command;\n\nlet response;\nif (command === '_not_a_command') {\n  response = 'I only respond to commands. Try /help to see available commands.';\n} else {\n  response = `Unknown command: /${command}\\n\\nTry /help to see available commands.`;\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    response: response\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        720
+      ],
+      "id": "fallback-handler-node",
+      "name": "Unknown Command"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        1460,
+        200
+      ],
+      "id": "merge-responses-node",
+      "name": "Merge Responses"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split Long Message into Chunks\n// Telegram max message length is ~4096 chars, using 4000 to be safe\n\nconst message = $json.response || 'No response';\nconst chatId = $json.chatId;\nconst maxLength = 4000;\nconst chunks = [];\n\nfor (let i = 0; i < message.length; i += maxLength) {\n  chunks.push(message.substring(i, i + maxLength));\n}\n\nreturn chunks.map((chunk, idx) => ({\n  json: {\n    chatId: chatId,\n    chunk: chunk,\n    part: idx + 1,\n    total: chunks.length\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        200
+      ],
+      "id": "split-long-message-node",
+      "name": "Split Long Message"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1900,
+        200
+      ],
+      "id": "loop-over-chunks-node",
+      "name": "Loop Over Chunks"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.total > 1 ? '[' + $json.part + '/' + $json.total + '] ' : '' }}{{ $json.chunk }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2120,
+        200
+      ],
+      "id": "send-telegram-response-node",
+      "name": "Send Response",
+      "webhookId": "tg-cmd-send-response",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Command Handlers\n\nEach command branch processes the request and returns:\n```\n{\n  chatId: \"...\",\n  response: \"formatted message\"\n}\n```\n\nAll branches merge before the response pipeline.",
+        "height": 200,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        780,
+        -200
+      ],
+      "id": "handlers-sticky-note",
+      "name": "Handlers Note"
+    },
+    {
+      "parameters": {
+        "content": "### Response Pipeline\n\n1. Merge all command outputs\n2. Split messages >4000 chars\n3. Loop and send each chunk\n4. Add part numbers for multi-part messages",
+        "height": 160,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1460,
+        -40
+      ],
+      "id": "pipeline-sticky-note",
+      "name": "Pipeline Note"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Whitelist Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whitelist Check": {
+      "main": [
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Parse Command": {
+      "main": [
+        [
+          {
+            "node": "Command Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Command Router": {
+      "main": [
+        [
+          {
+            "node": "Format Help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Executions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read FailedItems",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Execution ID?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Search Query?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Help": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Executions": {
+      "main": [
+        [
+          {
+            "node": "Format Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Status": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read FailedItems": {
+      "main": [
+        [
+          {
+            "node": "Format Failures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Failures": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Execution ID?": {
+      "main": [
+        [
+          {
+            "node": "Execute Retry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry Missing ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Missing ID": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Retry": {
+      "main": [
+        [
+          {
+            "node": "Format Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Retry": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Search Query?": {
+      "main": [
+        [
+          {
+            "node": "Read Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Missing Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Missing Query": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Invoices": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Command": {
+      "main": [
+        [
+          {
+            "node": "Merge Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Responses": {
+      "main": [
+        [
+          {
+            "node": "Split Long Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Long Message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Chunks": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Response": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
