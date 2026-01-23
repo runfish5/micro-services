@@ -19,8 +19,8 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -5072,
-        1264
+        -5040,
+        960
       ],
       "id": "ea5147ab-cef3-4997-8b89-f9de63b5aabd",
       "name": "Gmail Trigger",
@@ -44,8 +44,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -4848,
-        1632
+        -5040,
+        1344
       ],
       "id": "0b74cd47-24a4-4d98-b3c6-95308985eef1",
       "name": "Gmail",
@@ -74,7 +74,7 @@
               "type": "string"
             },
             {
-              "id": "company-name-config",
+              "id": "84f495c6-5380-4717-97d6-701ddc50694a",
               "name": "company_name",
               "value": "Runfish-data",
               "type": "string"
@@ -89,8 +89,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4848,
-        1440
+        -4816,
+        1136
       ]
     },
     {
@@ -104,8 +104,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -3120,
-        1824
+        -2944,
+        1328
       ],
       "id": "2fc49326-652b-4674-b3d8-800653d7e91a",
       "name": "Telegram & done",
@@ -148,8 +148,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -4848,
-        1264
+        -4816,
+        960
       ],
       "id": "05b945f4-50fd-4efd-9488-9c4fc31e7776",
       "name": "Stop promotions"
@@ -188,8 +188,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3552,
-        1424
+        -3728,
+        1280
       ],
       "id": "7164fdc1-9e5c-43e7-a8fa-ea356e0f66ed",
       "name": "financial doc router",
@@ -224,7 +224,7 @@
       "typeVersion": 2.2,
       "position": [
         -4576,
-        1360
+        1136
       ],
       "id": "c50b5726-d2be-4212-b73a-cb128abf1e87",
       "name": "Empty?"
@@ -241,8 +241,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        -4352,
-        1536
+        -4368,
+        1264
       ],
       "id": "5f29f1ac-6b56-4c64-b892-55784763a826",
       "name": "sp"
@@ -255,8 +255,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3552,
-        1616
+        -3504,
+        1280
       ],
       "id": "c8881149-bb5c-458e-8bb4-f24b398fcbce",
       "name": "user_email_whitelist"
@@ -278,8 +278,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -3904,
-        1360
+        -3872,
+        992
       ],
       "id": "f5436fb0-43ab-4eee-8702-4d28cace9c4c",
       "name": "subject-classifier-LM",
@@ -303,8 +303,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        -4624,
-        1824
+        -4736,
+        1488
       ],
       "id": "e05379c4-e445-4645-b517-9b6980d0e581",
       "name": "Accountant-concierge-LM",
@@ -331,17 +331,17 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "accounting_category": "={{ $json.output.accounting_category || \"-\" }}",
-            "supplier_name": "={{ $json.output.invoice_data.supplier_name }}",
-            "supplier_address": "={{ $json.output.invoice_data.supplier_address || \"-\"}}",
-            "invoice_date": "={{ $json.output.invoice_data.invoice_date }}",
-            "total_amount_due": "={{ $json.output.invoice_data.total_amount_due || \"-\" }}",
-            "currency_code": "={{ $json.output.invoice_data.currency_code || \"-\" }}",
-            "subtotal_amount": "={{ $json.output.invoice_data.total_amount_due || \"-\" }}",
-            "recipient_business_name": "={{ $json.output.invoice_data.recipient_business_name || \"-\" }}",
-            "payment_method": "={{ $json.output.invoice_data.payment_method || \"-\" }}",
-            "date_paid": "={{ $json.output.invoice_data.transaction_date || \"-\" }}",
-            "payment_reference": "={{ $json.output.invoice_data.payment_reference || \"-\" }}"
+            "supplier_name": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.supplier_name }}",
+            "supplier_address": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.supplier_address || \"-\"}}",
+            "invoice_date": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.invoice_date }}",
+            "total_amount_due": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.total_amount_due || \"-\" }}",
+            "currency_code": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.currency_code || \"-\" }}",
+            "subtotal_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.total_amount_due || \"-\" }}",
+            "recipient_business_name": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.recipient_business_name || \"-\" }}",
+            "payment_method": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.payment_method || \"-\" }}",
+            "date_paid": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.transaction_date || \"-\" }}",
+            "payment_reference": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.payment_reference || \"-\" }}",
+            "accounting_category": "={{ $('Accountant-concierge-LM').item.json.output.accounting_category || \"-\" }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -425,6 +425,16 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "accounting_category",
+              "displayName": "accounting_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "payment_reference",
@@ -633,8 +643,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -3952,
-        1824
+        -3232,
+        1616
       ],
       "id": "e13bc4b3-aeb3-4a08-9bf4-5a18e664504f",
       "name": "insert doc record",
@@ -652,8 +662,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -5072,
-        1440
+        -5040,
+        1136
       ],
       "id": "ead491ac-3396-4d17-89a9-442ff948ea7a",
       "name": "When Executed by Another Workflow"
@@ -676,8 +686,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -3632,
-        2000
+        -3680,
+        1488
       ],
       "id": "8020f2ce-db33-41c0-98dd-59c222071a7f",
       "name": "save doc to folder",
@@ -696,8 +706,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5680,
-        1152
+        -5648,
+        848
       ],
       "typeVersion": 1,
       "id": "dc5fbf41-617f-4bb8-8160-733c2bd01958",
@@ -705,48 +715,48 @@
     },
     {
       "parameters": {
-        "content": "\n\n\n\nModify your \nemail white-list.",
-        "height": 140,
-        "width": 376,
+        "content": "\n\n\n\n\n\nModify your \nemail white-list.\n\n",
+        "height": 124,
+        "width": 152,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3760,
-        1616
+        -3536,
+        1328
       ],
       "id": "599b5ae4-a9eb-4ecb-bd71-978e05a6f728",
       "name": "Sticky Note17"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.telegram)",
-        "height": 492,
-        "width": 232,
+        "content": "\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-bas)",
+        "height": 380,
+        "width": 248,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3184,
-        1488
+        -3056,
+        1104
       ],
       "id": "2994c448-5b8b-4bdf-835e-c0c75eed5049",
       "name": "Sticky Note18"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
-        "height": 364,
-        "width": 456,
+        "content": "\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
+        "height": 284,
+        "width": 760,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4320,
-        2000
+        -4304,
+        1488
       ],
       "id": "18e62520-e9be-40c2-af92-bd9ee4fd5c4a",
       "name": "Sticky Note19"
@@ -761,8 +771,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4048,
-        1776
+        -3328,
+        1552
       ],
       "id": "dc62ed16-0f9b-47b0-9b9c-b305c8cca6e2",
       "name": "Sticky Note20"
@@ -774,8 +784,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3856,
-        2176
+        -3648,
+        1792
       ],
       "id": "418244f4-9bae-45b9-9c95-4f1a51d1c1e5",
       "name": "Sticky Note5"
@@ -789,21 +799,21 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -4112,
-        1776
+        -3392,
+        1552
       ],
       "id": "e4fb79d3-3b34-46e7-aa69-92278bd36210",
       "name": "Sticky Note21"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst gmail = $('Gmail').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\nconst from = gmail.from.value[0];\nconst to = gmail.to.value[0];\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: isOutbound ? from.address : to.address,\n    contact_email: isOutbound ? to.address : from.address,\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
+        "jsCode": "// Clean Email object - Smart dual-extraction for n8n Code node\n// Handles both Google One (text=footer only) and Digitec (text=HTML) cases\n// Copy this code into the \"Clean Email object\" Code node in inbox-attachment-organizer workflow\n\nconst items = $input.all();\nconst gmail = $('Gmail').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\nconst from = gmail.from.value[0];\nconst to = gmail.to.value[0];\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: isOutbound ? from.address : to.address,\n    contact_email: isOutbound ? to.address : from.address,\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4352,
-        1360
+        -4368,
+        1088
       ],
       "id": "9e3a929c-8228-46fd-b551-a764a098d594",
       "name": "Clean Email object"
@@ -864,8 +874,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        -4128,
-        1536
+        -4144,
+        1264
       ],
       "id": "bf503e7b-f0c8-452e-81ff-6b687f32250e",
       "name": "Create Attachment Profile",
@@ -879,22 +889,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -3760,
-        1472
+        -3728,
+        1168
       ],
       "id": "e882c09a-c432-4f07-8115-2e407bb83355",
       "name": "output profile"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "name": "Trigger non-spam lineage",
-      "typeVersion": 1,
-      "position": [
-        -3344,
-        1200
-      ],
-      "id": "9545684a-72f8-4dc2-9f81-2bdaf774f0ab"
     },
     {
       "parameters": {
@@ -931,8 +930,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -3344,
-        1600
+        -3280,
+        1280
       ],
       "id": "70d4c8d7-9242-4c51-8090-3ec1774491c2",
       "name": "whitelist validator",
@@ -955,8 +954,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3408,
-        1824
+        -3008,
+        1616
       ],
       "id": "e5028514-c73e-4d28-929d-a74cb6e322d7",
       "name": "craft report note"
@@ -969,8 +968,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -4624,
-        2000
+        -4736,
+        1664
       ],
       "id": "bb5bf8d6-f781-412b-b515-fb01d7b30c10",
       "name": "any LM1",
@@ -989,8 +988,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        -4480,
-        2000
+        -4592,
+        1664
       ],
       "id": "6e605e66-1522-4b78-83f2-0304b5872aa4",
       "name": "Structured output"
@@ -1030,8 +1029,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4272,
-        2000
+        -4240,
+        1488
       ],
       "id": "44ff2ef8-536f-442d-8696-40f84828f6ae",
       "name": "input folder lookup"
@@ -1053,8 +1052,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3856,
-        2000
+        -3840,
+        1488
       ],
       "id": "f528ced0-7626-43b6-bf13-e81493cc0008",
       "name": "Get binary data2"
@@ -1062,14 +1061,14 @@
     {
       "parameters": {
         "content": "# attachment processer\nNodes 6-10",
-        "height": 608,
+        "height": 480,
         "width": 672,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -4640,
-        1152
+        -4608,
+        976
       ],
       "typeVersion": 1,
       "id": "b248a0d5-920d-4ffb-bd05-69c35cf36bf2",
@@ -1084,8 +1083,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5120,
-        1152
+        -5088,
+        848
       ],
       "typeVersion": 1,
       "id": "5ae0c5e4-b1ca-422e-a782-d7f912ad2092",
@@ -1095,13 +1094,13 @@
       "parameters": {
         "content": "# subject classifier\nNodes 11-18",
         "height": 608,
-        "width": 720,
+        "width": 416,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -3936,
-        1152
+        -3904,
+        848
       ],
       "typeVersion": 1,
       "id": "ff97a6c7-7421-4490-9707-dd1e9e94877c",
@@ -1110,59 +1109,18 @@
     {
       "parameters": {
         "content": "#  Invoices & Receipts\nNodes 19-30",
-        "height": 416,
-        "width": 1904,
+        "height": 304,
+        "width": 1920,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5120,
-        1792
+        -5088,
+        1488
       ],
       "typeVersion": 1,
       "id": "82b755d3-bd19-4ed4-89e7-823fdc1380b4",
       "name": "Sticky Note24"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{[\"appointment\"]}}",
-                    "rightValue": "={{ $json.output.type_of_document }}",
-                    "operator": {
-                      "type": "array",
-                      "operation": "contains",
-                      "rightType": "any"
-                    },
-                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.3,
-      "position": [
-        -3552,
-        1200
-      ],
-      "id": "d705905c-07c0-4d49-a893-3f99500ce74e",
-      "name": "appointment router",
-      "disabled": true
     },
     {
       "parameters": {
@@ -1177,8 +1135,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3344,
-        1360
+        -4768,
+        1344
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1196,8 +1154,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        -3904,
-        1488
+        -3872,
+        1168
       ],
       "id": "ee74d6d2-d451-428f-9a92-912c60176939",
       "name": "Any LM",
@@ -1221,8 +1179,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -3184,
-        2016
+        -3504,
+        1616
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1285,102 +1243,37 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -4128,
-        1360
+        -4144,
+        1088
       ],
       "id": "c91f07e2-8f2b-4f51-95a2-d0bd819d78bb",
       "name": "email-info-hub"
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{ $('email-info-hub').item.json.attachement_names }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "array",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -5072,
-        1888
-      ],
-      "id": "4bc843e4-8b07-4762-bae9-586fc3f74143",
-      "name": "Has Attachments?"
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combineBy": "combineByPosition",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        -3632,
-        1824
-      ],
-      "id": "4359aed6-d8f6-4558-98a2-74e6a681e648",
-      "name": "Await Storage Complete"
-    },
-    {
-      "parameters": {
-        "jsCode": "\nconst cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\nconst attachmentProfiles = $('Create Attachment Profile').all();\n\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n  const profile = attachmentProfiles[i]?.json?.data || {};\n  \n  // Skip style elements with high confidence (logos, icons, decorative images)\n  if (profile.content_class === 'style_element' && parseFloat(profile.class_confidence) >= 0.9) {\n    continue;\n  }\n  \n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments (all filtered as style elements)' } }];"
+        "jsCode": "const cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4864,
-        1872
+        -5056,
+        1584
       ],
       "id": "545e0711-796a-4ef2-b3ea-295a82d5da5c",
       "name": "Prepare Attachments"
     },
     {
       "parameters": {
-        "mode": "expression",
-        "numberOutputs": 1,
-        "output": "=0"
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.3,
-      "position": [
-        -3552,
-        960
-      ],
-      "id": "dff55a01-f6ee-4490-9ac0-3590f2769b8e",
-      "name": "ContactManager-lineage",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "content": "",
-        "height": 188,
+        "content": "### ContactManager-lineage",
+        "height": 204,
         "width": 680,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3168,
-        912
+        -3472,
+        864
       ],
       "id": "170f8e14-9572-4e85-9cd6-bcf90a1fb39c",
       "name": "Sticky Note25",
@@ -1408,8 +1301,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3104,
-        912
+        -3408,
+        896
       ],
       "id": "c5873ed9-7e9c-4299-8ff6-de7d35522a01",
       "name": "Call 'record-search'"
@@ -1436,8 +1329,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -2656,
-        912
+        -2960,
+        896
       ],
       "id": "d8452973-2b4c-4d42-939c-32d871f40f73",
       "name": "Call 'smart-table-fill'"
@@ -1507,8 +1400,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2880,
-        912
+        -3184,
+        896
       ],
       "id": "0738dc3c-d92c-4e3c-8b8f-0dbaf46c2cb5",
       "name": "Prepare Contact Input"
@@ -1516,7 +1409,7 @@
     {
       "parameters": {
         "chatId": "7582730035",
-        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }} \n📧 {{ $('subject-classifier-LM').item.json.output.type_of_document }} (no-log){{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? '\\n' + ($('subject-classifier-LM').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('subject-classifier-LM').item.json.output.message + ' ' + $('subject-classifier-LM').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('subject-classifier-LM').item.json.output.message : '' }}",
+        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }} \n📧 {{ $('subject-classifier-LM').item.json.output.type_of_document }} (no-log){{ $('subject-classifier-LM').item.json.output.type_of_document === 'operational' ? '\\n' + ($('subject-classifier-LM').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('subject-classifier-LM').item.json.output.message + ' ' + $('subject-classifier-LM').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('subject-classifier-LM').item.json.output.message : '' }} ",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -1524,8 +1417,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -3120,
-        1504
+        -2960,
+        1120
       ],
       "id": "22527da8-d851-4293-aac0-aacce3c5335a",
       "name": "notify the category",
@@ -1618,12 +1511,46 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -4048,
-        2000
+        -4032,
+        1488
       ],
       "id": "de62cc59-d230-49a8-967b-74edf75046b0",
       "name": "Call 'gdrive-recursion'",
       "notes": "Set this as debugging folder destination: `\"/Accounting/2025/11_November/Expense\"`"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6bde56d4-3365-48dc-985c-215425097c74",
+              "leftValue": "={{ $('email-info-hub').item.json.attachement_names }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4416,
+        1600
+      ],
+      "id": "9fc13fbd-5d26-4221-bda1-1ebb9cf4221e",
+      "name": "If"
     }
   ],
   "connections": {
@@ -1642,7 +1569,7 @@
       "main": [
         [
           {
-            "node": "Empty?",
+            "node": "Tag Mail with 'n8n'",
             "type": "main",
             "index": 0
           }
@@ -1658,6 +1585,11 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Telegram & done": {
+      "main": [
+        []
       ]
     },
     "Stop promotions": {
@@ -1726,22 +1658,17 @@
       "main": [
         [
           {
-            "node": "ContactManager-lineage",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "appointment router",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Tag Mail with 'n8n'",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "financial doc router",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "notify the category",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Call 'record-search'",
             "type": "main",
             "index": 0
           }
@@ -1752,12 +1679,7 @@
       "main": [
         [
           {
-            "node": "input folder lookup",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "insert doc record",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -1768,7 +1690,7 @@
       "main": [
         [
           {
-            "node": "Await Storage Complete",
+            "node": "craft report note",
             "type": "main",
             "index": 0
           }
@@ -1790,9 +1712,9 @@
       "main": [
         [
           {
-            "node": "Await Storage Complete",
+            "node": "Mark as Processed1",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -1834,7 +1756,7 @@
       "main": [
         [
           {
-            "node": "Has Attachments?",
+            "node": "Prepare Attachments",
             "type": "main",
             "index": 0
           }
@@ -1846,11 +1768,6 @@
         [
           {
             "node": "Telegram & done",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Mark as Processed1",
             "type": "main",
             "index": 0
           }
@@ -1901,22 +1818,11 @@
         ]
       ]
     },
-    "appointment router": {
-      "main": [
-        [
-          {
-            "node": "Trigger non-spam lineage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Tag Mail with 'n8n'": {
       "main": [
         [
           {
-            "node": "notify the category",
+            "node": "Empty?",
             "type": "main",
             "index": 0
           }
@@ -1934,33 +1840,22 @@
         ]
       ]
     },
+    "Mark as Processed1": {
+      "main": [
+        [
+          {
+            "node": "insert doc record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "email-info-hub": {
       "main": [
         [
           {
             "node": "subject-classifier-LM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Attachments?": {
-      "main": [
-        [
-          {
-            "node": "Prepare Attachments",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Await Storage Complete": {
-      "main": [
-        [
-          {
-            "node": "craft report note",
             "type": "main",
             "index": 0
           }
@@ -1978,17 +1873,6 @@
         ]
       ]
     },
-    "ContactManager-lineage": {
-      "main": [
-        [
-          {
-            "node": "Call 'record-search'",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Call 'record-search'": {
       "main": [
         [
@@ -1998,6 +1882,11 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Call 'smart-table-fill'": {
+      "main": [
+        []
       ]
     },
     "Prepare Contact Input": {
@@ -2011,11 +1900,34 @@
         ]
       ]
     },
+    "notify the category": {
+      "main": [
+        []
+      ]
+    },
     "Call 'gdrive-recursion'": {
       "main": [
         [
           {
             "node": "Get binary data2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "input folder lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark as Processed1",
             "type": "main",
             "index": 0
           }

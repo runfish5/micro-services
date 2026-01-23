@@ -1,6 +1,6 @@
 # Main Flow (38 Nodes)
 
-> Last verified: 2025-01-16
+> **Version 1.0.2** | Last verified: 2026-01-23
 
 ## Overview
 
