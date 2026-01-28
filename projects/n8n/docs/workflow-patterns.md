@@ -8,6 +8,7 @@ Apply when redesigning or debugging workflows. Stop reading if not relevant.
 |---------|----------|
 | [Row Index](#pattern-1-row-index) | Batch table ops, wrong row deleted, data lost after API |
 | [Wait Optimization](#pattern-2-wait-optimization) | `Code→If→Wait→end` bloat, rate limits |
+| [Schema Minimalism](#pattern-3-schema-minimalism) | LLM extraction schemas, Billing_Ledger design |
 
 ---
 
@@ -105,6 +106,24 @@ return results;
 
 ---
 
+## Pattern 3: Schema Minimalism
+
+**Problem:** LLM extraction schemas bloat with fields that exist elsewhere—CRM, public registries, derivable from other fields. More fields = more extraction errors + wasted tokens.
+
+**Solution:** Only extract transaction-specific data. Omit static entity details.
+
+### Billing_Ledger Example
+
+**Include:** invoice_number, amount, date_issued, counterparty_name, line_items
+**Omit:** company_address (lookup by name), VAT_number (public registry), payment_terms (CRM default)
+
+### When to Apply
+- Designing LLM structured output schemas
+- Counterparty/entity data already in CRM
+- Field is derivable from another extracted field
+
+---
+
 ## Quick Decision Guide
 
 | Symptom | Pattern | Fix |
@@ -113,3 +132,4 @@ return results;
 | Data lost after API call | Row Index | Spread `...$json` or add SaveForDelete node before |
 | `Code→If→Wait→end` bloat | Wait Optimization | Move delay into Code node |
 | Rate limit errors | Both | Code node with delay loop + preserve indices |
+| Schema too large, LLM errors | Schema Minimalism | Remove derivable/CRM fields |

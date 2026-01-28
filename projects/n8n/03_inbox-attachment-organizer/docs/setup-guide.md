@@ -53,7 +53,7 @@ invoice_date	currency_code	subtotal_amount	payment_method	date_paid	payment_refe
 | `purchase_order_number` | PO number if referenced |
 | `accounting_category` | "Revenue" or "Expense" (auto-classified) |
 
-*The sheet stores standardized invoice data with 13 columns following accounting best practices.*
+*The sheet stores standardized invoice data with 13 columns following accounting best practices. Fields like company address and VAT numbers are intentionally omitted—derivable from counterparty name or public registries.*
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/Billing_Ledger`)
 
