@@ -343,7 +343,8 @@
             "tax_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.tax_amount || \"-\" }}",
             "discount_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.discount_amount || \"-\" }}",
             "due_date_or_payment_terms": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.due_date_or_payment_terms || \"-\" }}",
-            "purchase_order_number": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.purchase_order_number || \"-\" }}"
+            "purchase_order_number": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.purchase_order_number || \"-\" }}",
+            "email_id": "={{ $('email-info-hub').item.json.contact_email }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -365,6 +366,16 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "counterparty_name",
@@ -576,7 +587,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"Billing_Ledger\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -1127,7 +1138,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments\nif (attachmentNames.length === 0) {\n  return [{ json: { message: 'No attachments' } }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
+        "jsCode": "const cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments - still include email context for LLM\nif (attachmentNames.length === 0) {\n  return [{\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: 'No attachments found',\n      attachmentName: '',\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    }\n  }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
