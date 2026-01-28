@@ -149,13 +149,12 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
   - Type detection: Invoice vs Receipt
   - Field extraction: dates, amounts, parties, line items
 
-**Billing_Ledger Schema** (13 fields, 4 required):
-| Required | Optional |
-|----------|----------|
-| `counterparty_name` | `invoice_number`, `subtotal_amount`, `tax_amount` |
-| `invoice_date` | `discount_amount`, `due_date_or_payment_terms` |
-| `total_amount_due` | `payment_method`, `payment_reference` |
-| `currency_code` | `date_paid`, `purchase_order_number` |
+**Billing_Ledger Schema** (15 fields, all required):
+
+| Source | Fields |
+|--------|--------|
+| **LLM** (Accountant-concierge-LM) | `counterparty_name`, `invoice_date`, `total_amount_due`, `currency_code`, `invoice_number`, `subtotal_amount`, `tax_amount`, `discount_amount`, `due_date_or_payment_terms`, `payment_method`, `payment_reference`, `date_paid`, `purchase_order_number`, `accounting_category` |
+| **Node** (email-info-hub) | `email_id`, `attachment_count` |
 
 > **counterparty_name** = the OTHER party on the invoice (supplier for Expense, customer for Revenue). Replaces legacy `supplier_name`/`recipient_business_name` fields.
 

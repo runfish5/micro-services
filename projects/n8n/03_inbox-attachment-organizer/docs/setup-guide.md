@@ -32,28 +32,32 @@ Create a Google Sheet named **"Billing_Ledger"** with these exact column headers
 **Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet. The tabs will automatically create separate columns.
 
 ```
-invoice_date	currency_code	subtotal_amount	payment_method	date_paid	payment_reference	accounting_category	counterparty_name	invoice_number	tax_amount	discount_amount	due_date_or_payment_terms	purchase_order_number
+invoice_date	currency_code	subtotal_amount	payment_method	date_paid	payment_reference	accounting_category	counterparty_name	invoice_number	tax_amount	discount_amount	due_date_or_payment_terms	purchase_order_number	email_id	attachment_count
 ```
 
-**Field definitions (13 columns):**
+**Field definitions (15 columns):**
 
-| Field | Description |
-|-------|-------------|
-| `counterparty_name` | **Required.** The other party: supplier (for Expense) or customer (for Revenue) |
-| `invoice_date` | **Required.** Document date (YYYY-MM-DD) |
-| `currency_code` | **Required.** CHF, EUR, USD, etc. |
-| `invoice_number` | Invoice/receipt reference number |
-| `subtotal_amount` | Amount (falls back to total if subtotal unavailable) |
-| `tax_amount` | VAT/tax amount |
-| `discount_amount` | Discount applied, if any |
-| `due_date_or_payment_terms` | Payment deadline or terms (e.g., "net 30", "upon receipt") |
-| `payment_method` | TWINT, bank transfer, credit card, etc. |
-| `payment_reference` | Transaction/payment ID |
-| `date_paid` | When payment was made (YYYY-MM-DD) |
-| `purchase_order_number` | PO number if referenced |
-| `accounting_category` | "Revenue" or "Expense" (auto-classified) |
+| Field | Source | Description |
+|-------|--------|-------------|
+| `counterparty_name` | LLM | The other party: supplier (for Expense) or customer (for Revenue) |
+| `invoice_date` | LLM | Document date (YYYY-MM-DD) |
+| `currency_code` | LLM | CHF, EUR, USD, etc. |
+| `invoice_number` | LLM | Invoice/receipt reference number |
+| `subtotal_amount` | LLM | Amount (falls back to total if subtotal unavailable) |
+| `tax_amount` | LLM | VAT/tax amount |
+| `discount_amount` | LLM | Discount applied, if any |
+| `due_date_or_payment_terms` | LLM | Payment deadline or terms (e.g., "net 30", "upon receipt") |
+| `payment_method` | LLM | TWINT, bank transfer, credit card, etc. |
+| `payment_reference` | LLM | Transaction/payment ID |
+| `date_paid` | LLM | When payment was made (YYYY-MM-DD) |
+| `purchase_order_number` | LLM | PO number if referenced |
+| `accounting_category` | LLM | "Revenue" or "Expense" (auto-classified) |
+| `email_id` | Node | Contact email address (from email-info-hub) |
+| `attachment_count` | Node | Number of attachments in source email (from email-info-hub) |
 
-*The sheet stores standardized invoice data with 13 columns following accounting best practices. Fields like company address and VAT numbers are intentionally omitted—derivable from counterparty name or public registries.*
+*All fields are required.*
+
+*The sheet stores standardized invoice data with 15 columns following accounting best practices. Fields like company address and VAT numbers are intentionally omitted—derivable from counterparty name or public registries. LLM fields are extracted by Accountant-concierge-LM; Node fields come from email-info-hub.*
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/Billing_Ledger`)
 
