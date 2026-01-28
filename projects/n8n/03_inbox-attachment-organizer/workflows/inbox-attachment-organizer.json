@@ -294,7 +294,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## COMPANY CONTEXT:\nYOUR COMPANY: {{ $('Set File ID').first().json.company_name }}\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- accounting_category:\n  - \"Expense\" = {{ $('Set File ID').first().json.company_name }} is paying (we receive the invoice)\n  - \"Revenue\" = {{ $('Set File ID').first().json.company_name }} is billing (we send the invoice)\n- If supplier_name contains \"{{ $('Set File ID').first().json.company_name }}\" -> always \"Revenue\"\n- document_type: \"Invoice\" (billing doc) | \"Receipt\" (payment proof)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, invoice_date, supplier_name, recipient_business_name, total_amount_due, currency_code, due_date, line_items, etc.\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
+              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## COMPANY CONTEXT:\nYOUR COMPANY: {{ $('Set File ID').first().json.company_name }}\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- accounting_category:\n  - \"Expense\" = {{ $('Set File ID').first().json.company_name }} is paying (we receive the invoice)\n  - \"Revenue\" = {{ $('Set File ID').first().json.company_name }} is billing (we send the invoice)\n- If counterparty_name contains \"{{ $('Set File ID').first().json.company_name }}\" -> always \"Revenue\"\n- document_type: \"Invoice\" (billing doc) | \"Receipt\" (payment proof)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, counterparty_name, invoice_date, total_amount_due, currency_code, subtotal_amount, tax_amount, discount_amount, due_date_or_payment_terms, payment_method, payment_reference, date_paid, purchase_order_number\n- counterparty_name = the OTHER party on the invoice (supplier for Expense, customer for Revenue)\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
             }
           ]
         },
@@ -318,7 +318,7 @@
           "__rl": true,
           "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
           "mode": "list",
-          "cachedResultName": "2505_Invoices",
+          "cachedResultName": "Billing_Ledger",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
         },
         "sheetName": {
@@ -331,20 +331,32 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "supplier_name": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.supplier_name }}",
-            "supplier_address": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.supplier_address || \"-\"}}",
             "invoice_date": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.invoice_date }}",
-            "total_amount_due": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.total_amount_due || \"-\" }}",
             "currency_code": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.currency_code || \"-\" }}",
             "subtotal_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.total_amount_due || \"-\" }}",
-            "recipient_business_name": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.recipient_business_name || \"-\" }}",
             "payment_method": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.payment_method || \"-\" }}",
-            "date_paid": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.transaction_date || \"-\" }}",
+            "date_paid": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.date_paid || \"-\" }}",
             "payment_reference": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.payment_reference || \"-\" }}",
-            "accounting_category": "={{ $('Accountant-concierge-LM').item.json.output.accounting_category || \"-\" }}"
+            "accounting_category": "={{ $('Accountant-concierge-LM').item.json.output.accounting_category || \"-\" }}",
+            "counterparty_name": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.counterparty_name }}",
+            "invoice_number": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.invoice_number || \"-\" }}",
+            "tax_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.tax_amount || \"-\" }}",
+            "discount_amount": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.discount_amount || \"-\" }}",
+            "due_date_or_payment_terms": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.due_date_or_payment_terms || \"-\" }}",
+            "purchase_order_number": "={{ $('Accountant-concierge-LM').item.json.output.invoice_data.purchase_order_number || \"-\" }}"
           },
           "matchingColumns": [],
           "schema": [
+            {
+              "id": "invoice_status",
+              "displayName": "invoice_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
             {
               "id": "invoice_number",
               "displayName": "invoice_number",
@@ -355,13 +367,14 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "supplier_name",
-              "displayName": "supplier_name",
+              "id": "counterparty_name",
+              "displayName": "counterparty_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "invoice_date",
@@ -379,7 +392,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "currency_code",
@@ -409,22 +423,14 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "supplier_address",
-              "displayName": "supplier_address",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
               "id": "recipient_business_name",
               "displayName": "recipient_business_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "accounting_category",
@@ -455,36 +461,6 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "due_date",
-              "displayName": "due_date",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "invoice_status",
-              "displayName": "invoice_status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "purchase_order_number",
-              "displayName": "purchase_order_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
               "id": "tax_amount",
               "displayName": "tax_amount",
               "required": false,
@@ -492,47 +468,7 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "payment_terms",
-              "displayName": "payment_terms",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "date_received",
-              "displayName": "date_received",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "supplier_vat_number",
-              "displayName": "supplier_vat_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "supplier_tax_id",
-              "displayName": "supplier_tax_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
+              "removed": false
             },
             {
               "id": "discount_amount",
@@ -542,97 +478,37 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": true
+              "removed": false
             },
             {
-              "id": "approver_id",
-              "displayName": "approver_id",
+              "id": "due_date_or_payment_terms",
+              "displayName": "due_date_or_payment_terms",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": true
+              "removed": false
             },
             {
-              "id": "approver_name",
-              "displayName": "approver_name",
+              "id": "purchase_order_number",
+              "displayName": "purchase_order_number",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": true
+              "removed": false
             },
             {
-              "id": "department_id",
-              "displayName": "department_id",
+              "id": "accounting_category",
+              "displayName": "accounting_category",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "cost_center_code",
-              "displayName": "cost_center_code",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "supplier_contact_details",
-              "displayName": "supplier_contact_details",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "supplier_bank_account_details",
-              "displayName": "supplier_bank_account_details",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "internal_reference_number",
-              "displayName": "internal_reference_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "recipient_business_address",
-              "displayName": "recipient_business_address",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "notes",
-              "displayName": "notes",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -700,7 +576,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"Billing_Ledger\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -983,7 +859,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"accounting_category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Revenue\", \"Expense\"],\n      \"description\": \"Revenue = we bill customers; Expense = we pay suppliers\"\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"Invoice\", \"Receipt\"],\n      \"description\": \"Invoice = formal billing; Receipt = payment proof\"\n    },\n    \"year\": {\n      \"type\": \"integer\",\n      \"description\": \"Year from document date\"\n    },\n    \"month\": {\n      \"type\": \"integer\",\n      \"description\": \"Month from document date (1-12)\"\n    },\n    \"invoice_data\": {\n      \"type\": \"object\",\n      \"description\": \"Extracted invoice fields in snake_case\",\n      \"additionalProperties\": true\n    }\n  },\n  \"required\": [\"accounting_category\", \"document_type\", \"year\", \"month\", \"invoice_data\"]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"accounting_category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Revenue\", \"Expense\"],\n      \"description\": \"Revenue = we bill customers; Expense = we pay suppliers\"\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"Invoice\", \"Receipt\"],\n      \"description\": \"Invoice = formal billing; Receipt = payment proof\"\n    },\n    \"year\": {\n      \"type\": \"integer\",\n      \"description\": \"Year from document date\"\n    },\n    \"month\": {\n      \"type\": \"integer\",\n      \"description\": \"Month from document date (1-12)\"\n    },\n    \"invoice_data\": {\n      \"type\": \"object\",\n      \"description\": \"Extracted transaction fields in snake_case (Billing_Ledger schema)\",\n      \"properties\": {\n        \"invoice_number\": { \"type\": \"string\", \"description\": \"Invoice/receipt reference number\" },\n        \"counterparty_name\": { \"type\": \"string\", \"description\": \"The other party: supplier (for Expense) or customer (for Revenue)\" },\n        \"invoice_date\": { \"type\": \"string\", \"description\": \"Document date (YYYY-MM-DD preferred)\" },\n        \"total_amount_due\": { \"type\": \"number\", \"description\": \"Total amount\" },\n        \"currency_code\": { \"type\": \"string\", \"description\": \"Currency: CHF, EUR, USD, etc.\" },\n        \"subtotal_amount\": { \"type\": \"number\", \"description\": \"Amount before tax\" },\n        \"tax_amount\": { \"type\": \"number\", \"description\": \"VAT/tax amount\" },\n        \"discount_amount\": { \"type\": \"number\", \"description\": \"Discount applied, if any\" },\n        \"due_date_or_payment_terms\": { \"type\": \"string\", \"description\": \"Payment deadline (YYYY-MM-DD) or terms (e.g., 'net 30', 'upon receipt')\" },\n        \"payment_method\": { \"type\": \"string\", \"description\": \"How paid: TWINT, bank transfer, credit card, etc.\" },\n        \"payment_reference\": { \"type\": \"string\", \"description\": \"Transaction/payment ID\" },\n        \"date_paid\": { \"type\": \"string\", \"description\": \"When payment was made (YYYY-MM-DD)\" },\n        \"purchase_order_number\": { \"type\": \"string\", \"description\": \"PO number if referenced\" }\n      },\n      \"required\": [\"counterparty_name\", \"invoice_date\", \"total_amount_due\", \"currency_code\"],\n      \"additionalProperties\": true\n    }\n  },\n  \"required\": [\"accounting_category\", \"document_type\", \"year\", \"month\", \"invoice_data\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,

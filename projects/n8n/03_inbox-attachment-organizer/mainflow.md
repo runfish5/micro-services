@@ -143,11 +143,21 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ### 2. Extraction
 - **Node**: Accountant-concierge-LM
 - **Input**: Cleaned invoice/receipt text
-- **Output**: Structured invoice data with all fields
+- **Output**: Structured invoice data following the **Billing_Ledger schema**
 - **Key Capabilities**:
   - Categorization: Revenue vs Expense
   - Type detection: Invoice vs Receipt
   - Field extraction: dates, amounts, parties, line items
+
+**Billing_Ledger Schema** (13 fields, 4 required):
+| Required | Optional |
+|----------|----------|
+| `counterparty_name` | `invoice_number`, `subtotal_amount`, `tax_amount` |
+| `invoice_date` | `discount_amount`, `due_date_or_payment_terms` |
+| `total_amount_due` | `payment_method`, `payment_reference` |
+| `currency_code` | `date_paid`, `purchase_order_number` |
+
+> **counterparty_name** = the OTHER party on the invoice (supplier for Expense, customer for Revenue). Replaces legacy `supplier_name`/`recipient_business_name` fields.
 
 ## 🔗 External Workflows Called
 

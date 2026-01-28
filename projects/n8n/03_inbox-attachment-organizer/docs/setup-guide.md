@@ -24,22 +24,38 @@ Only one authentication needed: **Google OAuth**
 
 Follow: [credentials-guide.md](config/credentials-guide.md)
 
-### 3. Create Google Sheet
-Create a Google Sheet named **"2505_Invoices"** with these exact column headers:
+### 3. Create Billing Ledger Google Sheet
+Create a Google Sheet named **"Billing_Ledger"** with these exact column headers:
+
+> **What is a Billing Ledger?** A unified record of invoices (both payable and receivable) with payment tracking. Also known as Invoice Register or combined AP/AR ledger. Tracks expenses (supplier invoices you pay) and revenue (customer invoices you send).
 
 **Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet. The tabs will automatically create separate columns.
 
 ```
-accounting_category	invoice_number	supplier_name	invoice_date	total_amount_due	currency_code	subtotal_amount	payment_method	supplier_address	recipient_business_name	payment_reference	date_paid	due_date	invoice_status	purchase_order_number	tax_amount	payment_terms	date_received	supplier_vat_number	supplier_tax_id	discount_amount	approver_id	approver_name	department_id	cost_center_code	supplier_contact_details	supplier_bank_account_details	internal_reference_number	recipient_business_address
+invoice_date	currency_code	subtotal_amount	payment_method	date_paid	payment_reference	accounting_category	counterparty_name	invoice_number	tax_amount	discount_amount	due_date_or_payment_terms	purchase_order_number
 ```
 
-**Example of the sheet structure:**
+**Field definitions (13 columns):**
 
-![2505_Invoices Sheet Structure](../assets/invoices-table-schema-columns-path-folder-id.png)
+| Field | Description |
+|-------|-------------|
+| `counterparty_name` | **Required.** The other party: supplier (for Expense) or customer (for Revenue) |
+| `invoice_date` | **Required.** Document date (YYYY-MM-DD) |
+| `currency_code` | **Required.** CHF, EUR, USD, etc. |
+| `invoice_number` | Invoice/receipt reference number |
+| `subtotal_amount` | Amount (falls back to total if subtotal unavailable) |
+| `tax_amount` | VAT/tax amount |
+| `discount_amount` | Discount applied, if any |
+| `due_date_or_payment_terms` | Payment deadline or terms (e.g., "net 30", "upon receipt") |
+| `payment_method` | TWINT, bank transfer, credit card, etc. |
+| `payment_reference` | Transaction/payment ID |
+| `date_paid` | When payment was made (YYYY-MM-DD) |
+| `purchase_order_number` | PO number if referenced |
+| `accounting_category` | "Revenue" or "Expense" (auto-classified) |
 
-*The sheet stores comprehensive invoice data with 29 columns for full accounting tracking.*
+*The sheet stores standardized invoice data with 13 columns following accounting best practices.*
 
-Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/2505_Invoices`)
+Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/Billing_Ledger`)
 
 ### 4. Create PathToIDLookup Google Sheet
 Create a Google Sheet named **"PathToIDLookup"** with these exact column headers:
