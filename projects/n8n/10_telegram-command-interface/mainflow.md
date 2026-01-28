@@ -101,7 +101,7 @@ Telegram Trigger
 |------|------|---------|
 | Has Search Query? | IF | Validates args contains search term |
 | Search Missing Query | Code | Error response if no query provided |
-| Read Invoices | Google Sheets | Reads from `2505_Invoices` sheet |
+| Read Invoices | Google Sheets | Reads from `Billing_Ledger` sheet |
 | Format Search | Code | Case-insensitive filter by supplier_name |
 
 #### Fallback (Node 18)
@@ -172,7 +172,7 @@ Telegram Trigger
 | Resource | Document ID | Sheet |
 |----------|-------------|-------|
 | FailedItems | `1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac` | gid=0 |
-| 2505_Invoices | `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94` | gid=0 |
+| Billing_Ledger | `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94` | gid=0 |
 | n8n API | `https://primary-production-2e961.up.railway.app` | - |
 
 ## Commands Reference

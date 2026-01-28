@@ -34,11 +34,11 @@ n8n workflow that generates monthly expense analytics reports following financia
 | `TOP_N_VENDORS` | 6 | Vendors in chart |
 | `CURRENCY_SYMBOL` | `€` | Display symbol |
 | `VARIANCE_ALERT_PCT` | 20 | Alert threshold |
-| `SHEET_ID` | 2505_Invoices | Source document |
+| `SHEET_ID` | Billing_Ledger | Source document |
 
 ## Data Source
 
-Uses `2505_Invoices` Google Sheet (same as Telegram Invoice OCR workflow).
+Uses `Billing_Ledger` Google Sheet (same as Telegram Invoice OCR workflow).
 
 **Required columns:**
 - `supplier_name` - Vendor name

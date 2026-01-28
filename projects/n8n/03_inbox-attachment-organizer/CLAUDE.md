@@ -18,7 +18,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ### Documentation
 - `docs/mainflow.md` - Complete 30-node breakdown by phases (1-5: trigger, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
-- `docs/setup-guide.md` - 2505_Invoices sheet schema (28 columns tab-separated), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
+- `docs/setup-guide.md` - Billing_Ledger sheet schema (28 columns tab-separated), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
 - `main-sticky-note.md` - Author's setup checklist showing deployment priorities and post-activation tasks
 
 ### Workflows
@@ -40,7 +40,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 Nodes 1-5: Email Trigger (Gmail Trigger polls every 1 min, filters promotions, downloads attachments)
 Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object aggregates text)
 Nodes 11-18: Classification & Routing (subject-classifier-LM, financial doc router, whitelist validator, appointment router)
-Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to 2505_Invoices sheet, Telegram notification, Mark as Processed)
+Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to Billing_Ledger sheet, Telegram notification, Mark as Processed)
 Alternative Entry: When Executed by Another Workflow
 
 ## More Details

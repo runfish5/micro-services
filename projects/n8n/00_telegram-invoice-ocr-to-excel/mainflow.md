@@ -92,7 +92,7 @@ Disabled branches:
 | 6 | Basic LLM Chain | chainLlm | Converts OCR text to structured JSON |
 | 7 | Google Gemini Chat Model | lmChatGoogleGemini | Text model for extraction |
 | 8 | Edit Fields | set | Strips markdown formatting from JSON response |
-| 9 | Google Sheets | googleSheets | Appends extracted data to 2505_Invoices sheet |
+| 9 | Google Sheets | googleSheets | Appends extracted data to Billing_Ledger sheet |
 | 10 | Edit Fields1 | set | Formats Telegram notification message |
 | 11 | Telegram2 | telegram | Sends confirmation with extracted data preview |
 | 12 | Basic LLM Chain1 | chainLlm | Alternative extraction path (disabled) |
@@ -101,7 +101,7 @@ Disabled branches:
 
 ## Notes
 - Chat ID for Telegram bot: `7281469586` (see Telegram Trigger1 notes)
-- Google Sheets document: `2505_Invoices` (ID: `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94`)
+- Google Sheets document: `Billing_Ledger` (ID: `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94`)
 - Output columns mapped: supplier_name, supplier_address, invoice_date, total_amount_due, currency_code, subtotal_amount, recipient_business_name, payment_method, date_paid, payment_reference
 - Edit Fields node uses regex to strip markdown code blocks: `.replace(/^(```json\\n)?(.*?)(\\n```)?$/s, '$2')`
 - Uses Telegram photo array index `[3]` for highest resolution

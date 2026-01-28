@@ -50,4 +50,4 @@ To add a new user:
 
 - **error-handler** - Logs failures to FailedItems sheet (queried by `/failures`)
 - **8-hour-incident-resolver** - Auto-retries failures (same retry mechanism as `/retry`)
-- **telegram-invoice-ocr-to-excel** - Writes to 2505_Invoices (queried by `/search`)
+- **telegram-invoice-ocr-to-excel** - Writes to Billing_Ledger (queried by `/search`)
