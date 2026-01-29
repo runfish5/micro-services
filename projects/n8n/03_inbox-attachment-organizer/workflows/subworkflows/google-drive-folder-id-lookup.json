@@ -298,38 +298,35 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "err",
-              "name": "error",
-              "value": "Folder not found",
-              "type": "string"
-            },
-            {
-              "id": "missing",
-              "name": "missing_segment",
-              "value": "={{ $('Calculate Next Segment').item.json.next_segment }}",
-              "type": "string"
-            },
-            {
-              "id": "searched",
-              "name": "searched_in",
-              "value": "={{ $('Calculate Next Segment').item.json.current_path }}",
-              "type": "string"
-            }
-          ]
+        "resource": "folder",
+        "name": "={{ $('Calculate Next Segment').item.json.next_segment }}",
+        "driveId": {
+          "__rl": true,
+          "value": "MyDrive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Calculate Next Segment').item.json.current_folder_id }}",
+          "mode": "id"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
       "position": [
         6048,
         2464
       ],
       "id": "4b4d96ab-aa74-431d-abea-656470542859",
-      "name": "Return Error"
+      "name": "Create Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HwaWjD4xhGV5dH9Q",
+          "name": "Google Drive Sheets & OAuth"
+        }
+      }
     },
     {
       "parameters": {
@@ -726,7 +723,18 @@
         ],
         [
           {
-            "node": "Return Error",
+            "node": "Create Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Folder": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cache Data",
             "type": "main",
             "index": 0
           }
