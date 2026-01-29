@@ -34,7 +34,7 @@
     {
       "parameters": {
         "operation": "get",
-        "messageId": "={{ $json.email_ID}}",
+        "messageId": "={{ $('Set File ID').item.json.email_ID }}",
         "simple": false,
         "options": {
           "dataPropertyAttachmentsPrefixName": "attachment_",
@@ -44,8 +44,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -5040,
-        1344
+        -4816,
+        1328
       ],
       "id": "0b74cd47-24a4-4d98-b3c6-95308985eef1",
       "name": "Gmail",
@@ -206,8 +206,8 @@
           "conditions": [
             {
               "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{ Object.keys($binary).length }}",
-              "rightValue": 0,
+              "leftValue": "={{Object.keys($('Gmail').item.binary).length}}",
+              "rightValue": null,
               "operator": {
                 "type": "number",
                 "operation": "equals"
@@ -335,6 +335,16 @@
           "matchingColumns": [],
           "schema": [
             {
+              "id": "accounting_category",
+              "displayName": "accounting_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
               "id": "invoice_status",
               "displayName": "invoice_status",
               "required": false,
@@ -440,8 +450,8 @@
               "removed": true
             },
             {
-              "id": "accounting_category",
-              "displayName": "accounting_category",
+              "id": "due_date_or_payment_terms",
+              "displayName": "due_date_or_payment_terms",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -488,28 +498,8 @@
               "removed": false
             },
             {
-              "id": "due_date_or_payment_terms",
-              "displayName": "due_date_or_payment_terms",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "purchase_order_number",
               "displayName": "purchase_order_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "accounting_category",
-              "displayName": "accounting_category",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -803,7 +793,7 @@
     },
     {
       "parameters": {
-        "model": "moonshotai/kimi-k2-instruct",
+        "model": "openai/gpt-oss-120b",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
@@ -824,7 +814,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"accounting_category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Revenue\", \"Expense\"],\n      \"description\": \"Revenue = we bill customers; Expense = we pay suppliers\"\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"Invoice\", \"Receipt\"],\n      \"description\": \"Invoice = formal billing; Receipt = payment proof\"\n    },\n    \"year\": {\n      \"type\": \"integer\",\n      \"description\": \"Year from document date\"\n    },\n    \"month\": {\n      \"type\": \"integer\",\n      \"description\": \"Month from document date (1-12)\"\n    },\n    \"invoice_data\": {\n      \"type\": \"object\",\n      \"description\": \"Extracted transaction fields in snake_case (Billing_Ledger schema)\",\n      \"properties\": {\n        \"invoice_number\": { \"type\": \"string\", \"description\": \"Invoice/receipt reference number\" },\n        \"counterparty_name\": { \"type\": \"string\", \"description\": \"The other party: supplier (for Expense) or customer (for Revenue)\" },\n        \"invoice_date\": { \"type\": \"string\", \"description\": \"Document date (YYYY-MM-DD preferred)\" },\n        \"total_amount_due\": { \"type\": \"number\", \"description\": \"Total amount\" },\n        \"currency_code\": { \"type\": \"string\", \"description\": \"Currency: CHF, EUR, USD, etc.\" },\n        \"subtotal_amount\": { \"type\": \"number\", \"description\": \"Amount before tax\" },\n        \"tax_amount\": { \"type\": \"number\", \"description\": \"VAT/tax amount\" },\n        \"discount_amount\": { \"type\": \"number\", \"description\": \"Discount applied, if any\" },\n        \"due_date_or_payment_terms\": { \"type\": \"string\", \"description\": \"Payment deadline (YYYY-MM-DD) or terms (e.g., 'net 30', 'upon receipt')\" },\n        \"payment_method\": { \"type\": \"string\", \"description\": \"How paid: TWINT, bank transfer, credit card, etc.\" },\n        \"payment_reference\": { \"type\": \"string\", \"description\": \"Transaction/payment ID\" },\n        \"date_paid\": { \"type\": \"string\", \"description\": \"When payment was made (YYYY-MM-DD)\" },\n        \"purchase_order_number\": { \"type\": \"string\", \"description\": \"PO number if referenced\" }\n      },\n      \"required\": [\"invoice_number\", \"counterparty_name\", \"invoice_date\", \"total_amount_due\", \"currency_code\", \"subtotal_amount\", \"tax_amount\", \"discount_amount\", \"due_date_or_payment_terms\", \"payment_method\", \"payment_reference\", \"date_paid\", \"purchase_order_number\"],\n      \"additionalProperties\": true\n    }\n  },\n  \"required\": [\"accounting_category\", \"document_type\", \"year\", \"month\", \"invoice_data\"]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"accounting_category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Revenue\", \"Expense\"],\n      \"description\": \"Revenue = we bill customers; Expense = we pay suppliers\"\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"Invoice\", \"Receipt\"],\n      \"description\": \"Invoice = formal billing; Receipt = payment proof\"\n    },\n    \"year\": {\n      \"type\": \"integer\",\n      \"description\": \"Year from document date\"\n    },\n    \"month\": {\n      \"type\": \"integer\",\n      \"description\": \"Month from document date (1-12)\"\n    },\n    \"invoice_data\": {\n      \"type\": \"object\",\n      \"description\": \"Extracted transaction fields in snake_case (Billing_Ledger schema)\",\n      \"properties\": {\n        \"invoice_number\": { \"type\": \"string\", \"description\": \"Invoice/receipt reference number\" },\n        \"counterparty_name\": { \"type\": \"string\", \"description\": \"The other party: supplier (for Expense) or customer (for Revenue)\" },\n        \"invoice_date\": { \"type\": \"string\", \"description\": \"Document date (YYYY-MM-DD preferred)\" },\n        \"total_amount_due\": { \"type\": \"number\", \"description\": \"Total amount\" },\n        \"currency_code\": { \"type\": \"string\", \"description\": \"Currency: CHF, EUR, USD, etc.\" },\n        \"subtotal_amount\": { \"type\": \"number\", \"description\": \"Amount before tax\" },\n        \"tax_amount\": { \"type\": \"number\", \"description\": \"VAT/tax amount\" },\n        \"discount_amount\": { \"type\": \"number\", \"description\": \"Discount applied, if any\" },\n        \"due_date_or_payment_terms\": { \"type\": \"string\", \"description\": \"Payment deadline (YYYY-MM-DD) or terms (e.g., 'net 30', 'upon receipt')\" },\n        \"payment_method\": { \"type\": \"string\", \"description\": \"How paid: TWINT, bank transfer, credit card, etc.\" },\n        \"payment_reference\": { \"type\": \"string\", \"description\": \"Transaction/payment ID\" },\n        \"date_paid\": { \"type\": \"string\", \"description\": \"When payment was made (YYYY-MM-DD)\" },\n        \"purchase_order_number\": { \"type\": \"string\", \"description\": \"PO number if referenced\" }\n      },\n      \"required\": [\"invoice_number\", \"counterparty_name\", \"invoice_date\", \"total_amount_due\", \"currency_code\", \"subtotal_amount\", \"tax_amount\", \"discount_amount\", \"due_date_or_payment_terms\", \"payment_method\", \"payment_reference\", \"date_paid\", \"purchase_order_number\"]\n    }\n  },\n  \"required\": [\"accounting_category\", \"document_type\", \"year\", \"month\", \"invoice_data\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -966,7 +956,7 @@
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Gmail').first().json.id }}",
+        "messageId": "={{ $json.id }}",
         "labelIds": [
           "Label_82"
         ]
@@ -976,8 +966,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -4768,
-        1344
+        -5040,
+        1328
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -1425,7 +1415,7 @@
       "main": [
         [
           {
-            "node": "Tag Mail with 'n8n'",
+            "node": "Empty?",
             "type": "main",
             "index": 0
           }
@@ -1436,7 +1426,7 @@
       "main": [
         [
           {
-            "node": "Gmail",
+            "node": "Tag Mail with 'n8n'",
             "type": "main",
             "index": 0
           }
@@ -1656,7 +1646,7 @@
       "main": [
         [
           {
-            "node": "Empty?",
+            "node": "Gmail",
             "type": "main",
             "index": 0
           }
