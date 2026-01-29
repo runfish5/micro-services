@@ -1,6 +1,6 @@
 # Main Flow (38 Nodes)
 
-> **Version 1.0.2** | Last verified: 2026-01-23
+> **Version 1.0.3** | Last verified: 2026-01-29
 
 ## Overview
 
@@ -30,9 +30,9 @@ Note: This particular telegram configuration must still be implemented.
 ```
 Email → Text Extraction → AI Classification
                               ↓
-                         Is Financial?
+                         Is Financial? (financial doc router)
                               ↓
-                      Whitelist Check
+                      [optional] Sender Whitelist (disabled)
                               ↓
                       AI Deep Extraction
                               ↓
@@ -64,7 +64,7 @@ Email → Text Extraction → AI Classification
     ├→ Tag Mail with 'n8n' → notify the category (Telegram)
     ├→ [disabled] ContactManager-lineage → record-search → smart-table-fill
     ├→ [disabled] appointment router → Trigger non-spam lineage
-    └→ [disabled] financial doc router → whitelist validator
+    └→ financial doc router → [disabled] sender_whitelist
     ↓
   Has Attachments? → Prepare Attachments → Accountant-concierge-LM (LM2)
     ↓
@@ -106,10 +106,10 @@ START: Gmail Trigger
               │     └→ Call 'record-search'
               │        └→ Prepare Contact Input
               │           └→ Call 'smart-table-fill'
-              ├→ [disabled] financial doc router → whitelist validator
+              ├→ financial doc router → [disabled] sender_whitelist
               └→ [disabled] appointment router → Trigger non-spam lineage
 
-              IF FINANCIAL (via whitelist):
+              IF FINANCIAL (via router):
               └→ Has Attachments?
                  │
                  └→ Prepare Attachments

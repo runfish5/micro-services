@@ -192,8 +192,7 @@
         1280
       ],
       "id": "7164fdc1-9e5c-43e7-a8fa-ea356e0f66ed",
-      "name": "financial doc router",
-      "disabled": true
+      "name": "financial doc router"
     },
     {
       "parameters": {
@@ -246,20 +245,6 @@
       ],
       "id": "5f29f1ac-6b56-4c64-b892-55784763a826",
       "name": "sp"
-    },
-    {
-      "parameters": {
-        "language": "pythonNative",
-        "pythonCode": "output_data = {\n  \"accounts\": [\n    \"payments-noreply@google.com\",\n    \"noreply@notifications.digitec.ch\",\n    \"invoice+statements@mail.anthropic.com\",\n    \"uniqued4ve@gmail.com\"\n  ]\n}\n\nif _items:\n    _items[0][\"json\"] = output_data\n\nreturn _items"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3504,
-        1280
-      ],
-      "id": "c8881149-bb5c-458e-8bb4-f24b398fcbce",
-      "name": "user_email_whitelist"
     },
     {
       "parameters": {
@@ -318,7 +303,7 @@
           "__rl": true,
           "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
           "mode": "list",
-          "cachedResultName": "Billing_Ledger",
+          "cachedResultName": "2505_Invoices",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
         },
         "sheetName": {
@@ -613,7 +598,7 @@
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\nModify your \nemail white-list.\n\n",
+        "content": "\n\n\n\n\n\nSender whitelist.\nEdit the JS array to\nadd/remove senders.\n\n",
         "height": 124,
         "width": 152,
         "color": 2
@@ -792,48 +777,6 @@
       ],
       "id": "e882c09a-c432-4f07-8115-2e407bb83355",
       "name": "output profile"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.accounts }}",
-                    "rightValue": "={{ $('Gmail').item.json.from.value[0].address }}",
-                    "operator": {
-                      "type": "array",
-                      "operation": "contains",
-                      "rightType": "any"
-                    },
-                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.3,
-      "position": [
-        -3280,
-        1280
-      ],
-      "id": "70d4c8d7-9242-4c51-8090-3ec1774491c2",
-      "name": "whitelist validator",
-      "disabled": true
     },
     {
       "parameters": {
@@ -1329,7 +1272,8 @@
           "id": "mlZdNwRkWhIVuDdr",
           "name": "Telegram inbox_important"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
@@ -1449,6 +1393,20 @@
       ],
       "id": "9fc13fbd-5d26-4221-bda1-1ebb9cf4221e",
       "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const whitelist = [\n    \"payments-noreply@google.com\",\n    \"noreply@notifications.digitec.ch\",\n    \"invoice+statements@mail.anthropic.com\",\n    \"uniqued4ve@gmail.com\"\n];\n\nconst senderEmail = $('Gmail').first().json.from.value[0].address.toLowerCase();\n\nif (whitelist.some(e => e.toLowerCase() === senderEmail)) {\n    return $input.all();\n} else {\n    return [];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3504,
+        1280
+      ],
+      "id": "c8881149-bb5c-458e-8bb4-f24b398fcbce",
+      "name": "sender_whitelist",
+      "disabled": true
     }
   ],
   "connections": {
@@ -1505,7 +1463,7 @@
       "main": [
         [
           {
-            "node": "user_email_whitelist",
+            "node": "sender_whitelist",
             "type": "main",
             "index": 0
           }
@@ -1535,17 +1493,6 @@
         [
           {
             "node": "Create Attachment Profile",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "user_email_whitelist": {
-      "main": [
-        [
-          {
-            "node": "whitelist validator",
             "type": "main",
             "index": 0
           }
@@ -1645,17 +1592,6 @@
           {
             "node": "subject-classifier-LM",
             "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "whitelist validator": {
-      "main": [
-        [
-          {
-            "node": "Prepare Attachments",
-            "type": "main",
             "index": 0
           }
         ]
@@ -1826,6 +1762,17 @@
         [
           {
             "node": "Mark as Processed1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sender_whitelist": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attachments",
             "type": "main",
             "index": 0
           }
