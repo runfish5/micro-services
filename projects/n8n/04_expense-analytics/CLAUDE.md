@@ -41,9 +41,12 @@ n8n workflow that generates monthly expense analytics reports following financia
 Uses `Billing_Ledger` Google Sheet (same as Telegram Invoice OCR workflow).
 
 **Required columns:**
-- `supplier_name` - Vendor name
+- `counterparty_name` - Vendor name
 - `invoice_date` - Date for filtering/grouping
-- `total_amount_due` - Amount (parsed as float)
+- `subtotal_amount` - Amount (parsed as float)
+- `currency_code` - CHF/EUR/USD, defaults to EUR
+
+
 
 ## Financial Standards Applied
 

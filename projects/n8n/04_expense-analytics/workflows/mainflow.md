@@ -21,10 +21,10 @@ Trigger → Config → Fetch Exchange Rates → Read Invoices → Build Chart Da
 **Input (Google Sheets):**
 | Column | Required | Notes |
 |--------|----------|-------|
-| `supplier_name` | ✓ | Vendor name |
+| `counterparty_name` | ✓ | Vendor name |
 | `invoice_date` | ✓ | Supports `DD.MM.YYYY` and ISO |
-| `total_amount_due` | ✓ | Parsed as float |
-| `currency` | — | CHF/EUR/USD, defaults to EUR |
+| `subtotal_amount` | ✓ | Parsed as float |
+| `currency_code` | — | CHF/EUR/USD, defaults to EUR |
 
 **Output (Telegram):**
 ```
