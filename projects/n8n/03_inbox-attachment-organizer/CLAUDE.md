@@ -25,7 +25,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 - `workflows/inbox-attachment-organizer.json` - Main workflow (34 nodes) orchestrating the full pipeline
 - `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`.
 - `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
-- `workflows/subworkflows/gmail-systematic-processor.json` - Standalone batch processor for existing inbox emails
+- `workflows/subworkflows/gmail-processor-datesize.json` - Standalone batch processor for existing inbox emails
 
 ## Non-Obvious Architecture
 
@@ -35,7 +35,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 **Financial docs without attachments**: The If node after Accountant-concierge-LM checks for attachments. Financial emails without attachments skip the Drive upload but still get logged to Sheets and notified via Telegram.
 
-**gmail-systematic-processor**: Separate workflow for batch processing existing inbox. Gmail Trigger only catches new emails.
+**gmail-processor-datesize**: Separate workflow for batch processing existing inbox. Gmail Trigger only catches new emails.
 
 **Folder structure**: Files organize as `/{RootFolder}/{Year}/{MM_Month}/{Category}/` - example: `/Accounting/2025/05_May/Expense/`. The MM_Month format (01_January, 02_February...) ensures proper sorted display in Drive. Category is determined by Accountant-concierge-LM extraction (Revenue vs Expense for financial docs).
 

@@ -13,7 +13,7 @@ Download and paste these workflow clipboard :clipboard: content directly into yo
 1. [inbox-attachment-organizer.json](../workflows/inbox-attachment-organizer.json) - Main workflow
 2. [any-file2json-converter.json](../workflows/subworkflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
 3. [google-drive-folder-id-lookup.json](../workflows/subworkflows/google-drive-folder-id-lookup.json) - Subworkflow: Self-recursive folder locator/creator
-4. [gmail-systematic-processor.json](../workflows/subworkflows/gmail-systematic-processor.json) - Batch processor for existing emails
+4. [gmail-processor-datesize.json](../workflows/subworkflows/gmail-processor-datesize.json) - Batch processor for existing emails
 
 **Important:** After importing each workflow, click **Publish** to save it. If Publish button doesn't work, see [troubleshooting.md](../../troubleshooting.md).
 
@@ -85,7 +85,7 @@ path	folder_id	child_ids	last_update
 ### 5. Activate
 - Send test email with invoice attachment
 - Check Google Drive for auto-created folders
-- **For existing emails:** Run the `gmail-systematic-processor` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
+- **For existing emails:** Run the `gmail-processor-datesize` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
 - Activate Gmail trigger ✅
 
 **Note:** Google Drive folders will be auto-created in this structure:

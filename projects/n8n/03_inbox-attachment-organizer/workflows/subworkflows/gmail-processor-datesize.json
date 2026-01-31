@@ -1,0 +1,575 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        80
+      ],
+      "id": "9792d966-129f-4a4e-9396-931c19a77617",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "label-input",
+              "name": "processLabel",
+              "value": "=GdriveFiled",
+              "type": "string"
+            },
+            {
+              "id": "ca5e7a2f-fc00-482f-816f-cb0eb6871ad4",
+              "name": "email_whitelist",
+              "value": "[\"payments-noreply@google.com\",\n\"invoice+statements@mail.anthropic.com\",\n\"uniqued4ve@gmail.com\"]",
+              "type": "array"
+            },
+            {
+              "id": "test-limit-field",
+              "name": "test_limit",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b6b6bb48-5366-4f71-aebb-fc26a4096600",
+      "name": "Set Label Variable",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        304,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "create",
+        "name": "={{ $json.processLabel }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        80
+      ],
+      "id": "b01b4398-2f2b-4be9-ab1d-2138c224de61",
+      "name": "Create a label",
+      "webhookId": "2bdeb3c4-fb9d-4c82-8cab-00b60e3f2bb1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "label"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        80
+      ],
+      "id": "daf15002-9965-465f-be6a-bd6df342fbb8",
+      "name": "Get many labels",
+      "webhookId": "5dd9fd28-6fa1-4094-9f96-c57238f374c8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "99f03dda-f6ac-4bf7-9e50-0fdfd8814215",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "={{ $('Set Label Variable').item.json.processLabel }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        80
+      ],
+      "id": "b8111a4f-4448-4f2f-8dba-a2b170c09f27",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration\nconst daysAgo = days => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];\n\nconst startDate = daysAgo(1);\n\n// Use tomorrow as endDate so today's emails are included\n// (Gmail receivedBefore is exclusive)\nconst todayDate = new Date($today);\ntodayDate.setDate(todayDate.getDate() + 1);\nconst endDate = todayDate.toISOString().split('T')[0];\n\nconst intervalDays = 3; // Adjust: 7=weekly, 30=monthly, 90=quarterly\n\n// Generate intervals\nconst intervals = [];\nlet current = new Date(startDate);\nconst end = new Date(endDate);\n\nwhile (current < end) {\n  const intervalEnd = new Date(current);\n  intervalEnd.setDate(intervalEnd.getDate() + intervalDays);\n  \n  intervals.push({\n    json: {\n      start: current.toISOString().split('T')[0],\n      end: intervalEnd > end ? end.toISOString().split('T')[0] : intervalEnd.toISOString().split('T')[0]\n    }\n  });\n  \n  current = intervalEnd;\n}\n\nreturn intervals;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        320
+      ],
+      "id": "8af55391-257f-47bc-a540-f35e3d28dabd",
+      "name": "Set Date-Range to process"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        304,
+        320
+      ],
+      "id": "dbccc65c-81fe-45dc-8bc1-1ef7771197a0",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": "={{ $('Set Label Variable').item.json.test_limit || 500 }}",
+        "filters": {
+          "receivedAfter": "={{ $json.start }}",
+          "receivedBefore": "={{ $json.end }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        320
+      ],
+      "id": "3ad587f5-4982-4980-83a4-607b86395e0d",
+      "name": "Get many messages",
+      "webhookId": "1af94b15-c787-484c-a985-105961534353",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        752,
+        320
+      ],
+      "id": "119b10a1-3c56-4205-857c-e1838c00ce45",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        320
+      ],
+      "id": "19a851f7-6a46-4dab-9fcf-fc6debb034cb",
+      "name": "Gmail",
+      "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9cde5ab0-1774-4855-99e9-999efcba6b12",
+              "name": "id",
+              "value": "={{ $('Loop Over Items').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2a4a8528-47ef-4d35-a522-a0991eabb7af",
+              "name": "from-address",
+              "value": "={{ $input.item.json.From?.match(/<(.+?)>/)?.[1] || $input.item.json.from?.value?.[0]?.address || \"ERROR_in_EMAILs\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        320
+      ],
+      "id": "30a0f040-94ef-4892-ae36-b3d40a10284a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9f0b3eb-8520-414e-8ba9-3bb5a319c09e",
+              "leftValue": "={{ $('Set Label Variable').item.json.email_whitelist }}",
+              "rightValue": "={{ $json['from-address'] }}",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        320
+      ],
+      "id": "0934bf87-dcac-4137-bf5e-574d4723256f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lRCrJIj1AEsuNxts",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/lRCrJIj1AEsuNxts",
+          "cachedResultName": "9_inbox_classifier_main"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1632,
+        320
+      ],
+      "id": "ec45c843-296d-4b18-ae6b-565c9af7f522",
+      "name": "Analyze file",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Edit Fields').item.json.id }}",
+        "labelIds": "={{ $('Filter').item.json.id }}"
+      },
+      "id": "e14e5c6d-a4ee-4342-8b0c-dc111fe6ec5a",
+      "name": "Mark as Processed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1840,
+        320
+      ],
+      "webhookId": "4e6601d7-b005-492e-9466-50fc56c5929b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Edit Fields').item.json.id }}",
+        "labelIds": "={{ $('Filter').item.json.id }}"
+      },
+      "id": "ce0f5ccd-f19c-4ece-b07e-d191b8a41628",
+      "name": "Remove label from message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2064,
+        320
+      ],
+      "webhookId": "remove-label-webhook-0001",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F3cQVIbokuyDLVR2",
+          "name": "Google_0Auth"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Testing this workflow\n\n**1.** Send 1-2 test emails to yourself with a PDF, add your address to `email_whitelist`\n**2.** Set `test_limit` to `2` in Set Label Variable (0 = production, uses 500)\n**3.** Shrink date range: `daysAgo(9)` → `daysAgo(1)` in the Code node\n**4.** Optionally disable **Analyze file** to skip the classifier\n**5.** Execute and click each node to inspect output\n**6.** Clean up: enable **Remove label from message** and re-run, or manually remove `GdriveFiled` in Gmail\n**7.** Restore: `test_limit` → `0`, `daysAgo(9)`, re-enable Analyze file\n\nFull guide: `docs/testing-gmail-processor.md`",
+        "height": 323,
+        "width": 648
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -16
+      ],
+      "id": "aa55c017-a560-4c7e-9585-356aa99f6d59",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "### Label buttons\nThese are UI buttons — use them.\n**Mark as Processed** adds the label,\n**Remove label** removes it (disabled by default).\n\nSee main testing sticky for the full flow.",
+        "height": 332,
+        "width": 398,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        112
+      ],
+      "id": "504eafb5-6389-449d-a21f-c9f08aca179d",
+      "name": "Sticky Note1"
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Set Label Variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Label Variable": {
+      "main": [
+        [
+          {
+            "node": "Create a label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a label": {
+      "main": [
+        [
+          {
+            "node": "Get many labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many labels": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Set Date-Range to process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Date-Range to process": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Analyze file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze file": {
+      "main": [
+        [
+          {
+            "node": "Mark as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Processed": {
+      "main": [
+        [
+          {
+            "node": "Remove label from message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

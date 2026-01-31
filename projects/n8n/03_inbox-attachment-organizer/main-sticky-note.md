@@ -26,7 +26,7 @@ Reads email attachment content, extracts key data to determine filing location (
 
 ---
 #### After First Run
-- [ ] Run `gmail-systematic-processor` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
+- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
 - [ ] Connect Telegram bot for notifications
 
 ---
