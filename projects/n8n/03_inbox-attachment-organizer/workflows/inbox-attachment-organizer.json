@@ -78,6 +78,12 @@
               "name": "company_name",
               "value": "Runfish-data",
               "type": "string"
+            },
+            {
+              "id": "20a51c7e-5962-4ce3-b7c4-8abf6f53b97b",
+              "name": "label_ID",
+              "value": "Label_82",
+              "type": "string"
             }
           ]
         },
@@ -104,7 +110,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2944,
+        -2736,
         1328
       ],
       "id": "2fc49326-652b-4674-b3d8-800653d7e91a",
@@ -516,7 +522,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -3232,
+        -3024,
         1616
       ],
       "id": "e13bc4b3-aeb3-4a08-9bf4-5a18e664504f",
@@ -612,7 +618,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -3056,
+        -2848,
         1104
       ],
       "id": "2994c448-5b8b-4bdf-835e-c0c75eed5049",
@@ -638,7 +644,7 @@
       "parameters": {
         "content": "Connect to the created google sheet.",
         "height": 204,
-        "width": 280,
+        "width": 488,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -667,7 +673,7 @@
       "parameters": {
         "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/03_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
         "height": 176,
-        "width": 336
+        "width": 544
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -785,7 +791,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3008,
+        -2800,
         1616
       ],
       "id": "e5028514-c73e-4d28-929d-a74cb6e322d7",
@@ -941,7 +947,7 @@
       "parameters": {
         "content": "#  Invoices & Receipts\nNodes 19-30",
         "height": 304,
-        "width": 1920,
+        "width": 2128,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -1397,6 +1403,28 @@
       "id": "c8881149-bb5c-458e-8bb4-f24b398fcbce",
       "name": "sender_whitelist",
       "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": "={{ $('Set File ID').item.json.label_ID }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3264,
+        1728
+      ],
+      "id": "a92f4eb2-5e36-477f-8220-215dad4b9832",
+      "name": "Remove label from message",
+      "webhookId": "820e746b-7ddc-4017-baf8-a103673d9584",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "T7t9UaxJCocOWjj8",
+          "name": "gmail-26-inboxOrg"
+        }
+      }
     }
   ],
   "connections": {
@@ -1668,7 +1696,7 @@
       "main": [
         [
           {
-            "node": "insert doc record",
+            "node": "Remove label from message",
             "type": "main",
             "index": 0
           }
@@ -1763,6 +1791,17 @@
         [
           {
             "node": "Prepare Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message": {
+      "main": [
+        [
+          {
+            "node": "insert doc record",
             "type": "main",
             "index": 0
           }

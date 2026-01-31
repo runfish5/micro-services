@@ -1,6 +1,6 @@
-# Main Flow (38 Nodes)
+# Main Flow (34 Nodes)
 
-> **Version 1.0.3** | Last verified: 2026-01-29
+> **Version 2.0.0** | Last verified: 2026-01-31
 
 ## Overview
 
@@ -9,12 +9,12 @@ This workflow automates the entire invoice processing
   minimal human intervention.
 
 
-## 🎯 Workflow Flow Summary
+## Workflow Flow Summary
 
 
 ### Phases:
 ```
-Email Trigger
+Email Trigger & Labeling
 Attachment Processing
 Subject Classifier & Routing
 Deep Invoice Extraction & Storage
@@ -26,31 +26,38 @@ Alternative Entry: When Executed by Another Workflow
 
 ### Data Flow
 
-Note: This particular telegram configuration must still be implemented.
 ```
-Email → Text Extraction → AI Classification
-                              ↓
-                         Is Financial? (financial doc router)
-                              ↓
-                      [optional] Sender Whitelist (disabled)
-                              ↓
-                      AI Deep Extraction
-                              ↓
-                    ┌─────────┴──────────┐
-                    ↓                    ↓
-              Google Drive          Google Sheets
-              (Organized)            (Logged)
-                    │                    │
-                    └─────────┬──────────┘
-                              ↓
-                      Telegram Notification
+Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classification
+                                                                    ↓
+                                                               Is Financial?
+                                                                    ↓
+                                                          [disabled] Whitelist
+                                                                    ↓
+                                                          Prepare Attachments
+                                                                    ↓
+                                                          AI Deep Extraction
+                                                                    ↓
+                                                          Has Attachments?
+                                                      ┌────── Yes ──┴── No ──────┐
+                                                      ↓                          ↓
+                                                Google Drive              Mark Processed
+                                                (Organized)                     ↓
+                                                      ↓                   Remove 'n8n' Label
+                                                Mark Processed                  ↓
+                                                      ↓                   Google Sheets
+                                                Remove 'n8n' Label            (Logged)
+                                                      ↓                        ↓
+                                                Google Sheets           Telegram Notification
+                                                  (Logged)
+                                                      ↓
+                                                Telegram Notification
 ```
 
 
 ### Key Workflow Logic
 ```
   Flow Summary:
-  Gmail Trigger → Stop promotions → Set File ID → Gmail (get attachments)
+  Gmail Trigger → Stop promotions → Set File ID → Tag Mail with 'n8n' → Gmail (download attachments)
     ↓
   Empty? (check for attachments)
     ├─ No Attachments → Clean Email object
@@ -58,20 +65,20 @@ Email → Text Extraction → AI Classification
                           ↓
                         Clean Email object
     ↓
-  email-info-hub → subject-classifier-LM (LM1)
+  email-info-hub → subject-classifier-LM (LM1: gpt-oss-120b)
     ↓
-  Routing branches (some disabled by default):
-    ├→ Tag Mail with 'n8n' → notify the category (Telegram)
-    ├→ [disabled] ContactManager-lineage → record-search → smart-table-fill
-    ├→ [disabled] appointment router → Trigger non-spam lineage
-    └→ financial doc router → [disabled] sender_whitelist
+  Routing branches:
+    ├→ financial doc router → [disabled] sender_whitelist
+    ├→ [disabled] notify the category (Telegram)
+    └→ [disabled] ContactManager-lineage → record-search → smart-table-fill
     ↓
-  Has Attachments? → Prepare Attachments → Accountant-concierge-LM (LM2)
+  IF FINANCIAL:
+  Prepare Attachments → Accountant-concierge-LM (LM2: gpt-oss-120b)
     ↓
-  input folder lookup → Call 'gdrive-recursion' → save doc to folder
-                  └→ insert doc record
-    ↓
-  Await Storage Complete → craft report note → Telegram & done / Mark as Processed1
+  If (has attachments?)
+    ├─ Yes → input folder lookup → Call 'gdrive-recursion' → Get binary data2 → save doc to folder
+    │        → Mark as Processed1 → Remove label from message → insert doc record → craft report note → Telegram & done
+    └─ No  → Mark as Processed1 → Remove label from message → insert doc record → craft report note → Telegram & done
 ```
 
 ### Contact-Centric Data Model
@@ -86,9 +93,10 @@ Email → Text Extraction → AI Classification
 START: Gmail Trigger
   │
   ├→ Stop promotions (filter)
-  ├→ Set File ID
-  ├→ Gmail (get full email + attachments)
-  └→ Empty? (check attachments)
+  ├→ Set File ID (email_ID, owner_name, company_name, label_ID)
+  ├→ Tag Mail with 'n8n' (add Gmail label)
+  ├→ Gmail (get full email + download attachments)
+  └→ Empty? (check binary attachment count)
      │
      ├─ NO ATTACHMENTS:
      │  └→ Clean Email object
@@ -101,53 +109,62 @@ START: Gmail Trigger
         └→ email-info-hub
    *11    └→ subject-classifier-LM
               │
-              ├→ Tag Mail with 'n8n' → notify the category (Telegram)
+              ├→ [disabled] notify the category (Telegram)
               ├→ [disabled] ContactManager-lineage
               │     └→ Call 'record-search'
               │        └→ Prepare Contact Input
               │           └→ Call 'smart-table-fill'
-              ├→ financial doc router → [disabled] sender_whitelist
-              └→ [disabled] appointment router → Trigger non-spam lineage
+              └→ financial doc router → [disabled] sender_whitelist
 
               IF FINANCIAL (via router):
-              └→ Has Attachments?
-                 │
-                 └→ Prepare Attachments
-                    └→ Accountant-concierge-LM
+              └→ Prepare Attachments
+                 └→ Accountant-concierge-LM
+                    └→ If (has attachments?)
                        │
-                       ├→ input folder lookup
-                       │  └→ Call 'gdrive-recursion'
-                       │     └→ Get binary data2
-                       │        └→ save doc to folder ─┐
-                       │                               │
-                       └→ insert doc record ───────────┤
-                                                       │
-                          Await Storage Complete ◄─────┘
-                             └→ craft report note
-                                ├→ Telegram & done
-                                └→ Mark as Processed1
+                       ├─ YES (upload + log):
+                       │  └→ input folder lookup
+                       │     └→ Call 'gdrive-recursion'
+                       │        └→ Get binary data2
+                       │           └→ save doc to folder
+                       │              └→ Mark as Processed1
+                       │                 └→ Remove label from message
+                       │                    └→ insert doc record
+                       │                       └→ craft report note
+                       │                          └→ Telegram & done
+                       │
+                       └─ NO (log only):
+                          └→ Mark as Processed1
+                             └→ Remove label from message
+                                └→ insert doc record
+                                   └→ craft report note
+                                      └→ Telegram & done
 
 ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ```
 
-## 🦜 AI Models Nodes
+## AI Models Nodes
+
+Both AI nodes use **gpt-oss-120b** via Groq (free tier).
 
 ### 1. Classification
 - **Node**: subject-classifier-LM
+- **Model**: gpt-oss-120b (Groq)
 - **Input**: Email text + attachment content + contact context from email-info-hub
-- **Output**: Document type, action required, Telegram summary, optional `contact_name_extracted`
+- **Output**: Document type, action required, Telegram summary, body_core (stripped content), optional `contact_name_extracted`
 - **Classification Types**:
   - confirmation, financial, newsletter, appointment, marketing, operational, other
 - **Note**: `contact_name_extracted` is optional - the LLM extracts a clearer name if available in the email body (separate from header-derived `contact_name`)
 
 ### 2. Extraction
 - **Node**: Accountant-concierge-LM
-- **Input**: Cleaned invoice/receipt text
-- **Output**: Structured invoice data following the **Billing_Ledger schema**
+- **Model**: gpt-oss-120b (Groq)
+- **Input**: Email context (subject, from, date, body_core) + parsed attachment text
+- **Output**: Structured invoice data following the **Billing_Ledger schema** + filing metadata (accounting_category, document_type, year, month)
 - **Key Capabilities**:
   - Categorization: Revenue vs Expense
   - Type detection: Invoice vs Receipt
   - Field extraction: dates, amounts, parties, line items
+  - Filing path computation: year + month for folder structure
 
 **Billing_Ledger Schema** (15 fields, all required):
 
@@ -158,7 +175,7 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 
 > **counterparty_name** = the OTHER party on the invoice (supplier for Expense, customer for Revenue). Replaces legacy `supplier_name`/`recipient_business_name` fields.
 
-## 🔗 External Workflows Called
+## External Workflows Called
 
 ### 1. any-file2json-converter
 - **Called by**: Create Attachment Profile
@@ -174,9 +191,9 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 - **Called by**: Call 'gdrive-recursion'
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)
-- **Input**: Path components (year, month, category)
+- **Input**: Path components (year, month, category) via `target_path`, `root_folder_id`, `root_path`
 - **Output**: Folder ID for file upload
-- **Behavior**: Self-recursive workflow—calls itself when folders don't exist, skips cache lookup on recursive calls for efficiency. Uses OR query for batch cache lookup (Google Sheets v4.7)
+- **Behavior**: Self-recursive workflow—calls itself when folders don't exist, auto-creates missing folders, caches results in PathToIDLookup sheet. Uses OR query for batch cache lookup (Google Sheets v4.7)
 
 ### 3. record-search [ContactManager]
 - **Called by**: ContactManager-lineage (disabled by default)
@@ -190,9 +207,12 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 - **Location**: `../02_smart-table-fill/workflows/smart-table-fill.n8n.json`
 - **Note**: Uses rate-limited LLM extraction subworkflow internally
 
-💡 **Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
+**Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
 
 
-## 📝 Notes
+## Notes
 - Google Sheets provides a queryable database of all processed invoices
 - The folder structure makes manual file browsing intuitive
+- The 'n8n' label acts as a processing-in-progress indicator: Tag Mail adds it early (before downloading attachments), and Remove label from message strips it after successful processing. Emails still carrying the label indicate incomplete or failed processing.
+- Financial documents without attachments still get logged via the "No" branch (LLM extracts data from email body)
+- sender_whitelist is disabled by default; enable it to restrict financial processing to known senders only

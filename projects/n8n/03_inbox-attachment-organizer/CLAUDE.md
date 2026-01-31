@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ IMPORTANT: Read This First
+## IMPORTANT: Read This First
 
-**ALWAYS read `workflows/mainflow.md` BEFORE looking at the workflow JSON files.** The mainflow.md is the authoritative representation of the workflow structure and logic. The JSON files are machine-readable exports that are difficult to understand without the context from mainflow.md. Do NOT attempt to reverse-engineer the JSON - read the documentation first.
+**ALWAYS read `mainflow.md` BEFORE looking at the workflow JSON files.** The mainflow.md is the authoritative representation of the workflow structure and logic. The JSON files are machine-readable exports that are difficult to understand without the context from mainflow.md. Do NOT attempt to reverse-engineer the JSON - read the documentation first.
 
 ## What This Is
 
@@ -17,19 +17,23 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ## Where Information Lives
 
 ### Documentation
-- `docs/mainflow.md` - Complete 30-node breakdown by phases (1-5: trigger, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
-- `docs/setup-guide.md` - Billing_Ledger sheet schema (28 columns tab-separated), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
+- `mainflow.md` - Complete 34-node breakdown by phases (1-5: trigger & labeling, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
+- `docs/setup-guide.md` - Billing_Ledger sheet schema (15 columns), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
 - `main-sticky-note.md` - Author's setup checklist showing deployment priorities and post-activation tasks
 
 ### Workflows
-- `workflows/inbox-attachment-organizer.json` - Main workflow (30 nodes) orchestrating the full pipeline
+- `workflows/inbox-attachment-organizer.json` - Main workflow (34 nodes) orchestrating the full pipeline
 - `workflows/subworkflows/any-file2json-converter.json` - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`.
-- `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; creates missing folders, caches results, uses batch OR query
+- `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
 - `workflows/subworkflows/gmail-systematic-processor.json` - Standalone batch processor for existing inbox emails
 
 ## Non-Obvious Architecture
 
-**Two AI stages**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check happens between stages.
+**Two AI stages (both gpt-oss-120b via Groq)**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check (disabled by default) sits between stages.
+
+**'n8n' label as processing indicator**: Tag Mail adds the 'n8n' label early (before Gmail downloads attachments). Remove label from message strips it after successful processing. Emails still carrying the label indicate incomplete or failed runs.
+
+**Financial docs without attachments**: The If node after Accountant-concierge-LM checks for attachments. Financial emails without attachments skip the Drive upload but still get logged to Sheets and notified via Telegram.
 
 **gmail-systematic-processor**: Separate workflow for batch processing existing inbox. Gmail Trigger only catches new emails.
 
@@ -37,12 +41,13 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ## Workflow Phases (from mainflow.md)
 
-Nodes 1-5: Email Trigger (Gmail Trigger polls every 1 min, filters promotions, downloads attachments)
-Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object aggregates text)
-Nodes 11-18: Classification & Routing (subject-classifier-LM, financial doc router, whitelist validator, appointment router)
-Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, google-drive-folder-id-lookup call, upload to Drive, log to Billing_Ledger sheet, Telegram notification, Mark as Processed)
+Nodes 1-5: Email Trigger & Labeling (Gmail Trigger polls every 1 min, filters promotions, sets metadata incl. label_ID, tags with 'n8n' label, downloads attachments)
+Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object sanitizes body + builds attachment map, email-info-hub aggregates contact/direction data)
+Nodes 11-18: Classification & Routing (subject-classifier-LM classifies, financial doc router, sender_whitelist disabled, notify the category disabled)
+Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, If checks attachments, google-drive-folder-id-lookup call, upload to Drive, Mark as Processed, Remove label from message, log to Billing_Ledger sheet, craft report, Telegram notification)
+ContactManager (disabled): record-search → Prepare Contact Input → smart-table-fill
 Alternative Entry: When Executed by Another Workflow
 
 ## More Details
 
-See `docs/mainflow.md` for complete node-by-node lineage and subworkflow integration points. See `main-sticky-note.md` for deployment checklist.
+See `mainflow.md` for complete node-by-node lineage and subworkflow integration points. See `main-sticky-note.md` for deployment checklist.
