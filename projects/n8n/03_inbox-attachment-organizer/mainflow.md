@@ -152,7 +152,7 @@ Both AI nodes use **gpt-oss-120b** via Groq (free tier).
 - **Input**: Email text + attachment content + contact context from email-info-hub
 - **Output**: Document type, action required, Telegram summary, body_core (stripped content), optional `contact_name_extracted`
 - **Classification Types**:
-  - confirmation, financial, newsletter, appointment, marketing, operational, other
+  - financial, actionable, informational, Other
 - **Note**: `contact_name_extracted` is optional - the LLM extracts a clearer name if available in the email body (separate from header-derived `contact_name`)
 
 ### 2. Extraction
