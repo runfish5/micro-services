@@ -2,11 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## SECURITY - Public Repository
+
+This repository is **PUBLIC**. Never commit:
+- Telegram chat IDs or bot tokens
+- n8n credential IDs (the `"id"` field inside `"credentials"` blocks)
+- Google Sheet document IDs
+- API keys, JWT tokens, or passwords
+- The n8n instance URL
+
+Use placeholder values (e.g., `CREDENTIAL_ID_TELEGRAM`, `YOUR_CHAT_ID_1`) in all committed files.
+Actual values belong in `.env` files (already gitignored) or in the n8n instance directly.
+
 ## Home Lab Context
 
 This repository supports a **home lab automation setup**. Key infrastructure:
 
-- **n8n instance**: Hosted on Railway at `primary-production-2e961.up.railway.app`
+- **n8n instance**: Hosted on Railway at `YOUR_N8N_INSTANCE.up.railway.app`
 - **Claude's role**: Supervisor - monitors executions, debugs failures, retries workflows       
 - **API credentials**: Stored in `.claude/n8n-api.env`
 

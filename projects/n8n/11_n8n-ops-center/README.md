@@ -26,7 +26,7 @@ Workflow monitoring and incident management via Telegram — check execution sta
 Authorized Telegram chat IDs are defined in the **Whitelist Check** node:
 
 ```javascript
-['7582730035', '7281469586'].includes(String($json.message.chat.id))
+['YOUR_CHAT_ID_1', 'YOUR_CHAT_ID_2'].includes(String($json.message.chat.id))
 ```
 
 To add a new user:
@@ -37,9 +37,9 @@ To add a new user:
 
 | Purpose | Credential Name | ID |
 |---------|-----------------|-----|
-| Telegram | n8n_house_bot | `OiAg5ImWe61JXymC` |
-| n8n API | Header Auth account | `vjEcFZksIjUCKNRz` |
-| Google Sheets | GoogleDriveMAIN | `O03W9YZyCWUacxnv` |
+| Telegram | n8n_house_bot | `CREDENTIAL_ID_TELEGRAM` |
+| n8n API | Header Auth account | `CREDENTIAL_ID_N8N_API` |
+| Google Sheets | GoogleDriveMAIN | `CREDENTIAL_ID_GOOGLE_DRIVE` |
 
 ## Documentation
 

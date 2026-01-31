@@ -136,7 +136,7 @@
       "name": "Upload Email File",
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "HwaWjD4xhGV5dH9Q",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE_OAUTH",
           "name": "Google Drive Sheets & OAuth"
         }
       }
@@ -167,7 +167,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "HwaWjD4xhGV5dH9Q",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE_OAUTH",
           "name": "Google Drive Sheets & OAuth"
         }
       }
@@ -192,7 +192,7 @@
       "name": "Download README",
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "HwaWjD4xhGV5dH9Q",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE_OAUTH",
           "name": "Google Drive Sheets & OAuth"
         }
       }
@@ -225,7 +225,7 @@
       "name": "Profile LLM",
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
+          "id": "CREDENTIAL_ID_GROQ",
           "name": "Groq account"
         }
       }
@@ -279,7 +279,7 @@
       "name": "Upload Updated README",
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "HwaWjD4xhGV5dH9Q",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE_OAUTH",
           "name": "Google Drive Sheets & OAuth"
         }
       }

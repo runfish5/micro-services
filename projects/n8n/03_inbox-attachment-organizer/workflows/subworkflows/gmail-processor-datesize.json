@@ -103,7 +103,7 @@
       "webhookId": "5dd9fd28-6fa1-4094-9f96-c57238f374c8",
       "credentials": {
         "gmailOAuth2": {
-          "id": "T7t9UaxJCocOWjj8",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "gmail-26-inboxOrg"
         }
       }
@@ -188,7 +188,7 @@
       "webhookId": "1af94b15-c787-484c-a985-105961534353",
       "credentials": {
         "gmailOAuth2": {
-          "id": "T7t9UaxJCocOWjj8",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "gmail-26-inboxOrg"
         }
       }
@@ -227,7 +227,7 @@
       "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
       "credentials": {
         "gmailOAuth2": {
-          "id": "T7t9UaxJCocOWjj8",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "gmail-26-inboxOrg"
         }
       }
@@ -344,7 +344,7 @@
       "webhookId": "4e6601d7-b005-492e-9466-50fc56c5929b",
       "credentials": {
         "gmailOAuth2": {
-          "id": "T7t9UaxJCocOWjj8",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "gmail-26-inboxOrg"
         }
       }

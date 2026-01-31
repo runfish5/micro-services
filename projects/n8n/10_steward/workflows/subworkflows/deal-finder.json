@@ -13,7 +13,7 @@
     },
     {
       "parameters": {
-        "chatId": "7582730035",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "\ud83d\uded2 Deal Finder is not yet set up.",
         "additionalFields": {
           "appendAttribution": false
@@ -29,7 +29,7 @@
       "name": "Send Stub Message",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }

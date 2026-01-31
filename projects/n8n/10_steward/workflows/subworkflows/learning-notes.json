@@ -24,7 +24,7 @@
             {
               "id": "ln-config-chat-id",
               "name": "chatId",
-              "value": "7582730035",
+              "value": "YOUR_CHAT_ID_1",
               "type": "string"
             }
           ]
@@ -56,7 +56,7 @@
       "name": "Search Notion",
       "credentials": {
         "notionApi": {
-          "id": "O6ijIm05042askTg",
+          "id": "CREDENTIAL_ID_NOTION",
           "name": "Notion account 2"
         }
       }
@@ -82,7 +82,7 @@
       "name": "Get Page Blocks",
       "credentials": {
         "notionApi": {
-          "id": "O6ijIm05042askTg",
+          "id": "CREDENTIAL_ID_NOTION",
           "name": "Notion account 2"
         }
       }
@@ -157,7 +157,7 @@
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
+          "id": "CREDENTIAL_ID_GEMINI",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
@@ -174,7 +174,7 @@
       "name": "Postgres Chat Memory",
       "credentials": {
         "postgres": {
-          "id": "rReqZb6H4chGQnSg",
+          "id": "CREDENTIAL_ID_POSTGRES",
           "name": "Postgres account"
         }
       }
@@ -211,7 +211,7 @@
       "name": "Send to Telegram",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }

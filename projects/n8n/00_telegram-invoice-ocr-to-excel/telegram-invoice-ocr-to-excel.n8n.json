@@ -15,7 +15,7 @@
       "typeVersion": 1,
       "credentials": {
         "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
+          "id": "CREDENTIAL_ID_GEMINI",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
@@ -38,11 +38,11 @@
       "webhookId": "5d8be2e2-4879-42c0-9dfe-233e61dcfd85",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       },
-      "notes": "Chat-ID : 7281469586"
+      "notes": "Chat-ID : YOUR_CHAT_ID_2"
     },
     {
       "parameters": {
@@ -60,14 +60,14 @@
       "webhookId": "46445344-dbab-4454-8158-0a8a4110b9dd",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }
     },
     {
       "parameters": {
-        "chatId": "7582730035",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "={{ $json.Message }}",
         "additionalFields": {
           "appendAttribution": false
@@ -87,7 +87,7 @@
       "retryOnFail": false,
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }
@@ -154,7 +154,7 @@
       "typeVersion": 1,
       "credentials": {
         "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
+          "id": "CREDENTIAL_ID_GEMINI",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
@@ -218,7 +218,7 @@
       "typeVersion": 1,
       "credentials": {
         "googlePalmApi": {
-          "id": "kmqRSsOartR5rGAD",
+          "id": "CREDENTIAL_ID_GEMINI",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
@@ -229,17 +229,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
+          "value": "YOUR_BILLING_LEDGER_SHEET_ID",
           "mode": "list",
           "cachedResultName": "Billing_Ledger",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_BILLING_LEDGER_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_BILLING_LEDGER_SHEET_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",

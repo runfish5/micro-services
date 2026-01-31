@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === USER CONFIGURATION ===\n// Edit these values to customize the report\nreturn [{\n  json: {\n    // Rolling period lookback (months)\n    MONTHS_BACK: 6,\n    \n    // Number of vendors shown in chart\n    TOP_N_VENDORS: 6,\n    \n    // Target currency for report (all amounts converted to this)\n    CURRENCY_SYMBOL: '$',\n    CURRENCY_CODE: 'USD',\n    \n    // Alert if MoM change exceeds this percentage\n    VARIANCE_ALERT_PCT: 20,\n    \n    // Threshold for large expense alerts (future use)\n    LARGE_EXPENSE_THRESHOLD: 500,\n    \n    // Telegram chat ID for notifications\n    CHAT_ID: '7582730035',\n    \n    // Google Sheets document ID (Billing_Ledger)\n    SHEET_ID: '1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94',\n    \n    // Sheet name within the document\n    SHEET_NAME: 'Sheet1'\n  }\n}];"
+        "jsCode": "// === USER CONFIGURATION ===\n// Edit these values to customize the report\nreturn [{\n  json: {\n    // Rolling period lookback (months)\n    MONTHS_BACK: 6,\n    \n    // Number of vendors shown in chart\n    TOP_N_VENDORS: 6,\n    \n    // Target currency for report (all amounts converted to this)\n    CURRENCY_SYMBOL: '$',\n    CURRENCY_CODE: 'USD',\n    \n    // Alert if MoM change exceeds this percentage\n    VARIANCE_ALERT_PCT: 20,\n    \n    // Threshold for large expense alerts (future use)\n    LARGE_EXPENSE_THRESHOLD: 500,\n    \n    // Telegram chat ID for notifications\n    CHAT_ID: 'YOUR_CHAT_ID_1',\n    \n    // Google Sheets document ID (Billing_Ledger)\n    SHEET_ID: 'YOUR_BILLING_LEDGER_SHEET_ID',\n    \n    // Sheet name within the document\n    SHEET_NAME: 'Sheet1'\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -72,7 +72,7 @@
       "name": "Read Invoices",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -133,7 +133,7 @@
       "name": "Send Chart to Telegram",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }

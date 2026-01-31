@@ -33,8 +33,8 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 |-----------|----------|-------|
 | Morning schedule | daily-briefing / Schedule Trigger | 7 AM daily |
 | Calendar | daily-briefing / Get Today's Events | `uniqued4ve@gmail.com` |
-| Chat ID | daily-briefing / Send to Telegram | `7582730035` |
-| Allowed users | menu-handler / Whitelist | `7582730035`, `7281469586` |
+| Chat ID | daily-briefing / Send to Telegram | `YOUR_CHAT_ID_1` |
+| Allowed users | menu-handler / Whitelist | `YOUR_CHAT_ID_1`, `YOUR_CHAT_ID_2` |
 | Notion search term | learning-notes / Config | `NVIDIA` (configurable) |
 
 ## Post-Import Setup
@@ -43,9 +43,9 @@ After importing `menu-handler.json`, update the 4 Execute Workflow node IDs to p
 
 ## Dependencies
 
-- **Google Calendar OAuth** - Calendar: `vtBfSfnYwvuSEgaV`
-- **Telegram API** - Bot: `OiAg5ImWe61JXymC` (n8n_house_bot)
-- **Notion API** - Account 2: `O6ijIm05042askTg`
-- **Google Gemini** - PaLM API: `kmqRSsOartR5rGAD`
-- **Postgres** - Chat memory: `rReqZb6H4chGQnSg`
+- **Google Calendar OAuth** - Calendar: `CREDENTIAL_ID_GOOGLE_CALENDAR`
+- **Telegram API** - Bot: `CREDENTIAL_ID_TELEGRAM` (n8n_house_bot)
+- **Notion API** - Account 2: `CREDENTIAL_ID_NOTION`
+- **Google Gemini** - PaLM API: `CREDENTIAL_ID_GEMINI`
+- **Postgres** - Chat memory: `CREDENTIAL_ID_POSTGRES`
 - **Project 04** - expense-trend-report (callable via Execute Workflow Trigger)

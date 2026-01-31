@@ -100,8 +100,8 @@ Disabled branches:
 | 14 | Google Gemini Chat Model (unused) | lmChatGoogleGemini | Placeholder node |
 
 ## Notes
-- Chat ID for Telegram bot: `7281469586` (see Telegram Trigger1 notes)
-- Google Sheets document: `Billing_Ledger` (ID: `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94`)
+- Chat ID for Telegram bot: `YOUR_CHAT_ID_2` (see Telegram Trigger1 notes)
+- Google Sheets document: `Billing_Ledger` (ID: `YOUR_BILLING_LEDGER_SHEET_ID`)
 - Output columns mapped: supplier_name, supplier_address, invoice_date, total_amount_due, currency_code, subtotal_amount, recipient_business_name, payment_method, date_paid, payment_reference
 - Edit Fields node uses regex to strip markdown code blocks: `.replace(/^(```json\\n)?(.*?)(\\n```)?$/s, '$2')`
 - Uses Telegram photo array index `[3]` for highest resolution

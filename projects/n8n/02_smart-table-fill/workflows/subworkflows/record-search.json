@@ -111,7 +111,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }

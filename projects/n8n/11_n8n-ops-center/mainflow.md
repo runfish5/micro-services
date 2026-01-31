@@ -55,7 +55,7 @@ Telegram Trigger
 | Node | Type | Purpose |
 |------|------|---------|
 | Telegram Trigger | telegramTrigger | Receives messages, credential: `n8n_house_bot` |
-| Whitelist Check | IF | Validates chat ID against `['7582730035', '7281469586']` |
+| Whitelist Check | IF | Validates chat ID against `['YOUR_CHAT_ID_1', 'YOUR_CHAT_ID_2']` |
 
 ### Command Parsing (Nodes 3-4)
 
@@ -125,7 +125,7 @@ Telegram Trigger
 ```json
 {
   "message": {
-    "chat": { "id": 7582730035 },
+    "chat": { "id": YOUR_CHAT_ID_1 },
     "text": "/status"
   }
 }
@@ -134,7 +134,7 @@ Telegram Trigger
 ### After Parse Command
 ```json
 {
-  "chatId": "7582730035",
+  "chatId": "YOUR_CHAT_ID_1",
   "command": "status",
   "args": "",
   "rawText": "/status"
@@ -144,7 +144,7 @@ Telegram Trigger
 ### Handler Output (all handlers)
 ```json
 {
-  "chatId": "7582730035",
+  "chatId": "YOUR_CHAT_ID_1",
   "response": "formatted message text"
 }
 ```
@@ -152,7 +152,7 @@ Telegram Trigger
 ### After Split Long Message
 ```json
 {
-  "chatId": "7582730035",
+  "chatId": "YOUR_CHAT_ID_1",
   "chunk": "message chunk",
   "part": 1,
   "total": 1
@@ -163,17 +163,17 @@ Telegram Trigger
 
 | Credential | ID | Used By |
 |------------|-----|---------|
-| n8n_house_bot (Telegram) | `OiAg5ImWe61JXymC` | Trigger, Send Response |
-| Header Auth account (n8n API) | `vjEcFZksIjUCKNRz` | Get Executions, Execute Retry |
-| GoogleDriveMAIN | `O03W9YZyCWUacxnv` | Read FailedItems, Read Invoices |
+| n8n_house_bot (Telegram) | `CREDENTIAL_ID_TELEGRAM` | Trigger, Send Response |
+| Header Auth account (n8n API) | `CREDENTIAL_ID_N8N_API` | Get Executions, Execute Retry |
+| GoogleDriveMAIN | `CREDENTIAL_ID_GOOGLE_DRIVE` | Read FailedItems, Read Invoices |
 
 ## External Dependencies
 
 | Resource | Document ID | Sheet |
 |----------|-------------|-------|
-| FailedItems | `1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac` | gid=0 |
-| Billing_Ledger | `1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94` | gid=0 |
-| n8n API | `https://primary-production-2e961.up.railway.app` | - |
+| FailedItems | `YOUR_FAILEDITEMS_SHEET_ID` | gid=0 |
+| Billing_Ledger | `YOUR_BILLING_LEDGER_SHEET_ID` | gid=0 |
+| n8n API | `https://YOUR_N8N_INSTANCE.up.railway.app` | - |
 
 ## Commands Reference
 

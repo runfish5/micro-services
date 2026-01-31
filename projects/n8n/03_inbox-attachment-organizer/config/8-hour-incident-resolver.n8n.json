@@ -24,17 +24,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
           "mode": "list",
           "cachedResultName": "🚩8-hour Retries",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "FailedItems",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit#gid=0"
         },
         "options": {}
       },
@@ -48,7 +48,7 @@
       "name": "Read FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -138,7 +138,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.execution_id }}/retry",
+        "url": "=https://YOUR_N8N_INSTANCE.up.railway.app/api/v1/executions/{{ $json.execution_id }}/retry",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {
@@ -159,7 +159,7 @@
       "name": "Execute Retry via API",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "vjEcFZksIjUCKNRz",
+          "id": "CREDENTIAL_ID_N8N_API",
           "name": "Header Auth account"
         }
       }
@@ -180,7 +180,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://primary-production-2e961.up.railway.app/api/v1/executions/{{ $json.new_execution_id }}",
+        "url": "=https://YOUR_N8N_INSTANCE.up.railway.app/api/v1/executions/{{ $json.new_execution_id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {
@@ -201,7 +201,7 @@
       "name": "Poll Execution Status",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "vjEcFZksIjUCKNRz",
+          "id": "CREDENTIAL_ID_N8N_API",
           "name": "Header Auth account"
         }
       }
@@ -367,7 +367,7 @@
       "name": "Append to All-Time Logs",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -377,17 +377,17 @@
         "operation": "delete",
         "documentId": {
           "__rl": true,
-          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
           "mode": "list",
           "cachedResultName": "🚩8-hour Retries",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "FailedItems",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit#gid=0"
         },
         "options": {
           "startRowNumber": "={{ $('Prepare Archive Record').first().json._rowIndex }}"
@@ -403,7 +403,7 @@
       "name": "Delete from FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -413,17 +413,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
           "mode": "list",
           "cachedResultName": "🚩8-hour Retries",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "FailedItems",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -477,7 +477,7 @@
       "name": "Update Retry Count",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -500,17 +500,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
           "mode": "list",
           "cachedResultName": "🚩8-hour Retries",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "FailedItems",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -553,14 +553,14 @@
       "name": "Update Status Escalated",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
     },
     {
       "parameters": {
-        "chatId": "7582730035",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "=🚨 ESCALATION: 3 retries exhausted\n\nWorkflow: {{ $json.workflow_name }}\nNode: {{ $json.failed_node }}\nError: {{ $json.error_message }}\n\nExecution ID: {{ $json.execution_id }}\nError Type: {{ $json.error_type }}\n\n⚠️ Manual intervention required",
         "additionalFields": {
           "appendAttribution": false
@@ -577,7 +577,7 @@
       "webhookId": "7d7cb033-297e-4132-9a85-1dcb7e81273f",
       "credentials": {
         "telegramApi": {
-          "id": "mlZdNwRkWhIVuDdr",
+          "id": "CREDENTIAL_ID_TELEGRAM_IMPORTANT",
           "name": "Telegram inbox_important"
         }
       }

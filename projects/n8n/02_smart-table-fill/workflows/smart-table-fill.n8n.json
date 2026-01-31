@@ -299,7 +299,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       },
@@ -322,7 +322,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -351,7 +351,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       },
@@ -435,7 +435,7 @@
       ],
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
+          "id": "CREDENTIAL_ID_GROQ",
           "name": "Groq account"
         }
       }
@@ -489,7 +489,7 @@
       "notesInFlow": false,
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
+          "id": "CREDENTIAL_ID_GROQ",
           "name": "Groq account"
         }
       }
@@ -533,7 +533,7 @@
       "name": "Get row(s) in sheet",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -647,7 +647,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }

@@ -77,7 +77,7 @@
       "name": "LLM1",
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
+          "id": "CREDENTIAL_ID_GROQ",
           "name": "Groq account"
         }
       }
@@ -329,7 +329,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets_FirstProject"
         }
       },
@@ -360,7 +360,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets_FirstProject"
         }
       },
@@ -471,10 +471,10 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94",
+          "value": "YOUR_BILLING_LEDGER_SHEET_ID",
           "mode": "list",
           "cachedResultName": "Billing_Ledger",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZfqdUCMMWFvN-AMUKL7n-TIbSZAer3fqiH6Oy03tM94/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_BILLING_LEDGER_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -494,7 +494,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets_FirstProject"
         }
       }
@@ -672,7 +672,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets_FirstProject"
         }
       }

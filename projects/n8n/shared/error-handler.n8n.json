@@ -72,17 +72,17 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac",
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
           "mode": "list",
           "cachedResultName": "007_Error-handler.n8n-sheet",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "FailedItems",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1m-CxKMnfImceMJL1Fzv98jbVz6a9bGqqhy6ekPI-Cac/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_FAILEDITEMS_SHEET_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -270,7 +270,7 @@
       "name": "Append to FailedItems",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "O03W9YZyCWUacxnv",
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "GoogleDriveMAIN"
         }
       }
@@ -316,7 +316,7 @@
     },
     {
       "parameters": {
-        "chatId": "=7582730035",
+        "chatId": "=YOUR_CHAT_ID_1",
         "text": "={{ $json.total > 1 ? '[' + $json.part + '/' + $json.total + '] ' : '' }}{{ $json.chunk }}",
         "additionalFields": {
           "appendAttribution": false
@@ -333,7 +333,7 @@
       "webhookId": "dda13267-ca61-4073-8a48-fd2f496c5c0f",
       "credentials": {
         "telegramApi": {
-          "id": "mlZdNwRkWhIVuDdr",
+          "id": "CREDENTIAL_ID_TELEGRAM_IMPORTANT",
           "name": "Telegram inbox_important"
         }
       }
@@ -373,7 +373,7 @@
     },
     {
       "parameters": {
-        "chatId": "7582730035",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "=🚨🚨🚨 CODE RED 🚨🚨🚨\n\n⚠️ ERROR HANDLER DOWN ⚠️\n\nThe 8-hour Task Resolver has FAILED!\nThis means automatic error recovery is broken.\n\nFailed Node: {{ $json.failed_node }}\nError: {{ $json.error_message }}\nExecution: {{ $json.execution_id }}\n\n🔥 IMMEDIATE ATTENTION REQUIRED 🔥",
         "additionalFields": {
           "appendAttribution": false
@@ -390,7 +390,7 @@
       "webhookId": "85b3bace-ff10-43ee-a533-9cf5b2323157",
       "credentials": {
         "telegramApi": {
-          "id": "mlZdNwRkWhIVuDdr",
+          "id": "CREDENTIAL_ID_TELEGRAM_IMPORTANT",
           "name": "Telegram inbox_important"
         }
       }
@@ -510,7 +510,7 @@
       {
         "execution": {
           "id": "36155",
-          "url": "https://primary-production-2e961.up.railway.app/workflow/WUOHyjdXfHdaL_oxpgtsY/executions/36155",
+          "url": "https://YOUR_N8N_INSTANCE.up.railway.app/workflow/WUOHyjdXfHdaL_oxpgtsY/executions/36155",
           "error": {
             "level": "warning",
             "shouldReport": false,

@@ -28,7 +28,7 @@ Manual Trigger ---------/
 | Manual Trigger | manualTrigger | Testing entry point | -- |
 | Get Today's Events | googleCalendar | Fetches today's events, `alwaysOutputData: true` | Calendar: `uniqued4ve@gmail.com` |
 | Format Message | code | Builds `HH:MM-HH:MM Title` lines, falls back to "No events today" | -- |
-| Send to Telegram | telegram | Sends message + 4 inline keyboard buttons | Chat ID: `7582730035` |
+| Send to Telegram | telegram | Sends message + 4 inline keyboard buttons | Chat ID: `YOUR_CHAT_ID_1` |
 
 ### Inline Keyboard Buttons
 
@@ -60,8 +60,8 @@ Telegram Trigger (callback_query) --> Whitelist --> Parse --> Route
 
 ### Allowed Chat IDs
 
-- `7582730035`
-- `7281469586`
+- `YOUR_CHAT_ID_1`
+- `YOUR_CHAT_ID_2`
 
 ### Post-Import Setup
 
@@ -87,10 +87,10 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ### Credentials
 
-- Notion: `Notion account 2` (`O6ijIm05042askTg`)
-- Gemini: `Google Gemini(PaLM) Api account` (`kmqRSsOartR5rGAD`)
-- Postgres: `Postgres account` (`rReqZb6H4chGQnSg`)
-- Telegram: `n8n_house_bot` (`OiAg5ImWe61JXymC`)
+- Notion: `Notion account 2` (`CREDENTIAL_ID_NOTION`)
+- Gemini: `Google Gemini(PaLM) Api account` (`CREDENTIAL_ID_GEMINI`)
+- Postgres: `Postgres account` (`CREDENTIAL_ID_POSTGRES`)
+- Telegram: `n8n_house_bot` (`CREDENTIAL_ID_TELEGRAM`)
 
 ## deal-finder.json (Stub Subworkflow)
 

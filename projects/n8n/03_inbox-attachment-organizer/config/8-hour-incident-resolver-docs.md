@@ -80,7 +80,7 @@ Settings → Error Workflow → Select "Error Handler"
 | Docker Linux | `http://172.17.0.1:5678` |
 | Native install | `http://localhost:5678` |
 
-**Current:** Railway (`https://primary-production-2e961.up.railway.app`)
+**Current:** Railway (`https://YOUR_N8N_INSTANCE.up.railway.app`)
 
 ---
 

@@ -17,7 +17,7 @@
       "webhookId": "daily-briefing-menu-handler",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }
@@ -34,7 +34,7 @@
             {
               "id": "whitelist-check",
               "leftValue": "={{ String($json.callback_query.from.id) }}",
-              "rightValue": "^(7582730035|7281469586)$",
+              "rightValue": "^(YOUR_CHAT_ID_1|YOUR_CHAT_ID_2)$",
               "operator": {
                 "type": "string",
                 "operation": "regex"
@@ -218,7 +218,7 @@
     },
     {
       "parameters": {
-        "content": "## Menu Handler\n\nAlways-on workflow. Listens for Telegram inline button taps from the daily briefing message.\n\n**Whitelist**: Only chat IDs 7582730035 and 7281469586 are accepted.\n\n**After import**: Update the 4 Execute Workflow node IDs to point to the actual subworkflow IDs in your n8n instance.",
+        "content": "## Menu Handler\n\nAlways-on workflow. Listens for Telegram inline button taps from the daily briefing message.\n\n**Whitelist**: Only chat IDs YOUR_CHAT_ID_1 and YOUR_CHAT_ID_2 are accepted.\n\n**After import**: Update the 4 Execute Workflow node IDs to point to the actual subworkflow IDs in your n8n instance.",
         "height": 220,
         "width": 300
       },

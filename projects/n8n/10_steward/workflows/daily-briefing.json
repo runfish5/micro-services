@@ -55,7 +55,7 @@
       "name": "Get Today's Events",
       "credentials": {
         "googleCalendarOAuth2Api": {
-          "id": "vtBfSfnYwvuSEgaV",
+          "id": "CREDENTIAL_ID_GOOGLE_CALENDAR",
           "name": "Google Calendar account"
         }
       }
@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "chatId": "7582730035",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "={{ $json.message }}",
         "replyMarkup": "inlineKeyboard",
         "inlineKeyboard": {
@@ -133,7 +133,7 @@
       "name": "Send to Telegram",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }

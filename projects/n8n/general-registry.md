@@ -17,7 +17,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | Property | Value |
 |----------|-------|
 | Host | Railway |
-| URL | `primary-production-2e961.up.railway.app` |
+| URL | `YOUR_N8N_INSTANCE.up.railway.app` |
 | Role | Workflow execution engine |
 | API Credentials | `.claude/n8n-api.env` |
 
