@@ -212,8 +212,8 @@
           "conditions": [
             {
               "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{Object.keys($('Gmail').item.binary).length}}",
-              "rightValue": null,
+              "leftValue": "={{Object.keys($('Gmail').item.binary || {}).length}}",
+              "rightValue": 0,
               "operator": {
                 "type": "number",
                 "operation": "equals"
@@ -232,7 +232,9 @@
         1136
       ],
       "id": "c50b5726-d2be-4212-b73a-cb128abf1e87",
-      "name": "Empty?"
+      "name": "Empty?",
+      "notesInFlow": false,
+      "notes": "Null-safe: binary || {} guards against emails with no attachments (binary=undefined)."
     },
     {
       "parameters": {
