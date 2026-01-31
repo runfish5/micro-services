@@ -2,6 +2,11 @@
 
 **Time:** <15 min | **Difficulty:** Easy | **Cost:** Free
 
+> **Docs**
+> - [parameters.md](parameters.md) - LIST MODE parameters
+> - [json-worksheet.md](json-worksheet.md) - JSON intro worksheet
+> - [email-crm-guide.md](email-crm-guide.md) - Email-CRM integration
+
 Choose your setup:
 
 | Setup | Description |
