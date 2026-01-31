@@ -28,9 +28,27 @@
               "type": "array"
             },
             {
-              "id": "test-limit-field",
-              "name": "test_limit",
-              "value": 0,
+              "id": "batch-mode-field",
+              "name": "batch_mode",
+              "value": "date",
+              "type": "string"
+            },
+            {
+              "id": "email-limit-field",
+              "name": "email_limit",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "lookback-days-field",
+              "name": "lookback_days",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "interval-days-field",
+              "name": "interval_days",
+              "value": 3,
               "type": "number"
             }
           ]
@@ -126,7 +144,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Configuration\nconst daysAgo = days => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];\n\nconst startDate = daysAgo(1);\n\n// Use tomorrow as endDate so today's emails are included\n// (Gmail receivedBefore is exclusive)\nconst todayDate = new Date($today);\ntodayDate.setDate(todayDate.getDate() + 1);\nconst endDate = todayDate.toISOString().split('T')[0];\n\nconst intervalDays = 3; // Adjust: 7=weekly, 30=monthly, 90=quarterly\n\n// Generate intervals\nconst intervals = [];\nlet current = new Date(startDate);\nconst end = new Date(endDate);\n\nwhile (current < end) {\n  const intervalEnd = new Date(current);\n  intervalEnd.setDate(intervalEnd.getDate() + intervalDays);\n  \n  intervals.push({\n    json: {\n      start: current.toISOString().split('T')[0],\n      end: intervalEnd > end ? end.toISOString().split('T')[0] : intervalEnd.toISOString().split('T')[0]\n    }\n  });\n  \n  current = intervalEnd;\n}\n\nreturn intervals;"
+        "jsCode": "// Read config from Set Label Variable node\nconst config = $('Set Label Variable').first().json;\nconst batchMode    = config.batch_mode    || 'date';\nconst emailLimit   = config.email_limit   ?? 500;\nconst lookbackDays = config.lookback_days ?? 1;\nconst intervalDays = config.interval_days ?? 3;\n\n// Dry run: 0 = don't process anything\nif (emailLimit === 0) return [];\n\nconst daysAgo = days => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];\nconst todayDate = new Date($today);\ntodayDate.setDate(todayDate.getDate() + 1);\nconst endDate = todayDate.toISOString().split('T')[0];\n\n// Size mode: single wide interval, email_limit caps the fetch\nif (batchMode === 'size') {\n  return [{ json: { start: '2000-01-01', end: endDate } }];\n}\n\n// Date mode: chunked intervals\nconst startDate = daysAgo(lookbackDays);\nconst intervals = [];\nlet current = new Date(startDate);\nconst end = new Date(endDate);\n\nwhile (current < end) {\n  const intervalEnd = new Date(current);\n  intervalEnd.setDate(intervalEnd.getDate() + intervalDays);\n  intervals.push({\n    json: {\n      start: current.toISOString().split('T')[0],\n      end: intervalEnd > end ? end.toISOString().split('T')[0] : intervalEnd.toISOString().split('T')[0]\n    }\n  });\n  current = intervalEnd;\n}\nreturn intervals;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -153,7 +171,7 @@
     {
       "parameters": {
         "operation": "getAll",
-        "limit": "={{ $('Set Label Variable').item.json.test_limit || 500 }}",
+        "limit": "={{ $('Set Label Variable').item.json.email_limit }}",
         "filters": {
           "receivedAfter": "={{ $json.start }}",
           "receivedBefore": "={{ $json.end }}"
@@ -356,9 +374,9 @@
     },
     {
       "parameters": {
-        "content": "## Testing this workflow\n\n**1.** Send 1-2 test emails to yourself with a PDF, add your address to `email_whitelist`\n**2.** Set `test_limit` to `2` in Set Label Variable (0 = production, uses 500)\n**3.** Shrink date range: `daysAgo(9)` → `daysAgo(1)` in the Code node\n**4.** Optionally disable **Analyze file** to skip the classifier\n**5.** Execute and click each node to inspect output\n**6.** Clean up: enable **Remove label from message** and re-run, or manually remove `GdriveFiled` in Gmail\n**7.** Restore: `test_limit` → `0`, `daysAgo(9)`, re-enable Analyze file\n\nFull guide: `docs/testing-gmail-processor.md`",
-        "height": 323,
-        "width": 648
+        "content": "## Configuration (Set Label Variable node)\n\nAll settings are in the first Set node — edit them like cells in a spreadsheet.\n\n| Field | What it does | Default |\n|-------|-------------|--------|\n| `batch_mode` | `date` = scan by date chunks, `size` = fetch newest N emails | `date` |\n| `email_limit` | Max emails to fetch. **0 = dry run** | `500` |\n| `lookback_days` | How many days back to scan (date mode) | `1` |\n| `interval_days` | Days per batch chunk (date mode) | `3` |\n\n### Quick-start test\n1. Send yourself 1-2 emails with a PDF attachment\n2. Add your email address to `email_whitelist`\n3. Set `email_limit` to `2`, `lookback_days` to `1`\n4. Execute workflow, click each node to inspect output\n\n### Second test: process all your test emails\nSet `batch_mode` to `size`, `email_limit` to `50` — fetches up to 50 newest emails regardless of date.\n\n### Clean up\nEnable **Remove label from message** node and re-run, or remove `GdriveFiled` label manually in Gmail.\n\nFull guide: `docs/testing-gmail-processor.md`",
+        "height": 480,
+        "width": 700
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

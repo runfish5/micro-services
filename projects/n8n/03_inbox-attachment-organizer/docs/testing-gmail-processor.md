@@ -1,65 +1,73 @@
 # Testing the Gmail Systematic Processor
 
-Step-by-step guide for testing the `3_inbox_Gmail_Systematic_Processor` workflow without affecting production emails.
+Step-by-step guide for testing the `gmail-processor-datesize` workflow without affecting production emails.
 
 ## 1. Before you start
 
 - Send 1-2 emails **to yourself** with a PDF attachment (invoice, receipt, anything).
 - In the **Set Label Variable** node, add your own email address to `email_whitelist` so the If node doesn't skip your test messages.
 
-## 2. Set test_limit
+## 2. Configure for testing
 
-In **Set Label Variable**, change `test_limit` from `0` to a small number like `2`.
+In **Set Label Variable**, change these fields:
 
-- `0` = production mode (fetches up to 500 emails per date chunk)
-- `1`, `2`, `3` = fetch only that many emails per chunk
+| Field | Test value | Why |
+|-------|-----------|-----|
+| `email_limit` | `2` | Only fetch 2 emails per chunk — keeps test runs fast |
+| `lookback_days` | `1` | Only scan yesterday + today |
 
-This keeps test runs fast and avoids processing your entire inbox.
+Leave `batch_mode` as `date` and `interval_days` as `3` for your first test.
 
-## 3. Shrink the date range
+### Dry run
 
-In the **Set Date-Range to process** Code node, change:
+Set `email_limit` to `0`. The workflow will execute the setup branch (label creation) but skip all Gmail fetches. Useful for verifying the label logic without touching any emails.
 
-```js
-const startDate = daysAgo(9);
-```
-
-to:
-
-```js
-const startDate = daysAgo(1);
-```
-
-This limits the scan to yesterday + today only.
-
-## 4. Disable Analyze file (optional)
+## 3. Disable Analyze file (optional)
 
 If you just want to verify the fetch/filter/label logic without triggering the full classifier subworkflow, **disable** the Analyze file node (right-click > Disable).
 
 Mark as Processed will still run, so you can confirm labeling works independently.
 
-## 5. Run and inspect
+## 4. Run and inspect
 
 Click **Execute Workflow**, then click each node to see its output:
 
-- **Get many messages** - should return at most `test_limit` emails per chunk
-- **Edit Fields** - should show extracted `id` and `from-address`
-- **If** - should route your whitelisted emails to the True branch
-- **Mark as Processed** - should apply the `GdriveFiled` label
+- **Set Date-Range to process** — should show 1 date interval (yesterday to tomorrow)
+- **Get many messages** — should return at most 2 emails per chunk
+- **Edit Fields** — should show extracted `id` and `from-address`
+- **If** — should route your whitelisted emails to the True branch
+- **Mark as Processed** — should apply the `GdriveFiled` label
+
+## 5. Second test: size mode
+
+To process emails regardless of when they arrived:
+
+| Field | Value |
+|-------|-------|
+| `batch_mode` | `size` |
+| `email_limit` | `50` |
+
+This fetches up to 50 of your newest emails (single wide date range from 2000 to tomorrow). Good for catching emails that fell outside your `lookback_days` window.
 
 ## 6. Clean up labels
 
 After testing, remove the `GdriveFiled` label from your test emails. Two options:
 
-**Option A** - Enable the **Remove label from message** node in the workflow and re-run. It's wired after Mark as Processed but disabled by default.
+**Option A** — Enable the **Remove label from message** node in the workflow and re-run. It's wired after Mark as Processed but disabled by default.
 
-**Option B** - In Gmail, search `label:GdriveFiled`, select all results, click the label icon, and uncheck `GdriveFiled`.
+**Option B** — In Gmail, search `label:GdriveFiled`, select all results, click the label icon, and uncheck `GdriveFiled`.
 
-## 7. Go to production
+## 7. Restore production settings
 
-Restore all test settings:
+Reset all fields in **Set Label Variable**:
 
-- Set `test_limit` back to `0`
-- Restore `daysAgo(9)` in the Code node
+| Field | Production value |
+|-------|-----------------|
+| `batch_mode` | `date` |
+| `email_limit` | `500` |
+| `lookback_days` | `1` |
+| `interval_days` | `3` |
+
+Also:
 - Re-enable Analyze file (if you disabled it)
 - Disable Remove label from message (if you enabled it)
