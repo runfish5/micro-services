@@ -1,0 +1,207 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "db100001-0001-0001-0001-000000000001",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        100
+      ],
+      "id": "db100001-0001-0001-0001-000000000002",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "uniqued4ve@gmail.com",
+          "mode": "list",
+          "cachedResultName": "uniqued4ve@gmail.com"
+        },
+        "options": {
+          "timeMin": "={{ $now.beginningOf('day').toISO() }}",
+          "timeMax": "={{ $now.plus(1, 'day').beginningOf('day').toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        200
+      ],
+      "alwaysOutputData": true,
+      "id": "db100001-0001-0001-0001-000000000003",
+      "name": "Get Today's Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "vtBfSfnYwvuSEgaV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all();\nconst lines = [];\n\nfor (const item of events) {\n  const ev = item.json;\n  // Skip empty items (alwaysOutputData sends one empty item when no events)\n  if (!ev.summary && !ev.start) continue;\n\n  const start = ev.start?.dateTime || ev.start?.date || '';\n  const end = ev.end?.dateTime || ev.end?.date || '';\n\n  // Format times (HH:MM)\n  let timeRange = '';\n  if (start.includes('T')) {\n    const s = new Date(start);\n    const e = new Date(end);\n    const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });\n    timeRange = `${fmt(s)}-${fmt(e)}`;\n  } else {\n    timeRange = 'All day';\n  }\n\n  lines.push(`${timeRange}  ${ev.summary || '(no title)'}`);\n}\n\nconst calendarBlock = lines.length > 0\n  ? lines.join('\\n')\n  : 'No events today';\n\nconst message = `\\u2600\\uFE0F Good morning! Your day:\\n${calendarBlock}`;\n\nreturn [{ json: { message } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        200
+      ],
+      "id": "db100001-0001-0001-0001-000000000004",
+      "name": "Format Message"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "={{ $json.message }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "\ud83d\udcca Expenses",
+                    "additionalFields": {
+                      "callback_data": "briefing:expenses"
+                    }
+                  },
+                  {
+                    "text": "\ud83d\udcda Learning Notes",
+                    "additionalFields": {
+                      "callback_data": "briefing:learning"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "\ud83d\uded2 Deal Finder",
+                    "additionalFields": {
+                      "callback_data": "briefing:deals"
+                    }
+                  },
+                  {
+                    "text": "\ud83d\udc1f Mr. Runfish",
+                    "additionalFields": {
+                      "callback_data": "briefing:runfish"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        200
+      ],
+      "id": "db100001-0001-0001-0001-000000000005",
+      "name": "Send to Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Daily Briefing\n\nSends calendar summary + 4 action buttons every morning at 7 AM.\n\nButtons dispatch to menu-handler.json which routes to subworkflows.\n\nManual Trigger wired for testing.",
+        "height": 200,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        60
+      ],
+      "id": "db100001-0001-0001-0001-000000000006",
+      "name": "Sticky Note - Overview"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Today's Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Today's Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today's Events": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

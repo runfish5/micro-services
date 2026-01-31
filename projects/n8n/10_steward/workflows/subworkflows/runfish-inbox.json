@@ -1,0 +1,70 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        300
+      ],
+      "id": "ri100001-0001-0001-0001-000000000001",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "\ud83d\udc1f Mr. Runfish is not yet accepting tasks.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        20,
+        300
+      ],
+      "id": "ri100001-0001-0001-0001-000000000002",
+      "name": "Send Stub Message",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Mr. Runfish - Future Plans\n\n1. Task queue Google Sheet (task description, priority, status)\n2. LLM router to classify and dispatch tasks\n3. Execution handlers for different task types\n4. Status updates back to Telegram\n5. Task completion confirmations",
+        "height": 200,
+        "width": 300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        60
+      ],
+      "id": "ri100001-0001-0001-0001-000000000003",
+      "name": "Sticky Note - Future Plans"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send Stub Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

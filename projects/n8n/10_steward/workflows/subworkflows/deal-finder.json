@@ -1,0 +1,70 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        300
+      ],
+      "id": "df100001-0001-0001-0001-000000000001",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "7582730035",
+        "text": "\ud83d\uded2 Deal Finder is not yet set up.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        20,
+        300
+      ],
+      "id": "df100001-0001-0001-0001-000000000002",
+      "name": "Send Stub Message",
+      "credentials": {
+        "telegramApi": {
+          "id": "OiAg5ImWe61JXymC",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Deal Finder - Future Plans\n\n1. Product watchlist Google Sheet (name, target price, URLs)\n2. Web price search via HTTP Request nodes\n3. Compare current vs target price\n4. Alert on price drops via Telegram\n5. Weekly digest of price trends",
+        "height": 200,
+        "width": 300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        60
+      ],
+      "id": "df100001-0001-0001-0001-000000000003",
+      "name": "Sticky Note - Future Plans"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send Stub Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

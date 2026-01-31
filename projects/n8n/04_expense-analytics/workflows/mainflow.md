@@ -5,7 +5,9 @@
 ## Node Sequence
 
 ```
-Trigger → Config → Fetch Exchange Rates → Read Invoices → Build Chart Data → QuickChart API → Telegram
+Schedule Trigger (1st of month) ──→ Config → Fetch Exchange Rates → Read Invoices → Build Chart Data → QuickChart API → Telegram
+Manual Trigger ───────────────────↗
+Execute Workflow Trigger ─────────↗
 ```
 
 ## Key Nodes

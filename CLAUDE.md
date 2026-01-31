@@ -33,7 +33,10 @@ projects/n8n/
 ├── 00_telegram-invoice-ocr-to-excel/  - Photo → Telegram bot → Google Sheets
 ├── 01_LLM-bulk-responses/             - Batch process spreadsheet rows with AI
 ├── 02_smart-table-fill/               - Text in, structured data out
-└── 03_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
+├── 03_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
+├── 04_expense-analytics/              - Monthly expense chart to Telegram
+├── 10_steward/                        - Personal assistant: briefing, dispatch, subworkflows
+└── 11_n8n-ops-center/                 - Workflow monitoring: /status, /failures, /retry
 ```
 
 Projects 02 and 03 have their own `CLAUDE.md` files with detailed architecture documentation.

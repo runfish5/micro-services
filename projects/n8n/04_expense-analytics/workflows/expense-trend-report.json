@@ -150,6 +150,17 @@
       "name": "Manual Trigger"
     },
     {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        500
+      ],
+      "id": "a1b2c3d4-0001-0001-0001-000000000012",
+      "name": "Execute Workflow Trigger"
+    },
+    {
       "parameters": {
         "content": "## Expense Trend Report\n\nMonthly expense analytics with:\n- Rolling period analysis (configurable)\n- MoM and YoY variance tracking\n- Top vendor concentration\n- Stacked bar chart visualization\n- **Multi-currency support** (auto-converts to USD)\n\n**Edit Config node** to customize:\n- MONTHS_BACK: Rolling period\n- TOP_N_VENDORS: Chart categories\n- VARIANCE_ALERT_PCT: Alert threshold",
         "height": 280,
@@ -263,6 +274,17 @@
       ]
     },
     "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Trigger": {
       "main": [
         [
           {

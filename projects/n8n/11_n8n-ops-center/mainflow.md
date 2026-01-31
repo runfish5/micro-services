@@ -1,8 +1,8 @@
-# Telegram Command Interface - Mainflow Documentation
+# n8n Operations Center - Mainflow Documentation
 
 ## Overview
 
-Command-line style interface via Telegram for monitoring and querying the home lab automation system.
+Workflow monitoring and incident management via Telegram for the home lab automation system.
 
 **Workflow ID:** (assigned after import)
 **Node Count:** 22 (including 4 sticky notes)

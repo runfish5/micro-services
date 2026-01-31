@@ -43,7 +43,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | `Lw53fM7EghZm7Qxy` | smart-table-fill | `02_smart-table-fill/workflows/smart-table-fill.n8n.json` |
 | `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `03_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
 | - | expense-trend-report | `04_expense-analytics/workflows/expense-trend-report.json` |
-| - | telegram-command-interface | `10_telegram-command-interface/` |
+| - | daily-briefing | `10_steward/workflows/daily-briefing.json` |
+| - | menu-handler | `10_steward/workflows/menu-handler.json` |
+| - | telegram-command-interface | `11_n8n-ops-center/telegram-command-interface.n8n.json` |
 
 ### Subworkflows
 
@@ -54,6 +56,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | gmail-processor-datesize | `03_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual batch runs |
 | `ZPJYCwXcmisoSkuz` | record-search | `02_smart-table-fill/workflows/subworkflows/record-search.json` | inbox-attachment-organizer |
 | `AP7QbVnt424dz8dD` | contact-memory-update | `02_smart-table-fill/workflows/subworkflows/contact-memory-update.json` | smart-table-fill |
+| - | learning-notes | `10_steward/workflows/subworkflows/learning-notes.json` | menu-handler |
+| - | deal-finder | `10_steward/workflows/subworkflows/deal-finder.json` | menu-handler |
+| - | runfish-inbox | `10_steward/workflows/subworkflows/runfish-inbox.json` | menu-handler |
 
 ### Support Workflows
 

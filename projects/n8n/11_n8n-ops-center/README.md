@@ -1,6 +1,6 @@
-# Telegram Command Interface
+# 11 - n8n Operations Center
 
-Command-line style interface via Telegram for monitoring and querying the home lab automation system.
+Workflow monitoring and incident management via Telegram — check execution status, review failures, retry runs, and search invoices.
 
 ## Quick Start
 
