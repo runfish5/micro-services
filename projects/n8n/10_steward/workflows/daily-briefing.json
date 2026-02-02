@@ -106,12 +106,6 @@
                     "additionalFields": {
                       "callback_data": "briefing:deals"
                     }
-                  },
-                  {
-                    "text": "\ud83d\udc1f Mr. Runfish",
-                    "additionalFields": {
-                      "callback_data": "briefing:runfish"
-                    }
                   }
                 ]
               }
@@ -140,7 +134,7 @@
     },
     {
       "parameters": {
-        "content": "## Daily Briefing\n\nSends calendar summary + 4 action buttons every morning at 7 AM.\n\nButtons dispatch to menu-handler.json which routes to subworkflows.\n\nManual Trigger wired for testing.",
+        "content": "## Daily Briefing\n\nSends calendar summary + 3 action buttons every morning at 7 AM.\n\nButtons dispatch to menu-handler.json which routes to subworkflows.\n\nManual Trigger wired for testing.",
         "height": 200,
         "width": 280
       },

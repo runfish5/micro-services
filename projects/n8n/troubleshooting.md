@@ -72,3 +72,21 @@ Error: "Rate limit exceeded" when using free-tier APIs (e.g., Groq 5 req/min).
   3. Add **Wait** node (60 seconds)
   4. Wire: `Build Output Schema → Split In Batches → Extract Data from String → Wait → (loop back to Split In Batches)`
   5. Connect Split In Batches **second output** (done) → "Merge Outputs"
+
+---
+
+## "Referenced node doesn't exist" After Import
+
+Error: `Referenced node doesn't exist` with stack trace pointing to `workflow-data-proxy.js`.
+
+**Cause**: Re-importing a workflow without deleting the old one first. n8n appends `1` to
+colliding node names (`AI Classifier` → `AI Classifier1`) but expressions like
+`$node['AI Classifier']` still reference the original name.
+
+**Prevention**: Delete the old workflow before importing the updated version.
+
+**Fix**:
+1. Open the workflow in the n8n editor
+2. Find nodes with `1` suffix (e.g., `AI Classifier1`, `Brave Search1`)
+3. Either rename them back (remove the `1`) or update all `$node['...']` expressions to match
+4. Save and republish

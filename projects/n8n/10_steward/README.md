@@ -6,7 +6,7 @@ Personal assistant via Telegram — morning briefing, on-demand dispatch, and su
 
 Every morning at 7 AM, sends a Telegram message with:
 - Today's Google Calendar events (time + title)
-- 4 inline buttons for on-demand actions
+- 3 inline buttons for on-demand actions
 
 ```
   ☀ Good morning! Your day:
@@ -14,7 +14,7 @@ Every morning at 7 AM, sends a Telegram message with:
   14:00-15:30  Client call
 
   [📊 Expenses]     [📚 Learning Notes]
-  [🛒 Deal Finder]  [🐟 Mr. Runfish]
+  [🛒 Deal Finder]
 ```
 
 Tapping a button triggers the corresponding subworkflow.
@@ -27,7 +27,6 @@ Tapping a button triggers the corresponding subworkflow.
 | `menu-handler.json` | Button tap router | Always on (webhook) |
 | `subworkflows/learning-notes.json` | Notion AI summary | Called by menu-handler |
 | `subworkflows/deal-finder.json` | Stub | Called by menu-handler |
-| `subworkflows/runfish-inbox.json` | Stub | Called by menu-handler |
 
 ## Button Actions
 
@@ -36,19 +35,25 @@ Tapping a button triggers the corresponding subworkflow.
 | Expenses | Active | Calls expense-trend-report (project 04) - sends chart + insights |
 | Learning Notes | Active | Searches Notion, AI-summarizes notes, sends to Telegram |
 | Deal Finder | Stub | Responds "not yet set up" |
-| Mr. Runfish | Stub | Responds "not yet accepting tasks" |
 
 ## Setup
 
-1. Import all 5 workflows into n8n
-2. In `menu-handler.json`, update the 4 Execute Workflow node IDs to match actual workflow IDs
+1. Import all 4 workflows into n8n
+2. In `menu-handler.json`, update the 3 Execute Workflow node IDs to match actual workflow IDs
 3. Activate `menu-handler.json` (must be always-on for button taps)
 4. `daily-briefing.json` runs on schedule or test via Manual Trigger
+
+## Credentials
+
+See [workflows/mainflow.md](workflows/mainflow.md#credentials) for the full credential table with setup instructions.
 
 ## Dependencies
 
 - Google Calendar OAuth
 - Telegram Bot (n8n_house_bot)
+- Groq API (classifier + reasoning LLM)
+- Perplexity API (research queries)
+- Brave Search API (factual lookups — Header Auth credential)
 - Notion API (for learning-notes)
 - Google Gemini API (for learning-notes)
 - Postgres (for AI chat memory)
