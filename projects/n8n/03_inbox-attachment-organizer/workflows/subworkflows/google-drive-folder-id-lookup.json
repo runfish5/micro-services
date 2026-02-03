@@ -128,7 +128,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -399,7 +399,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },

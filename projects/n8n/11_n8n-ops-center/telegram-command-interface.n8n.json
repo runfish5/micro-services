@@ -265,7 +265,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "CREDENTIAL_ID_N8N_API",
-          "name": "Header Auth account"
+          "name": "n8n API Key"
         }
       }
     },
@@ -311,7 +311,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -399,7 +399,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "CREDENTIAL_ID_N8N_API",
-          "name": "Header Auth account"
+          "name": "n8n API Key"
         }
       }
     },
@@ -491,7 +491,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },

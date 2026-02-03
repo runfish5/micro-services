@@ -531,7 +531,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -814,7 +814,7 @@
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_GROQ",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },
@@ -1000,7 +1000,7 @@
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_GROQ",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },

@@ -226,7 +226,7 @@
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_GROQ",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },

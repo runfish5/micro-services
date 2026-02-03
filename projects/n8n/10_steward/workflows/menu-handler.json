@@ -19,7 +19,7 @@
       "webhookId": "daily-briefing-menu-handler",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }
@@ -269,8 +269,8 @@
       "name": "Groq Classifier LLM",
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq API"
         }
       }
     },
@@ -400,8 +400,8 @@
       "name": "Groq Reasoning LLM",
       "credentials": {
         "groqApi": {
-          "id": "sue07pcKIgrn1xhP",
-          "name": "Groq account"
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq API"
         }
       }
     },
@@ -445,7 +445,7 @@
       "credentials": {
         "httpHeaderAuth": {
           "id": "7QCzZjFHSrLnxyxs",
-          "name": "Brave-X-Subscription-Token"
+          "name": "Brave Search API"
         }
       }
     },
@@ -532,7 +532,7 @@
       "webhookId": "b14685ea-4835-4e62-9487-9a19a827cf78",
       "credentials": {
         "telegramApi": {
-          "id": "OiAg5ImWe61JXymC",
+          "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "n8n_house_bot"
         }
       }

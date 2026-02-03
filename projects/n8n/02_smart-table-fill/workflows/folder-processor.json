@@ -95,7 +95,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       },
       "onError": "continueRegularOutput"
@@ -126,7 +126,7 @@
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -178,7 +178,7 @@
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -273,7 +273,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -332,7 +332,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "GoogleDriveMAIN"
+          "name": "Google Sheets OAuth"
         }
       }
     },

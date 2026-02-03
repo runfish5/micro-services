@@ -78,7 +78,7 @@
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_GROQ",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },
@@ -330,7 +330,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets_FirstProject"
+          "name": "Google Sheets OAuth"
         }
       },
       "disabled": true
@@ -361,7 +361,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets_FirstProject"
+          "name": "Google Sheets OAuth"
         }
       },
       "disabled": true
@@ -495,7 +495,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets_FirstProject"
+          "name": "Google Sheets OAuth"
         }
       }
     },
@@ -673,7 +673,7 @@
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets_FirstProject"
+          "name": "Google Sheets OAuth"
         }
       }
     }

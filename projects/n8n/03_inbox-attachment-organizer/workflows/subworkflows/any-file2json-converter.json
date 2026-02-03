@@ -382,7 +382,7 @@
       "credentials": {
         "googlePalmApi": {
           "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini(PaLM) Api account"
+          "name": "Google Gemini API"
         }
       }
     },

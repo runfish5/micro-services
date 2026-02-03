@@ -16,7 +16,7 @@
       "credentials": {
         "googlePalmApi": {
           "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini(PaLM) Api account"
+          "name": "Google Gemini API"
         }
       }
     },
@@ -155,7 +155,7 @@
       "credentials": {
         "googlePalmApi": {
           "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini(PaLM) Api account"
+          "name": "Google Gemini API"
         }
       }
     },
@@ -219,7 +219,7 @@
       "credentials": {
         "googlePalmApi": {
           "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini(PaLM) Api account"
+          "name": "Google Gemini API"
         }
       }
     },
@@ -552,8 +552,8 @@
       "name": "Google Sheets",
       "credentials": {
         "googleApi": {
-          "id": "c8nbjZwjbgoLDWIt",
-          "name": "Google Service Acc_"
+          "id": "CREDENTIAL_ID_GOOGLE_SERVICE_ACCOUNT",
+          "name": "Google Service Account"
         }
       }
     },
