@@ -59,7 +59,7 @@ START: Manual Trigger / When Executed by Another Workflow
   │
   └→ String Input (config: spreadsheet_id, data_sheet_name, schema_sheet_name,
   │                body_core, contact_name, contact_email, subject,
-  │                batch_size, llm_rate_limit, llm_rate_delay)
+  │                match_column, match_value, batch_size)
        │
        └→ Fetch Data Sheet Headers (row 1 of data sheet)
             │
@@ -126,7 +126,7 @@ START: Manual Trigger / When Executed by Another Workflow
 | 8 | Schema LLM | lmChatGroq | Language model for schema |
 | 9 | Schema Output Parser | outputParser | Parse schema JSON |
 | 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 11 | Build Output Schema | code | Build JSON schema (sources from upstream) |
+| 11 | Build Output Schema | code | Build JSON schema; row_id from match_column → match_value → email |
 | 12 | Call llm-extract-rate-limited | executeWorkflow | Subworkflow for rate-limited LLM extraction |
 | 13 | Merge Outputs | code | Merge batch outputs + confidence data |
 | 14 | Write_Excel | googleSheets | Standalone mode write (disabled by default) |
@@ -142,15 +142,30 @@ START: Manual Trigger / When Executed by Another Workflow
 - **Rate limiting**: Configure `llm_rate_limit` (requests before pause) and `llm_rate_delay` (seconds to wait) for Groq free tier
 - **Apps Script handles both writing and folder creation** - no triggers needed (CRM mode)
 
-### Update-or-Append Logic (Merge Outputs)
+### Update-or-Append Logic (Merge Outputs + Write_Excel)
 
-The Merge Outputs node handles row matching for the Write_Excel node:
+The Merge Outputs node prepares clean data for Write_Excel:
 
 1. **Dynamic match column**: Sets `merged[matchColumn]` from the `match_column` config
 2. **Write_Excel compatibility**: Always copies match value to `merged.email` (Write_Excel hardcoded to match on "email" column)
 3. **Overwrite prevention**: Only sets `merged[textColumn]` if `textColumn !== matchColumn` to prevent the text body from overwriting the match value
+4. **Clean output**: Confidence/observability fields are logged but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write_Excel.
 
-This ensures rows UPDATE at correct positions instead of appending new rows when `match_column` is set to a non-email field like `Text_to_interpret`.
+Write_Excel reads `match_same_row` directly from String Input to decide `append` vs `appendOrUpdate`. The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
+
+### Caller-Overridable Config (String Input)
+
+When called as a subworkflow, callers can override these fields (defaults apply if not provided):
+
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `spreadsheet_id` | `1xGxyFu3...` | Google Sheets document ID |
+| `data_sheet_name` | `Sheet1` | Sheet tab name |
+| `schema_sheet_name` | `Description_hig7f6` | Schema definition sheet |
+| `batch_size` | `10` | Fields per LLM batch |
+| `match_column` | `email` | Which column to match on |
+| `match_value` | `$json[$json.match_column]` | Value to match; auto-resolved from `match_column` field name |
+| `match_same_row` | `true` | `false` = append-only mode |
 
 ---
 
@@ -263,4 +278,111 @@ Called by inbox-attachment-organizer's `ContactManager-lineage` switch node:
 ```
 ContactManager-lineage → RecordSearch → Prepare Contact Input → smart-table-fill
 ```
+
+---
+
+### Folder Processor
+
+**File:** `workflows/folder-processor.json`
+
+**Purpose:** Process all files in a Google Drive folder through any-file2json-converter + smart-table-fill, with skip-on-retry resumability.
+
+#### Architecture
+```
+[folder-processor]
+        |
+        |-- calls --> any-file2json-converter  (existing subworkflow)
+        |-- calls --> smart-table-fill         (existing workflow, Write_Excel mode)
+```
+
+#### Prerequisites
+In smart-table-fill (n8n UI): disable `[CRM] Write via Apps Script`, enable `Write_Excel`, then republish.
+
+#### Flow
+```
+Manual Trigger
+     ↓
+Config (Set node: folder_id, spreadsheet_id, data_sheet_name, etc.)
+     ↓
+Fetch Headers (HTTP GET: read row 1 of data sheet)
+     ↓
+IF: All Headers Present? (check if source_file + Text_to_interpret exist)
+     ├─ TRUE → Read Processed Files
+     └─ FALSE → Add Missing Headers (POST batchUpdate: add missing headers) → Read Processed Files
+     ↓
+Read Processed Files (Google Sheets: read all rows from target sheet)
+     ↓
+List Drive Files (Google Drive: list files in folder)
+     ↓
+Filter Already-Processed (Code: compare filenames against source_file column)
+     ↓
+Loop Over Files (1 at a time)
+     ↓
+Download File (Google Drive: download binary per item)
+     ↓
+Convert File to Text (Execute Workflow: any-file2json-converter, mode: each)
+     ↓
+Prepare STF Input (Code: shape converter text + filename for smart-table-fill)
+     ↓
+Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
+```
+
+#### Config Parameters
+
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `folder_id` | *(user fills)* | Google Drive folder to process |
+| `spreadsheet_id` | *(user fills)* | Target Google Sheet |
+| `data_sheet_name` | `Sheet1` | Sheet tab name |
+| `source_file_column` | `source_file` | Column to check for already-processed filenames |
+| `match_column` | `source_file` | For Build Output Schema row grouping |
+| `batch_size` | `10` | Fields per LLM extraction call |
+| `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
+
+#### Node Details
+
+| # | Node | Type | Purpose |
+|---|------|------|---------|
+| 1 | Manual Trigger | trigger | Manual execution |
+| 2 | Config | set | All configuration variables |
+| 3 | Fetch Headers | httpRequest | Read row 1 headers from data sheet |
+| 4 | IF: All Headers Present? | if | Check if `source_file` + `Text_to_interpret` headers exist |
+| 5 | Add Missing Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
+| 6 | Read Processed Files | googleSheets | Read existing rows for resumability check |
+| 7 | List Drive Files | googleDrive | List all files in target folder |
+| 8 | Filter Already-Processed | code | Skip files already in the sheet |
+| 9 | Loop Over Files | splitInBatches | Process one file at a time |
+| 10 | Download File | googleDrive | Download file binary data |
+| 11 | Convert File to Text | executeWorkflow | Calls any-file2json-converter |
+| 12 | Prepare STF Input | code | Shape data for smart-table-fill input |
+| 13 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
+
+#### Resumability (Skip-on-Retry)
+
+1. Each smart-table-fill call appends a row with `source_file` = filename and `Text_to_interpret` = converter text
+2. On retry, `Read Processed Files` reads all rows from the sheet
+3. `Filter Already-Processed` reads the `source_file` column directly to get processed filenames
+4. Already-done files are skipped; only new/failed files are processed
+
+The `source_file` column is auto-created by the header-ensure logic. `Text_to_interpret` contains only the converter output text (no prefix). The `convertFieldsToString: false` setting in Call smart-table-fill preserves boolean types so `match_same_row: false` evaluates correctly in STF.
+
+#### Why mode: each (not batch)
+
+Per-file execution means each file gets its own smart-table-fill run and its own Write_Excel append. If file #6 fails, files 1-5 are already written. On retry, the resumability check skips those 5.
+
+#### Target Sheet Setup
+
+The user's Google Sheet needs column headers for their data fields. Both `source_file` and `Text_to_interpret` columns are auto-created by the header-ensure logic if missing.
+
+| Column | Required | Purpose |
+|--------|----------|---------|
+| `source_file` | Auto-created | Filename identifier for resumability matching |
+| `Text_to_interpret` | Auto-created | Converter output text (no prefix) |
+| *(user's data columns)* | Yes | Whatever structured data to extract |
+
+**Note:** Delete the `Description_hig7f6` schema sheet if it was generated before adding these columns, so it regenerates with the new headers.
+
+#### match_value Flow (STF Integration)
+
+folder-processor sends `match_column: "source_file"` + `source_file: "image.png"` to STF. STF's String Input dynamically resolves `match_value = $json[$json.match_column]` = the filename. Build Output Schema uses `match_value` as the row ID fallback when the match_column field itself isn't in the String Input assignments. This enables Merge Outputs to correlate batched LLM results back to the correct file.
 

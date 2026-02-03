@@ -1,0 +1,527 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        300
+      ],
+      "id": "fp-manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fp-folder-id",
+              "name": "folder_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fp-spreadsheet-id",
+              "name": "spreadsheet_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fp-data-sheet-name",
+              "name": "data_sheet_name",
+              "value": "Sheet1",
+              "type": "string"
+            },
+            {
+              "id": "fp-source-file-col",
+              "name": "source_file_column",
+              "value": "source_file",
+              "type": "string"
+            },
+            {
+              "id": "fp-match-column",
+              "name": "match_column",
+              "value": "source_file",
+              "type": "string"
+            },
+            {
+              "id": "fp-batch-size",
+              "name": "batch_size",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "fp-schema-sheet-name",
+              "name": "schema_sheet_name",
+              "value": "Description_hig7f6",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -580,
+        300
+      ],
+      "id": "fp-config",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.data_sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -100,
+        300
+      ],
+      "id": "fp-read-processed",
+      "name": "Read Processed Files",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "GoogleDriveMAIN"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Config').first().json.folder_id || 'ERROR_config_EMPTY_FOLDER_ID' }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        140,
+        300
+      ],
+      "id": "fp-list-drive-files",
+      "name": "List Drive Files",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveFiles = $('List Drive Files').all();\nconst sheetRows = $('Read Processed Files').all();\nconst col = $('Config').first().json.source_file_column;\n\nconst done = new Set();\nfor (const r of sheetRows) {\n  const val = (r.json[col] || '').trim();\n  if (!val) continue;\n  done.add(val.toLowerCase());\n}\n\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        300
+      ],
+      "id": "fp-filter-processed",
+      "name": "Filter Already-Processed"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        620,
+        300
+      ],
+      "id": "fp-loop",
+      "name": "Loop Over Files"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        860,
+        300
+      ],
+      "id": "fp-download-file",
+      "name": "Download File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GtcLjBMusAUB0h30",
+          "mode": "list",
+          "cachedResultName": "any-file2json-converter"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "fp-convert-file",
+      "name": "Convert File to Text",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config').first().json;\nconst fileName = $('Download File').first().json.name || 'unknown';\nconst text = $input.first().json?.data?.text || $input.first().json?.text || '';\n\nif (!text.trim()) return []; // skip failed conversion\n\nreturn [{\n  json: {\n    body_core: text,\n    source_file: fileName,\n    spreadsheet_id: config.spreadsheet_id,\n    data_sheet_name: config.data_sheet_name,\n    schema_sheet_name: config.schema_sheet_name,\n    match_column: config.match_column,\n    match_same_row: false,\n    batch_size: config.batch_size,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "id": "fp-prepare-stf-input",
+      "name": "Prepare STF Input"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Lw53fM7EghZm7Qxy",
+          "mode": "list",
+          "cachedResultName": "smart-table-fill"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        300
+      ],
+      "id": "fp-call-stf",
+      "name": "Call smart-table-fill",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/{{ encodeURIComponent($json.data_sheet_name) }}!1:1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -460,
+        300
+      ],
+      "id": "fp-fetch-headers",
+      "name": "Fetch Headers",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fp-has-headers-condition",
+              "leftValue": "={{ $json.values[0].includes('Text_to_interpret') && $json.values[0].includes('source_file') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -340,
+        300
+      ],
+      "id": "fp-if-has-text-col",
+      "name": "IF: All Headers Present?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.spreadsheet_id }}/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const headers = $json.values[0]; const sheetName = $('Config').first().json.data_sheet_name; const needed = ['source_file', 'Text_to_interpret'].filter(h => !headers.includes(h)); const data = needed.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -340,
+        500
+      ],
+      "id": "fp-add-text-header",
+      "name": "Add Missing Headers",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "GoogleDriveMAIN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Header auto-ensure:** On first run, checks if both `source_file` and `Text_to_interpret` headers exist. Adds any missing headers automatically via Sheets batchUpdate.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column directly. `Text_to_interpret` contains only the converter text (no prefix).",
+        "height": 280,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -20
+      ],
+      "id": "fp-sticky-setup",
+      "name": "Sticky Note - Setup"
+    },
+    {
+      "parameters": {
+        "content": "### Loop: 1 file at a time\nDownload → Convert → Write → next file.\nIf file #6 fails, files 1-5 are already written.\nOn retry, resumability check skips those 5.",
+        "height": 120,
+        "width": 340
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        580,
+        200
+      ],
+      "id": "fp-sticky-mode",
+      "name": "Sticky Note - Loop"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Headers": {
+      "main": [
+        [
+          {
+            "node": "IF: All Headers Present?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: All Headers Present?": {
+      "main": [
+        [
+          {
+            "node": "Read Processed Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add Missing Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Missing Headers": {
+      "main": [
+        [
+          {
+            "node": "Read Processed Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Processed Files": {
+      "main": [
+        [
+          {
+            "node": "List Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Filter Already-Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Already-Processed": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Convert File to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert File to Text": {
+      "main": [
+        [
+          {
+            "node": "Prepare STF Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare STF Input": {
+      "main": [
+        [
+          {
+            "node": "Call smart-table-fill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call smart-table-fill": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}
