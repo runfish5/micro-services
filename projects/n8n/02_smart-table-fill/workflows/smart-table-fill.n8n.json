@@ -2,6 +2,22 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## Smart Table Fill – Extract Structured Data\n\n### How it works\n1. Workflow is triggered by another workflow.\n2. It reads rows from the configured data sheet and loads column headers.\n3. If a schema sheet exists it uses it; otherwise it asks an LLM to generate a JSON schema for the columns and creates the schema sheet.\n4. The rows are batched and sent to an LLM that extracts the required fields from the text column according to the schema.\n5. LLM output is parsed, confidence scores are added, duplicate emails are merged, and each row's data is assembled.\n6. The final structured records are written back to the data sheet (append or update).\n\n### Setup\n- [ ] Connect your Google Sheets account in n8n credentials.\n- [ ] Set `spreadsheet_id` to the target spreadsheet.\n- [ ] Ensure the data sheet (default \"Sheet1\") contains a header row with a text column to interpret.\n- [ ] (Optional) Provide a custom `schema_sheet_name` or let the workflow generate one.\n- [ ] Add your Groq/OpenAI API key for the LLM nodes.\n- [ ] Adjust `batch_size` if you hit LLM context limits.\n- [ ] Call this workflow from another n8n workflow or test with the manual trigger.",
+        "height": 500,
+        "width": 500,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1150,
+        -380
+      ],
+      "id": "f7a8b9c0-d1e2-4f3a-5b6c-7d8e9f0a1b2c",
+      "name": "Sticky Note - Template Description"
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
