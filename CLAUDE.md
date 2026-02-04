@@ -43,13 +43,15 @@ Collection of n8n automation workflows for document processing and AI-powered da
 ```
 projects/n8n/
 ├── 00_telegram-invoice-ocr-to-excel/  - Photo → Telegram bot → Google Sheets
-├── 01_LLM-bulk-responses/             - Batch process spreadsheet rows with AI
-├── 02_smart-table-fill/               - Text in, structured data out
-├── 03_any-file2json-converter/        - File to JSON converter (subworkflow)
-├── 04_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
-|   └── 04_expense-analytics/              - Monthly expense chart to Telegram
-├── 10_steward/                        - Personal assistant: briefing, dispatch, subworkflows
-└── 11_n8n-ops-center/                 - Workflow monitoring: /status, /failures, /retry
+├── 01_LLM-bulk-responses/           - Batch process spreadsheet rows with AI
+├── 02_smart-table-fill/             - Text in, structured data out
+├── 03_any-file2json-converter/      - File to JSON converter (subworkflow)
+├── 04_inbox-attachment-organizer/   - Email attachments → AI → Google Drive
+|   └── 04_expense-analytics/        - Monthly expense chart to Telegram
+├── 07_error-handler/                - Global error handler, classification, alerts
+├── 08_8-hours-incident-resolver/    - Works thorugh a google sheet
+├── 10_steward/                      - Personal assistant: briefing, dispatch, subworkflows
+└── 11_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
 ```
 
 Projects 02, 03, and 04 have their own `CLAUDE.md` files with detailed architecture documentation.
