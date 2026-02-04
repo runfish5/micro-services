@@ -11,7 +11,7 @@ This guide configures n8n to call Google Apps Script via the Execution API with 
 - [Google Cloud Console](https://console.cloud.google.com) access
 - [n8n](https://n8n.io) instance (self-hosted or cloud)
 - Google Sheet with your data (e.g., "Entries" sheet)
-- [03_inbox-attachment-organizer](../../03_inbox-attachment-organizer) workflow with [smart-table-fill subworkflow](email-crm-guide.md) (activate the HTTP node instead of Excel)
+- [04_inbox-attachment-organizer](../../04_inbox-attachment-organizer) workflow with [smart-table-fill subworkflow](email-crm-guide.md) (activate the HTTP node instead of Excel)
 
 ---
 

@@ -589,7 +589,7 @@
     },
     {
       "parameters": {
-        "content": "## Mode B: Email-CRM Setup\nsee [inbox-organizer](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer) and [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) for details",
+        "content": "## Mode B: Email-CRM Setup\nsee [inbox-organizer](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer) and [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) for details",
         "height": 220,
         "width": 668
       },

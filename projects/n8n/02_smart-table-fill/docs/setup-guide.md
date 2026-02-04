@@ -41,7 +41,7 @@ Modify the **String Input** node with your text, run manually.
 
 ## Setup B: Email-CRM
 
-**Want a full CRM?** Combine with [03_inbox-attachment-organizer](../../03_inbox-attachment-organizer) for a full contact management system — auto-capture contacts from incoming emails, organized folders, and AI-maintained profiles.
+**Want a full CRM?** Combine with [04_inbox-attachment-organizer](../../04_inbox-attachment-organizer) for a full contact management system — auto-capture contacts from incoming emails, organized folders, and AI-maintained profiles.
 
 **➡️ [Email-CRM Setup Guide](email-crm-guide.md)**
 

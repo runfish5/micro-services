@@ -54,7 +54,7 @@ flowchart LR
 ```
 
 
-> **Want a full CRM?** Combine with [03_inbox-attachment-organizer](../03_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).
+> **Want a full CRM?** Combine with [04_inbox-attachment-organizer](../04_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).
 
 ## 🔗 Links
 

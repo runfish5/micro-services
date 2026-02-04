@@ -8,7 +8,7 @@ This guide adds contact management to your existing inbox-attachment-organizer w
 
 ## What This Is
 
-Email-CRM is an **extension** of [inbox-attachment-organizer](../../03_inbox-attachment-organizer), not a standalone workflow.
+Email-CRM is an **extension** of [inbox-attachment-organizer](../../04_inbox-attachment-organizer), not a standalone workflow.
 
 **inbox-attachment-organizer handles:** Gmail trigger, attachment extraction, AI classification
 
@@ -57,9 +57,9 @@ For each email, the system creates or updates:
 
 ### 1.1 Check Email Pipeline
 
-Before starting, confirm the email pipeline in [inbox-attachment-organizer](../../03_inbox-attachment-organizer) is working.
+Before starting, confirm the email pipeline in [inbox-attachment-organizer](../../04_inbox-attachment-organizer) is working.
 
-**Not set up yet?** You need the email pipeline from [inbox-attachment-organizer](../../03_inbox-attachment-organizer) — at minimum: Gmail Trigger through subject-classifier-LM and the CRM-lineage nodes. The other lineages (finance, appointments) are optional.
+**Not set up yet?** You need the email pipeline from [inbox-attachment-organizer](../../04_inbox-attachment-organizer) — at minimum: Gmail Trigger through subject-classifier-LM and the CRM-lineage nodes. The other lineages (finance, appointments) are optional.
 
 ### 1.2 Import Subworkflows
 
@@ -234,5 +234,5 @@ Click **Save** and **Publish**.
 ## Related Docs
 
 - [Apps Script Execution API Setup](apps-script-execution-api-setup.md) — OAuth configuration details
-- [inbox-attachment-organizer](../../03_inbox-attachment-organizer) — Prerequisite workflow
+- [inbox-attachment-organizer](../../04_inbox-attachment-organizer) — Prerequisite workflow
 - [Standalone setup](setup-guide.md) — Mode A (simpler, no email integration)

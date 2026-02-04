@@ -42,7 +42,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | LLM-bulk-responses | `01_LLM-bulk-responses/1_LLM-bulk-responses.n8n.json` |
 | `Lw53fM7EghZm7Qxy` | smart-table-fill | `02_smart-table-fill/workflows/smart-table-fill.n8n.json` |
 | `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `04_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
-| - | expense-trend-report | `04_expense-analytics/workflows/expense-trend-report.json` |
+| - | expense-trend-report | `04_inbox-attachment-organizer/workflows/subworkflows/expense-trend-report.json` |
 | - | daily-briefing | `10_steward/workflows/daily-briefing.json` |
 | - | menu-handler | `10_steward/workflows/menu-handler.json` |
 | - | telegram-command-interface | `11_n8n-ops-center/telegram-command-interface.n8n.json` |

@@ -580,7 +580,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (financial, actionable, informational, Other)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/03_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (financial, actionable, informational, Other)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -659,7 +659,7 @@
     },
     {
       "parameters": {
-        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/03_inbox-attachment-organizer/assets/google-drive-folder-structure.png)"
+        "content": "![](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/04_inbox-attachment-organizer/assets/google-drive-folder-structure.png)"
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -672,7 +672,7 @@
     },
     {
       "parameters": {
-        "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/03_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
+        "content": "![invoices Sheet Structure](https://raw.githubusercontent.com/runfish5/micro-services/main/projects/n8n/04_inbox-attachment-organizer/assets/invoices-table-schema-columns-path-folder-id.png)\n",
         "height": 176,
         "width": 544
       },
