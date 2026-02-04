@@ -226,6 +226,29 @@
                 ],
                 "combinator": "and"
               }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "url-route-condition",
+                    "leftValue": "={{ $binary.data.mimeType }}",
+                    "rightValue": "text/x-url",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
             }
           ]
         },
@@ -272,7 +295,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"binary_files\": \n      {\n        \"attachment_0\": \n          {\n          \"mimeType\": \"image/jpeg\",\n          \"fileType\": \"pdf\",\n          \"fileExtension\": \"pdf\",\n          \"data\": \"%PDF-1.0\\ntrailer<</Root<</Pages<</Kids[<</MediaBox[0 0 3 3]>>]>>>>>>\",\n          \"fileName\": \"image001.jpg\",\n          \"fileSize\": \"6.68 kB\"\n            },\n            \"attachment_1\": \n            {\n            \"mimeType\": \"image/png\",\n            \"fileType\": \"image\",\n            \"fileExtension\": \"png\",\n            \"data\": \"iVBORw0KGgoAA...LVhj9+RyLCNqAoieyMiClpEFLSIiChoEVHQIv6n+GcAG8nxS438B1wAAAAASUVORK5CYII=\",\n            \"fileName\": \"image002.png\",\n            \"fileSize\": \"6.07 kB\"\n            }\n      },\n  \"data\": {\"key0\":\"val0\"},\n  \"metadata\": \n  {\n  \"file_id\": \"1968dc035a3f7f40\",\n  \"file_type\": \"gmail\",\n  \"file_title\": \"Google Cloud Platform & APIs: Your invoice is available for 01E17F-79B946-1695E2\",\n  \"file_url\": \"Null\"\n  }\n}"
+        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"metadata\": {}\n}"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -285,16 +308,16 @@
     },
     {
       "parameters": {
-        "content": "",
-        "height": 200,
-        "width": 460
+        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\", \"metadata\": {}}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  },\n  \"metadata\": {\"source\": \"test\"}\n}\n```",
+        "height": 460,
+        "width": 320
       },
       "id": "5a71bd8a-3c09-4ee9-8f39-b880019fcc22",
       "name": "Sticky Note2",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -896,
-        304
+        -496,
+        2144
       ],
       "typeVersion": 1
     },
@@ -379,7 +402,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return $input.all().flatMap(item => \n    item.binary ? Object.keys(item.binary).map(key => ({\n        json: item.json, // This preserves ALL original JSON data\n        binary: { data: item.binary[key] }\n    })) : [item]\n);"
+        "jsCode": "const items = $input.all();\n\nreturn items.flatMap(item => {\n  // Check for URL input (no binary data, has url field)\n  const url = item.json.url || item.json.source_url || null;\n  const isUrl = url && /^https?:\\/\\/.+/.test(url) && !item.binary;\n\n  if (isUrl) {\n    // Return item with pseudo-MIME for Switch routing\n    return [{\n      json: {\n        ...item.json,\n        _inputType: 'url',\n        _jinaUrl: `https://r.jina.ai/${url}`\n      },\n      binary: {\n        data: {\n          mimeType: 'text/x-url',\n          data: '',\n          fileName: url\n        }\n      }\n    }];\n  }\n\n  // Existing logic: flatten binary files\n  return item.binary\n    ? Object.keys(item.binary).map(key => ({\n        json: item.json,\n        binary: { data: item.binary[key] }\n      }))\n    : [item];\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -418,7 +441,8 @@
         128
       ],
       "id": "b356d59d-3cf0-4903-b931-7732982a04bf",
-      "name": "Input Validator"
+      "name": "Input Validator",
+      "notes": "Pin test data here. See Testing sticky note for examples."
     },
     {
       "parameters": {},
@@ -642,6 +666,27 @@
       ],
       "id": "0e3f38bb-72b6-43ed-bf2f-8ac2277de98c",
       "name": "Return node"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json._jinaUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        100,
+        960
+      ],
+      "id": "jina-url-fetch-node",
+      "name": "Fetch URL (Jina)"
     }
   ],
   "connections": {
@@ -742,7 +787,25 @@
         ],
         [
           {
+            "node": "Fetch URL (Jina)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Unresolved Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch URL (Jina)": {
+      "main": [
+        [
+          {
+            "node": "Return node",
             "type": "main",
             "index": 0
           }
