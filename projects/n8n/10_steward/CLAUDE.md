@@ -18,7 +18,7 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 ## Where Information Lives
 
 ### Workflows
-- `workflows/daily-briefing.json` - Morning message sender (5 nodes + sticky)
+- `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
 - `workflows/menu-handler.json` - Button tap router (18 nodes + 2 sticky notes)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
 - `workflows/subworkflows/deal-finder.json` - Stub (3 nodes)

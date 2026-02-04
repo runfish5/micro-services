@@ -48,6 +48,7 @@ projects/n8n/
 ├── 03_any-file2json-converter/      - File to JSON converter (subworkflow)
 ├── 04_inbox-attachment-organizer/   - Email attachments → AI → Google Drive
 |   └── 04_expense-analytics/        - Monthly expense chart to Telegram
+├── 05_daily-briefing/               - Morning calendar briefing to Telegram
 ├── 07_error-handler/                - Global error handler, classification, alerts
 ├── 08_8-hours-incident-resolver/    - Works thorugh a google sheet
 ├── 10_steward/                      - Personal assistant: briefing, dispatch, subworkflows

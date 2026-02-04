@@ -13,10 +13,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -400,
-        300
+        304,
+        240
       ],
-      "id": "db100001-0001-0001-0001-000000000001",
+      "id": "1fa0d5b5-9671-4de1-bdce-6d1c333c0ba7",
       "name": "Schedule Trigger"
     },
     {
@@ -24,10 +24,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -400,
-        100
+        304,
+        48
       ],
-      "id": "db100001-0001-0001-0001-000000000002",
+      "id": "095ec94d-5fec-407a-be92-754f1ad9212f",
       "name": "Manual Trigger"
     },
     {
@@ -47,18 +47,12 @@
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1,
       "position": [
-        -180,
-        200
+        528,
+        144
       ],
       "alwaysOutputData": true,
-      "id": "db100001-0001-0001-0001-000000000003",
-      "name": "Get Today's Events",
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_CALENDAR",
-          "name": "Google Calendar account"
-        }
-      }
+      "id": "f24ae974-20be-48a1-8b7d-ca9752eca1d5",
+      "name": "Get Today's Events"
     },
     {
       "parameters": {
@@ -67,87 +61,75 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        40,
-        200
+        752,
+        144
       ],
-      "id": "db100001-0001-0001-0001-000000000004",
+      "id": "7dd737b0-7c4c-4c14-955f-01356f83d2b9",
       "name": "Format Message"
     },
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
         "text": "={{ $json.message }}",
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": {
-          "rows": [
-            {
-              "row": {
-                "buttons": [
-                  {
-                    "text": "\ud83d\udcca Expenses",
-                    "additionalFields": {
-                      "callback_data": "briefing:expenses"
-                    }
-                  },
-                  {
-                    "text": "\ud83d\udcda Learning Notes",
-                    "additionalFields": {
-                      "callback_data": "briefing:learning"
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "row": {
-                "buttons": [
-                  {
-                    "text": "\ud83d\uded2 Deal Finder",
-                    "additionalFields": {
-                      "callback_data": "briefing:deals"
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        },
         "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": "HTML"
+          "appendAttribution": false
         }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        260,
-        200
+        960,
+        144
       ],
-      "id": "db100001-0001-0001-0001-000000000005",
+      "id": "7cb8f9c2-7b6b-4f4d-b45b-1c6d6ce204c2",
       "name": "Send to Telegram",
-      "credentials": {
-        "telegramApi": {
-          "id": "CREDENTIAL_ID_TELEGRAM",
-          "name": "n8n_house_bot"
-        }
-      }
+      "webhookId": "253c4ff0-1ffa-4639-b661-fc56e7abdcca"
     },
     {
       "parameters": {
-        "content": "## Daily Briefing\n\nSends calendar summary + 3 action buttons every morning at 7 AM.\n\nButtons dispatch to menu-handler.json which routes to subworkflows.\n\nManual Trigger wired for testing.",
-        "height": 200,
+        "content": "## Daily Briefing\n\nSends calendar summary every morning at 7 AM.\n\nManual Trigger wired for testing.",
+        "height": 160,
         "width": 280
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -700,
-        60
+        0,
+        0
       ],
-      "id": "db100001-0001-0001-0001-000000000006",
+      "id": "01bbbab4-8ffa-4ad0-a8e9-39f81e28df33",
       "name": "Sticky Note - Overview"
-    }
-  ],
+    },
+    {
+      "parameters": {
+        "content": "## Mode B: Multi-turn\nFor action buttons + menu routing, see [10_steward](https://github.com/runfish5/micro-services/tree/main/projects/n8n/10_steward) which adds inline keyboard buttons and menu-handler.json",
+        "height": 140,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        688,
+        320
+      ],
+      "id": "53a66f4c-94ec-41bb-b20a-d5bbd5143e1c",
+      "name": "Sticky - Mode B"
+    },
+    {
+      "parameters": {
+        "content": "## Mode A: Single Message\nActive by default. Standalone briefing - no buttons, no dependencies.",
+        "height": 100,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        304,
+        320
+      ],
+      "id": "087f3373-9453-4ecd-bdff-059d16cad7e9",
+      "name": "Sticky - Mode A"
+    }  ],
   "connections": {
     "Schedule Trigger": {
       "main": [
