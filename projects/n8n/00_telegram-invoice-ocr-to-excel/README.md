@@ -48,3 +48,35 @@ Need help with credentials? See [credentials-guide.md](../credentials-guide.md)
 - Telegram Bot API
 - Google Gemini API
 - Google Sheets (with service account)
+
+---
+
+## n8n Template Description
+
+> Copy this when submitting to n8n.io/workflows
+
+### Who is this for?
+Freelancers, small business owners, and home accountants who want to digitize paper invoices and receipts without manual data entry.
+
+### What it does
+Send a photo of any invoice or receipt to your Telegram bot. The workflow will:
+1. Extract text using Gemini Vision OCR
+2. Parse into structured JSON (supplier, amount, date)
+3. Append to your Google Sheets ledger
+4. Send a confirmation message back
+
+### How to set up
+1. Create a Telegram bot via @BotFather
+2. Get a Google Gemini API key (free tier works)
+3. Set up a Google Service Account and share your Sheet
+4. Update the Sheet ID and chat IDs in the workflow
+
+### Requirements
+- Telegram Bot token
+- Google Gemini API key
+- Google Service Account with Sheets access
+
+### How to customize
+- Edit the prompt in "Parse Invoice to JSON" for different fields
+- Modify column mappings in "Write to Billing Ledger"
+- Change the message format in "Format Notification"

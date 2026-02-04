@@ -2,23 +2,77 @@
   "nodes": [
     {
       "parameters": {
+        "content": "**1. Trigger**\nReceives photo message from Telegram bot and downloads the image file",
+        "height": 228,
+        "width": 264
+      },
+      "id": "0325534b-b937-4cf5-b361-c7193ab239c0",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        2336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "**2. OCR Processing**\nGemini Vision extracts all visible text from the invoice image",
+        "height": 80,
+        "width": 260
+      },
+      "id": "22222a5e-b863-4f15-b8b0-ecc08b00d18e",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        336,
+        2336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "**3. Data Extraction**\nLLM parses OCR text into structured JSON with standard invoice fields",
+        "height": 80,
+        "width": 300
+      },
+      "id": "4f18f88f-ee17-48a8-a1ae-c934f807e1e2",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -384,
+        2928
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "**4. Storage & Notify**\nWrites extracted data to Google Sheets and sends Telegram confirmation",
+        "height": 80,
+        "width": 300
+      },
+      "id": "8ee34964-3992-4791-a194-796608c900ca",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        2800
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
         "modelName": "models/gemini-2.5-flash-preview-05-20",
         "options": {}
       },
-      "id": "9eed5fef-3e0e-4d52-9f47-6b115d49ec30",
-      "name": "Google Gemini Chat Model1",
+      "id": "433f85a1-a7e8-47de-8b41-062815be3bf1",
+      "name": "Gemini Vision Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
-        -60,
-        -920
+        384,
+        2576
       ],
-      "typeVersion": 1,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini API"
-        }
-      }
+      "typeVersion": 1
     },
     {
       "parameters": {
@@ -30,40 +84,29 @@
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        -760,
-        -1080
+        -320,
+        2416
       ],
-      "id": "fba2a8a2-853a-43c9-be3e-e4a8a7aea79a",
-      "name": "Telegram Trigger1",
+      "id": "c11933ac-16cb-42ea-b1ee-46b5c8d5c6eb",
+      "name": "Receive Invoice Photo",
       "webhookId": "5d8be2e2-4879-42c0-9dfe-233e61dcfd85",
-      "credentials": {
-        "telegramApi": {
-          "id": "CREDENTIAL_ID_TELEGRAM",
-          "name": "n8n_house_bot"
-        }
-      },
       "notes": "Chat-ID : YOUR_CHAT_ID_2"
     },
     {
       "parameters": {
         "resource": "file",
-        "fileId": "={{ $json.message.photo[3].file_id }}"
+        "fileId": "={{ $json.message.photo[3].file_id }}",
+        "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -540,
-        -1080
+        -96,
+        2416
       ],
-      "id": "a1b0be88-ebd6-4016-ad6f-0fb0af56b632",
-      "name": "Telegram1",
-      "webhookId": "46445344-dbab-4454-8158-0a8a4110b9dd",
-      "credentials": {
-        "telegramApi": {
-          "id": "CREDENTIAL_ID_TELEGRAM",
-          "name": "n8n_house_bot"
-        }
-      }
+      "id": "20289c44-679e-49fe-b5da-52b1255b77fb",
+      "name": "Download Photo File",
+      "webhookId": "46445344-dbab-4454-8158-0a8a4110b9dd"
     },
     {
       "parameters": {
@@ -76,21 +119,15 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        40,
-        -860
+        496,
+        2640
       ],
-      "id": "5869384d-94e6-4934-aa00-ab8fe2905d1a",
-      "name": "Telegram2",
+      "id": "fe5b1162-21b9-49a0-8448-35686ccb700a",
+      "name": "Send Confirmation",
       "webhookId": "68939611-b78f-4de1-9d57-d723dd37a511",
       "alwaysOutputData": false,
       "executeOnce": false,
-      "retryOnFail": false,
-      "credentials": {
-        "telegramApi": {
-          "id": "CREDENTIAL_ID_TELEGRAM",
-          "name": "n8n_house_bot"
-        }
-      }
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -109,12 +146,12 @@
           ]
         }
       },
-      "id": "1860385a-b1c4-4137-b90a-febab3affd60",
-      "name": "Image-to-text",
+      "id": "3f5fc96c-0a78-47ba-9b7e-db768efbf415",
+      "name": "OCR Extract Text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        -100,
-        -1080
+        352,
+        2416
       ],
       "typeVersion": 1.4
     },
@@ -133,31 +170,25 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        -760,
-        -860
+        -320,
+        2640
       ],
-      "id": "98e54bd9-5859-4ae4-8232-c28a57fadadc",
-      "name": "Basic LLM Chain"
+      "id": "d976ad29-60c7-4eb7-81a2-c1c2fc4ff060",
+      "name": "Parse Invoice to JSON"
     },
     {
       "parameters": {
         "modelName": "models/gemini-2.5-flash-preview-05-20",
         "options": {}
       },
-      "id": "bc60e467-5374-4195-b63a-4147a828cfd9",
-      "name": "Google Gemini Chat Model",
+      "id": "31a763a3-f491-4a7a-a69a-ba21268fb0c0",
+      "name": "Gemini Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
-        -720,
-        -680
+        -272,
+        2816
       ],
-      "typeVersion": 1,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini API"
-        }
-      }
+      "typeVersion": 1
     },
     {
       "parameters": {
@@ -176,52 +207,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -400,
-        -860
+        48,
+        2640
       ],
-      "id": "594fb9b3-fc3a-42c6-a809-507a08f131b8",
-      "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=<parsed-invoice>\n{{ $json.text }}\n</parsed-invoice>",
-        "messages": {
-          "messageValues": [
-            {
-              "message": "You are an AI data extractor. Your task is to convert the provided invoice (<parsed-invoice>) text into a single, valid JSON object.\n\nKey Instructions:\n\n1.  **Output JSON Only:** Your entire response MUST be the JSON object. No explanations or any other text.\n2.  **Key Creation:**\n    * All keys must be **snake\\_case** (e.g., `invoice_number`, `due_date`) and in **English**.\n    * If the invoice text provides a label (e.g., \"Invoice #:\", \"Date:\"), use that as the basis for the key (e.g., `invoice_hash`, `date`).\n    * **Crucially: If a piece of information has no explicit label in the text, you MUST create a concise, descriptive, and logical snake\\_case key for it.** (e.g., for an unlabeled company name, use `vendor_name` or `customer_name` based on context).\n3.  **Value Extraction:**\n    * Extract values accurately.\n    * Use actual numbers for numerical values (e.g., `123.45`).\n    * Format dates as `YYYY-MM-DD` if clearly identifiable, otherwise use the original date string.\n    * If there are line items, structure them as an array of objects within the JSON (e.g., under a key like `line_items`).\n4.  **Missing Information:** Do not include keys for information not present in the invoice. Do not invent data."
-            }
-          ]
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.6,
-      "position": [
-        -800,
-        -480
-      ],
-      "id": "c5583c16-90f2-400c-8bfb-5fc63c0c7363",
-      "name": "Basic LLM Chain1"
-    },
-    {
-      "parameters": {
-        "modelName": "models/gemini-2.5-flash-preview-05-20",
-        "options": {}
-      },
-      "id": "12882e79-5649-4b93-9fbc-ee5cbfb92705",
-      "name": "Google Gemini Chat Model2",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "position": [
-        -760,
-        -300
-      ],
-      "typeVersion": 1,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "CREDENTIAL_ID_GEMINI",
-          "name": "Google Gemini API"
-        }
-      }
+      "id": "782d098f-5643-4271-b517-e99d6a55683b",
+      "name": "Clean JSON Response"
     },
     {
       "parameters": {
@@ -545,17 +535,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        -160,
-        -720
+        288,
+        2768
       ],
-      "id": "aa347958-26b4-43fe-8d2c-e84663b8adeb",
-      "name": "Google Sheets",
-      "credentials": {
-        "googleApi": {
-          "id": "CREDENTIAL_ID_GOOGLE_SERVICE_ACCOUNT",
-          "name": "Google Service Account"
-        }
-      }
+      "id": "6ccd2351-11d2-4a74-97e6-f28514662874",
+      "name": "Write to Billing Ledger"
     },
     {
       "parameters": {
@@ -563,12 +547,12 @@
         "borderHeight": 1,
         "options": {}
       },
-      "id": "95550a33-ad41-43b5-b860-96ebd0bfd97c",
-      "name": "conversion",
+      "id": "fca064bc-819c-48d2-a704-533da62e739c",
+      "name": "Process Image",
       "type": "n8n-nodes-base.editImage",
       "position": [
-        -320,
-        -1080
+        128,
+        2416
       ],
       "typeVersion": 1
     },
@@ -589,133 +573,128 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -160,
-        -840
+        288,
+        2656
       ],
-      "id": "99faf9d3-e21f-495f-9a77-e9d86e656e05",
-      "name": "Edit Fields1"
+      "id": "6ae485c5-042f-4dd0-95e1-f2dbcd85a648",
+      "name": "Format Notification"
+    },
+    {
+      "parameters": {
+        "content": "## Extract Invoice Data from Telegram Image and Log to Google Sheet\n\n### How it works\n1. A Telegram user sends an image (e.g., a scanned invoice) to the bot.\n2. The workflow downloads the photo, runs a Gemini OCR model to extract raw text.\n3. An LLM chain formats the extracted text into a structured JSON invoice object.\n4. Key fields (supplier, date, amount, currency, etc.) are written to a Google Sheet ledger.\n5. A concise summary with a timestamp is sent back to the user via Telegram.\n\n### Setup\n- [ ] Connect your Telegram bot credentials.\n- [ ] Add a Google Service Account with Sheets write access.\n- [ ] Provide the target Google Sheet ID and sheet name.\n- [ ] Enable the Google Gemini API and add the API key.\n- [ ] Ensure the bot has permission to receive photos.\n- [ ] Test with a sample invoice image to verify JSON mapping.",
+        "height": 768,
+        "width": 400,
+        "color": 7
+      },
+      "id": "486b429f-c2eb-415a-8e42-7ec82250ea0c",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -800,
+        2240
+      ],
+      "typeVersion": 1
     }
   ],
   "connections": {
-    "Google Gemini Chat Model1": {
+    "Gemini Vision Model": {
       "ai_languageModel": [
         [
           {
-            "node": "Image-to-text",
+            "node": "OCR Extract Text",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Telegram Trigger1": {
+    "Receive Invoice Photo": {
       "main": [
         [
           {
-            "node": "Telegram1",
+            "node": "Download Photo File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Telegram1": {
+    "Download Photo File": {
       "main": [
         [
           {
-            "node": "conversion",
+            "node": "Process Image",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Telegram2": {
-      "main": [
-        []
-      ]
-    },
-    "Image-to-text": {
+    "OCR Extract Text": {
       "main": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "Parse Invoice to JSON",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Basic LLM Chain": {
+    "Parse Invoice to JSON": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Clean JSON Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Gemini Chat Model": {
+    "Gemini Chat Model": {
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "Parse Invoice to JSON",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Clean JSON Response": {
       "main": [
         [
           {
-            "node": "Google Sheets",
+            "node": "Write to Billing Ledger",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Edit Fields1",
+            "node": "Format Notification",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Gemini Chat Model2": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Basic LLM Chain1",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets": {
-      "main": [
-        []
-      ]
-    },
-    "conversion": {
+    "Process Image": {
       "main": [
         [
           {
-            "node": "Image-to-text",
+            "node": "OCR Extract Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields1": {
+    "Format Notification": {
       "main": [
         [
           {
-            "node": "Telegram2",
+            "node": "Send Confirmation",
             "type": "main",
             "index": 0
           }
