@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        224,
-        384
+        -32,
+        496
       ],
       "alwaysOutputData": true
     },
@@ -25,8 +25,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        256,
-        32
+        0,
+        144
       ]
     },
     {
@@ -39,8 +39,8 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        448,
-        528
+        192,
+        640
       ]
     },
     {
@@ -60,8 +60,8 @@
       "type": "n8n-nodes-base.summarize",
       "typeVersion": 1,
       "position": [
-        544,
-        528
+        400,
+        640
       ]
     },
     {
@@ -238,8 +238,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        0,
-        16
+        -256,
+        128
       ]
     },
     {
@@ -252,8 +252,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        224,
-        672
+        -32,
+        784
       ]
     },
     {
@@ -263,8 +263,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        224,
-        528
+        -32,
+        640
       ],
       "id": "6869d8cd-a552-46dd-8e33-078906931dae",
       "name": "Extract from CSV"
@@ -277,8 +277,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -464,
-        16
+        -720,
+        128
       ],
       "id": "aa29a1f4-89e4-4402-a320-fcf59f339a90",
       "name": "When Executed by Another Workflow"
@@ -293,8 +293,8 @@
       "name": "Sticky Note2",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -640,
-        192
+        -896,
+        304
       ],
       "typeVersion": 1
     },
@@ -313,8 +313,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -464,
-        224
+        -720,
+        336
       ],
       "executeOnce": true,
       "disabled": true
@@ -329,8 +329,8 @@
       "name": "Sticky Note3",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -640,
-        -16
+        -896,
+        96
       ],
       "typeVersion": 1
     },
@@ -342,7 +342,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
+              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Input Validator').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
             },
             {
               "type": "HumanMessagePromptTemplate",
@@ -355,8 +355,8 @@
       "name": "Image-to-text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        304,
-        -304
+        48,
+        -192
       ],
       "typeVersion": 1.4
     },
@@ -372,8 +372,8 @@
       "name": "conversion",
       "type": "n8n-nodes-base.editImage",
       "position": [
-        160,
-        -304
+        -96,
+        -192
       ],
       "typeVersion": 1
     },
@@ -384,8 +384,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -144,
-        16
+        -400,
+        128
       ],
       "id": "c9cfe875-2d30-4718-80de-0c24b099d639",
       "name": "(File-rename)"
@@ -395,9 +395,15 @@
         "assignments": {
           "assignments": [
             {
-              "id": "0af57e1c-21ab-433b-a109-3e21070857a2",
-              "name": "binary_files",
-              "value": "={{ $input.item.binary.data || JSON.parse('{\\\"message\\\": \\\"No binary Attachment\\\"}') }}",
+              "id": "input-validator-extraction",
+              "name": "extraction",
+              "value": "={{ $json.extraction || {} }}",
+              "type": "object"
+            },
+            {
+              "id": "input-validator-metadata",
+              "name": "metadata",
+              "value": "={{ $json.metadata || {} }}",
               "type": "object"
             }
           ]
@@ -408,20 +414,19 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -304,
-        224
+        -560,
+        128
       ],
       "id": "b356d59d-3cf0-4903-b931-7732982a04bf",
-      "name": "Extract Binary Data",
-      "disabled": true
+      "name": "Input Validator"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -624,
-        224
+        -880,
+        336
       ],
       "id": "ecef6366-4686-431a-8edf-1bd7b90815e7",
       "name": "Testing n8n sub-workflow",
@@ -437,8 +442,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        160,
-        -96
+        -96,
+        16
       ],
       "id": "79986b8f-d12d-4dca-a908-ee2a663467c6",
       "name": "Sticky Note15"
@@ -446,15 +451,15 @@
     {
       "parameters": {
         "content": "## Any-file2json converter\n# · image OCR\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n```\n```\n# · json\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
-        "height": 1272,
+        "height": 1224,
         "width": 528,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        144,
-        -400
+        -112,
+        -288
       ],
       "id": "9a2dc413-8361-423c-9eed-696b49f948ab",
       "name": "Sticky Note"
@@ -469,8 +474,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        656,
-        -48
+        400,
+        64
       ],
       "id": "a0e02be3-3273-4f33-8924-c541f2da5ca4",
       "name": "Confidence Note"
@@ -485,8 +490,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        256,
-        192
+        0,
+        304
       ],
       "id": "e598263b-1e7b-4ecd-ace8-e21199a19faa",
       "name": "Extract from JSON",
@@ -501,8 +506,8 @@
       "name": "Output Schema",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
-        400,
-        -176
+        144,
+        -64
       ],
       "typeVersion": 1.2
     },
@@ -515,8 +520,8 @@
       "name": "image-language-model",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
-        240,
-        -176
+        -16,
+        -64
       ],
       "typeVersion": 1,
       "credentials": {
@@ -585,8 +590,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        224,
-        832
+        400,
+        432
       ],
       "id": "170406de-0713-4f7d-9335-63159443d990",
       "name": "Unresolved Handler"
@@ -632,8 +637,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        656,
-        32
+        400,
+        144
       ],
       "id": "0e3f38bb-72b6-43ed-bf2f-8ac2277de98c",
       "name": "Return node"
@@ -770,6 +775,17 @@
       "main": [
         [
           {
+            "node": "Input Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Validator": {
+      "main": [
+        [
+          {
             "node": "(File-rename)",
             "type": "main",
             "index": 0
@@ -781,7 +797,7 @@
       "main": [
         [
           {
-            "node": "Extract Binary Data",
+            "node": "Input Validator",
             "type": "main",
             "index": 0
           }
@@ -815,17 +831,6 @@
         [
           {
             "node": "Switch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Binary Data": {
-      "main": [
-        [
-          {
-            "node": "(File-rename)",
             "type": "main",
             "index": 0
           }
