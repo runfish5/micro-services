@@ -5,13 +5,13 @@
         "operation": "text",
         "options": {}
       },
-      "id": "dcfab135-3e7b-4e0b-9397-980e2cbef2f8",
+      "id": "71f88351-3536-4555-82ee-49895154c8d5",
       "name": "Extract Document Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -32,
-        496
+        -768,
+        768
       ],
       "alwaysOutputData": true
     },
@@ -20,13 +20,13 @@
         "operation": "pdf",
         "options": {}
       },
-      "id": "631f18b6-4382-445a-a0fd-bb235a9e9cd6",
+      "id": "6bf5eca2-8555-4ea8-b2f1-594af5563299",
       "name": "Extract PDF Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        0,
-        144
+        -736,
+        416
       ]
     },
     {
@@ -34,13 +34,13 @@
         "aggregate": "aggregateAllItemData",
         "options": {}
       },
-      "id": "56b3e55a-2844-4139-af77-b3ebf89f04d4",
+      "id": "3bcc35ca-5a3d-4f1a-9669-30a65862f297",
       "name": "Aggregate",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        192,
-        640
+        -544,
+        912
       ]
     },
     {
@@ -55,13 +55,13 @@
         },
         "options": {}
       },
-      "id": "ebcd05e7-ad0b-410a-9855-d4465d54754c",
+      "id": "21bdece4-27c7-4d06-979d-9e0e41c2adc6",
       "name": "Summarize",
       "type": "n8n-nodes-base.summarize",
       "typeVersion": 1,
       "position": [
-        400,
-        640
+        -544,
+        768
       ]
     },
     {
@@ -256,13 +256,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "9003d1e6-9184-4d9c-8bd0-7a0cca80aee8",
+      "id": "aa494995-2e49-4f04-a519-e7f56eb34171",
       "name": "Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -256,
-        128
+        -992,
+        400
       ]
     },
     {
@@ -270,13 +270,13 @@
         "operation": "xlsx",
         "options": {}
       },
-      "id": "e50f6105-7701-4dc7-83e2-99be0e83953d",
+      "id": "2d60a23a-1abc-4e7b-8ed8-8da1593cfacf",
       "name": "Extract from Excel",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -32,
-        784
+        -768,
+        1056
       ]
     },
     {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -32,
-        640
+        -768,
+        912
       ],
-      "id": "6869d8cd-a552-46dd-8e33-078906931dae",
+      "id": "13d15b17-7094-43b5-a3a6-c3bfa3ec2fb1",
       "name": "Extract from CSV"
     },
     {
@@ -300,26 +300,11 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -720,
-        128
+        -1456,
+        400
       ],
-      "id": "aa29a1f4-89e4-4402-a320-fcf59f339a90",
+      "id": "348208e4-d9e9-492d-be7a-f388bf8ab45d",
       "name": "When Executed by Another Workflow"
-    },
-    {
-      "parameters": {
-        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\", \"metadata\": {}}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  },\n  \"metadata\": {\"source\": \"test\"}\n}\n```",
-        "height": 460,
-        "width": 320
-      },
-      "id": "5a71bd8a-3c09-4ee9-8f39-b880019fcc22",
-      "name": "Sticky Note2",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -496,
-        2144
-      ],
-      "typeVersion": 1
     },
     {
       "parameters": {
@@ -331,29 +316,29 @@
         },
         "options": {}
       },
-      "id": "bd482512-2e93-4b88-8a78-7d7740c67ad5",
+      "id": "cb19ad57-5345-4bb1-8ba4-fb56ba5632c4",
       "name": "Download File1",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -720,
-        336
+        -1456,
+        608
       ],
       "executeOnce": true,
       "disabled": true
     },
     {
       "parameters": {
-        "content": "## Use case",
-        "height": 188,
+        "content": "## Any‑file to JSON converter\n\n### How it works\n1. Another workflow triggers this sub‑workflow and sends a JSON payload containing `binary_files` and file metadata.\n2. The Input Validator extracts metadata, then a code node flattens each attachment into its own item.\n3. A Switch node examines the MIME type of each file and routes it:\n   - Images → editImage → Gemini OCR prompt → structured JSON.\n   - PDFs → PDF text extractor.\n   - JSON files → direct JSON extraction.\n   - CSV/Excel → text extraction, aggregation, and summarization.\n4. Each branch normalises the extracted text, runs an optional LLM summarizer, and returns a JSON object with `content_class` and `class_confidence`.\n5. Unsupported types are caught by the Unresolved Handler and marked for manual review.\n\n### Setup\n- [ ] Connect a Google Gemini (PaLM) credential for the image‑to‑text model.\n- [ ] Ensure the calling workflow sends a `binary_files` object with proper MIME types.\n- [ ] Verify the Output Schema node matches your desired JSON fields.\n- [ ] Test each file type (image, PDF, JSON, CSV, Excel) to confirm routing.\n- [ ] Adjust the Switch rules if you need to support additional MIME types.\n- [ ] Deploy the workflow and reference its ID in the parent workflow.",
+        "height": 796,
         "width": 460
       },
-      "id": "00c92ade-a32e-41e4-b7ee-396f22f3c1b3",
+      "id": "f3f9259a-b29f-4ad5-874a-ff91c74d795d",
       "name": "Sticky Note3",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -896,
-        96
+        -2112,
+        368
       ],
       "typeVersion": 1
     },
@@ -374,12 +359,12 @@
           ]
         }
       },
-      "id": "67064dc4-f2f2-471d-990b-e8319a3c286c",
+      "id": "94b72956-776f-4410-8a9c-1b494eed1c67",
       "name": "Image-to-text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        48,
-        -192
+        -688,
+        80
       ],
       "typeVersion": 1.4
     },
@@ -391,12 +376,12 @@
           "fileName": "data"
         }
       },
-      "id": "c5739e57-d656-42d2-a5ca-9eebde5478b0",
+      "id": "52e8cb62-4f10-46a7-9736-d1f66109b0d2",
       "name": "conversion",
       "type": "n8n-nodes-base.editImage",
       "position": [
-        -96,
-        -192
+        -832,
+        80
       ],
       "typeVersion": 1
     },
@@ -407,10 +392,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -400,
-        128
+        -1136,
+        400
       ],
-      "id": "c9cfe875-2d30-4718-80de-0c24b099d639",
+      "id": "29d01b4b-ec16-496e-9b9f-d551ae815bff",
       "name": "(File-rename)"
     },
     {
@@ -437,10 +422,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -560,
-        128
+        -1296,
+        400
       ],
-      "id": "b356d59d-3cf0-4903-b931-7732982a04bf",
+      "id": "d444e35f-ccad-417d-a758-4649749c7fc9",
       "name": "Input Validator",
       "notes": "Pin test data here. See Testing sticky note for examples."
     },
@@ -449,10 +434,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -880,
-        336
+        -1616,
+        608
       ],
-      "id": "ecef6366-4686-431a-8edf-1bd7b90815e7",
+      "id": "51196187-9710-4710-a4d2-938a24171d35",
       "name": "Testing n8n sub-workflow",
       "disabled": true
     },
@@ -460,48 +445,46 @@
       "parameters": {
         "content": "\n\n\n\nThis node requires an LLM API which accpets images. Google works nicely, leave this model if possible.",
         "height": 96,
-        "width": 400,
-        "color": 5
+        "width": 400
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -96,
-        16
+        -832,
+        288
       ],
-      "id": "79986b8f-d12d-4dca-a908-ee2a663467c6",
+      "id": "bab52de7-f2e4-4a6d-92cf-eac15d094a58",
       "name": "Sticky Note15"
     },
     {
       "parameters": {
         "content": "## Any-file2json converter\n# · image OCR\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n```\n```\n# · json\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
-        "height": 1224,
-        "width": 528,
+        "height": 1384,
+        "width": 432,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -112,
-        -288
+        -848,
+        -16
       ],
-      "id": "9a2dc413-8361-423c-9eed-696b49f948ab",
+      "id": "f3ce7b26-f00a-402a-8ae0-9a00c77dfcb8",
       "name": "Sticky Note"
     },
     {
       "parameters": {
         "content": "**Optional:** LLM confidence scoring via `class_confidence` field. See `docs/observability-through-llm-confidence-estimate.md`",
         "height": 80,
-        "width": 300,
-        "color": 6
+        "width": 300
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        400,
-        64
+        -336,
+        336
       ],
-      "id": "a0e02be3-3273-4f33-8924-c541f2da5ca4",
+      "id": "b0c8696a-178c-4d7c-b0be-0c15b9e81a9d",
       "name": "Confidence Note"
     },
     {
@@ -514,10 +497,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        0,
-        304
+        -736,
+        576
       ],
-      "id": "e598263b-1e7b-4ecd-ace8-e21199a19faa",
+      "id": "95d8a1ac-ede3-4c64-b6c6-cf2534192287",
       "name": "Extract from JSON",
       "alwaysOutputData": true
     },
@@ -526,12 +509,12 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"content_class\": {\n      \"type\": \"string\",\n      \"enum\": [\"primary_document\", \"style_element\", \"unclassified\"]\n    },\n    \"class_confidence\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\"content_class\", \"class_confidence\"],\n  \"additionalProperties\": true\n}"
       },
-      "id": "db98dc53-dc2f-4a15-a266-f1d741f01960",
+      "id": "eb1fbc57-1ab1-4776-934d-5a7a3124ee0c",
       "name": "Output Schema",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
-        144,
-        -64
+        -592,
+        208
       ],
       "typeVersion": 1.2
     },
@@ -540,12 +523,12 @@
         "modelName": "models/gemini-3-flash-preview",
         "options": {}
       },
-      "id": "7fede59f-e129-457c-9e06-0c9ddb512f9f",
+      "id": "e23fb0ad-c743-4e0a-9cf4-fba0736730a7",
       "name": "image-language-model",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
-        -16,
-        -64
+        -752,
+        208
       ],
       "typeVersion": 1,
       "credentials": {
@@ -614,10 +597,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        400,
-        432
+        -336,
+        912
       ],
-      "id": "170406de-0713-4f7d-9335-63159443d990",
+      "id": "49859284-724f-4d50-b952-27fbe38e9696",
       "name": "Unresolved Handler"
     },
     {
@@ -661,15 +644,14 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        400,
-        144
+        -336,
+        416
       ],
-      "id": "0e3f38bb-72b6-43ed-bf2f-8ac2277de98c",
+      "id": "1c9206c0-5927-4c4a-a124-72c9726e3668",
       "name": "Return node"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "={{ $json._jinaUrl }}",
         "options": {
           "response": {
@@ -682,11 +664,43 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        100,
-        960
+        -544,
+        1152
       ],
-      "id": "jina-url-fetch-node",
+      "id": "d3b152ce-fb60-4814-a242-74b10eb6153b",
       "name": "Fetch URL (Jina)"
+    },
+    {
+      "parameters": {
+        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\", \"metadata\": {}}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  },\n  \"metadata\": {\"source\": \"test\"}\n}\n```",
+        "height": 504,
+        "width": 460,
+        "color": 7
+      },
+      "id": "676adb44-466e-4f7d-829a-2eb5996ab366",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1632,
+        560
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Use case",
+        "height": 188,
+        "width": 460,
+        "color": 7
+      },
+      "id": "48900309-8646-43ad-9567-c1237f5df371",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1632,
+        368
+      ],
+      "typeVersion": 1
     }
   ],
   "connections": {
@@ -801,17 +815,6 @@
         ]
       ]
     },
-    "Fetch URL (Jina)": {
-      "main": [
-        [
-          {
-            "node": "Return node",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Extract from Excel": {
       "main": [
         [
@@ -839,17 +842,6 @@
         [
           {
             "node": "Input Validator",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Input Validator": {
-      "main": [
-        [
-          {
-            "node": "(File-rename)",
             "type": "main",
             "index": 0
           }
@@ -894,6 +886,17 @@
         [
           {
             "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Validator": {
+      "main": [
+        [
+          {
+            "node": "(File-rename)",
             "type": "main",
             "index": 0
           }
@@ -954,10 +957,22 @@
           }
         ]
       ]
+    },
+    "Fetch URL (Jina)": {
+      "main": [
+        [
+          {
+            "node": "Return node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
   }
 }
