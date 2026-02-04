@@ -5,7 +5,7 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -200,
+        -600,
         300
       ],
       "id": "df100001-0001-0001-0001-000000000001",
@@ -13,8 +13,246 @@
     },
     {
       "parameters": {
-        "chatId": "YOUR_CHAT_ID_1",
-        "text": "\ud83d\uded2 Deal Finder is not yet set up.",
+        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'YOUR_DEAL_FINDER_SHEET_ID',\n  sheetName: 'Requirements',\n  chatId: 'YOUR_CHAT_ID_1',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "df100001-0001-0001-0001-000000000002",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming command from menu-handler\n// Input: { action: 'deals', chatId: '...', text: '...' }\n// text examples:\n//   \"\" or \"phone\" → digest flow\n//   \"add phone 800CHF flagship camera\" → add flow\n//   \"remove phone\" → remove flow\n\nconst input = $input.first().json;\nconst text = (input.text || '').trim();\nconst chatId = input.chatId || $('Config').first().json.chatId;\n\nlet operation = 'digest';\nlet category = '';\nlet constraints = '';\nlet maxPrice = '';\n\nif (text.toLowerCase().startsWith('add ')) {\n  operation = 'add';\n  // Parse: add <category> <price> <constraints...>\n  // Example: add phone 800CHF flagship good camera\n  const parts = text.substring(4).trim().split(/\\s+/);\n  category = parts[0] || '';\n  \n  // Find price (contains CHF, EUR, or just digits)\n  const priceIdx = parts.findIndex((p, i) => i > 0 && /^\\d+/.test(p));\n  if (priceIdx > 0) {\n    maxPrice = parts[priceIdx];\n    constraints = parts.slice(priceIdx + 1).join(' ');\n  } else {\n    constraints = parts.slice(1).join(' ');\n  }\n  \n} else if (text.toLowerCase().startsWith('remove ')) {\n  operation = 'remove';\n  category = text.substring(7).trim();\n  \n} else if (text.toLowerCase().startsWith('pause ')) {\n  operation = 'pause';\n  category = text.substring(6).trim();\n  \n} else if (text.toLowerCase().startsWith('resume ')) {\n  operation = 'resume';\n  category = text.substring(7).trim();\n  \n} else if (text) {\n  // Single word = category filter for digest\n  operation = 'digest';\n  category = text.toLowerCase();\n}\n\nreturn [{\n  json: {\n    operation,\n    category: category.toLowerCase(),\n    constraints,\n    maxPrice,\n    chatId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        300
+      ],
+      "id": "df100001-0001-0001-0001-000000000003",
+      "name": "Parse Command"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-digest",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "digest",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "digest"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-add",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "add"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-remove",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "remove",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "remove"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-pause",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "pause",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pause"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-resume",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "resume",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resume"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        40,
+        300
+      ],
+      "id": "df100001-0001-0001-0001-000000000004",
+      "name": "Route Operation"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        280,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000005",
+      "name": "Load Requirements",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter requirements: active only, optional category filter\nconst command = $('Parse Command').first().json;\nconst categoryFilter = command.category;\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const row = item.json;\n  // Only active requirements\n  if ((row.status || '').toLowerCase() !== 'active') return false;\n  // Optional category filter\n  if (categoryFilter && (row.category || '').toLowerCase() !== categoryFilter) return false;\n  return true;\n});\n\nif (filtered.length === 0) {\n  return [{\n    json: {\n      empty: true,\n      message: categoryFilter \n        ? `No active requirements found for \"${categoryFilter}\"`\n        : 'No active requirements found. Use /deals add <category> <price> <constraints> to add one.'\n    }\n  }];\n}\n\n// Pass through filtered items\nreturn filtered;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000006",
+      "name": "Filter Active"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000007",
+      "name": "Check Empty"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "={{ $json.message }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -22,11 +260,11 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        20,
-        300
+        940,
+        60
       ],
-      "id": "df100001-0001-0001-0001-000000000002",
-      "name": "Send Stub Message",
+      "id": "df100001-0001-0001-0001-000000000008",
+      "name": "Send Empty Message",
       "credentials": {
         "telegramApi": {
           "id": "CREDENTIAL_ID_TELEGRAM",
@@ -36,18 +274,691 @@
     },
     {
       "parameters": {
-        "content": "## Deal Finder - Future Plans\n\n1. Product watchlist Google Sheet (name, target price, URLs)\n2. Web price search via HTTP Request nodes\n3. Compare current vs target price\n4. Alert on price drops via Telegram\n5. Weekly digest of price trends",
-        "height": 200,
-        "width": 300
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        940,
+        220
+      ],
+      "id": "df100001-0001-0001-0001-000000000009",
+      "name": "Loop Requirements"
+    },
+    {
+      "parameters": {
+        "messages": {
+          "message": [
+            {
+              "content": "=You are a shopping advisor for {{ $('Config').first().json.region }}. Find the current best value option for:\n\nCategory: {{ $json.category }}\nRequirements: {{ $json.constraints }}\nBudget: {{ $json.max_price }}\nPriority: {{ $json.priority }}\n\nSearch retailers in {{ $('Config').first().json.region }} ({{ $('Config').first().json.retailers }}, etc.) and recommend 2-3 options with:\n- Product name and model\n- Current price in {{ $('Config').first().json.currency }}\n- Where to buy (retailer name)\n- Why it's a good value\n\nFocus on products actually available in {{ $('Config').first().json.region }}. Be concise but include specific prices and retailers."
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 1024
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        1160,
+        220
+      ],
+      "id": "df100001-0001-0001-0001-000000000010",
+      "name": "Perplexity Research",
+      "credentials": {
+        "perplexityApi": {
+          "id": "CREDENTIAL_ID_PERPLEXITY",
+          "name": "Perplexity API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Perplexity response with category header\nconst requirement = $('Loop Requirements').first().json;\nconst perplexityResponse = $input.first().json;\n\nconst content = perplexityResponse.choices?.[0]?.message?.content || 'No recommendations found.';\n\nconst emoji = {\n  'phone': '📱',\n  'desk': '🪑',\n  'laptop': '💻',\n  'kitchen': '🍳',\n  'audio': '🎧',\n  'camera': '📷',\n  'tv': '📺',\n  'appliance': '🏠'\n};\n\nconst icon = emoji[requirement.category.toLowerCase()] || '🛒';\n\nreturn [{\n  json: {\n    category: requirement.category,\n    formatted: `${icon} *${requirement.category.toUpperCase()}* (Budget: ${requirement.max_price})\\n\\n${content}`,\n    raw: content\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        220
+      ],
+      "id": "df100001-0001-0001-0001-000000000011",
+      "name": "Format Result"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000012",
+      "name": "Collect Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all formatted results into final digest\nconst results = $input.first().json.data || [];\nconst chatId = $('Parse Command').first().json.chatId;\n\nif (results.length === 0) {\n  return [{\n    json: {\n      chatId,\n      message: '🛒 No recommendations generated.'\n    }\n  }];\n}\n\nconst digest = results.map(r => r.formatted).join('\\n\\n---\\n\\n');\nconst header = `🛒 *Deal Finder Digest*\\n_${results.length} categor${results.length === 1 ? 'y' : 'ies'} researched_\\n\\n`;\n\nreturn [{\n  json: {\n    chatId,\n    message: header + digest\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000013",
+      "name": "Build Digest"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2040,
+        140
+      ],
+      "id": "df100001-0001-0001-0001-000000000014",
+      "name": "Send Digest",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "category": "={{ $('Parse Command').first().json.category }}",
+            "constraints": "={{ $('Parse Command').first().json.constraints }}",
+            "max_price": "={{ $('Parse Command').first().json.maxPrice }}",
+            "priority": "medium",
+            "status": "active"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        280,
+        340
+      ],
+      "id": "df100001-0001-0001-0001-000000000015",
+      "name": "Append Requirement",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=✅ Added \"{{ $('Parse Command').first().json.category }}\" to watchlist\n\nBudget: {{ $('Parse Command').first().json.maxPrice || 'not specified' }}\nConstraints: {{ $('Parse Command').first().json.constraints || 'none' }}\n\nUse /deals to get recommendations.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        500,
+        340
+      ],
+      "id": "df100001-0001-0001-0001-000000000016",
+      "name": "Confirm Add",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        280,
+        540
+      ],
+      "id": "df100001-0001-0001-0001-000000000017",
+      "name": "Load for Remove",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find row to remove by category\nconst categoryToRemove = $('Parse Command').first().json.category;\nconst items = $input.all();\n\nlet rowIndex = -1;\nfor (let i = 0; i < items.length; i++) {\n  if ((items[i].json.category || '').toLowerCase() === categoryToRemove) {\n    rowIndex = i + 2; // +2 for header row and 1-based index\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    category: categoryToRemove,\n    rowIndex,\n    found: rowIndex > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        540
+      ],
+      "id": "df100001-0001-0001-0001-000000000018",
+      "name": "Find Row"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-found",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        540
+      ],
+      "id": "df100001-0001-0001-0001-000000000019",
+      "name": "Check Found"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "deleteType": "specificRows",
+        "rowsToDelete": "={{ $json.rowIndex }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        940,
+        480
+      ],
+      "id": "df100001-0001-0001-0001-000000000020",
+      "name": "Delete Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=✅ Removed \"{{ $('Find Row').first().json.category }}\" from watchlist",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1160,
+        480
+      ],
+      "id": "df100001-0001-0001-0001-000000000021",
+      "name": "Confirm Remove",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=❌ Category \"{{ $json.category }}\" not found in watchlist",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        620
+      ],
+      "id": "df100001-0001-0001-0001-000000000022",
+      "name": "Not Found",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        280,
+        740
+      ],
+      "id": "df100001-0001-0001-0001-000000000023",
+      "name": "Load for Pause",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find row to pause by category\nconst categoryToPause = $('Parse Command').first().json.category;\nconst items = $input.all();\n\nlet rowIndex = -1;\nlet currentStatus = '';\nfor (let i = 0; i < items.length; i++) {\n  if ((items[i].json.category || '').toLowerCase() === categoryToPause) {\n    rowIndex = i + 2; // +2 for header row and 1-based index\n    currentStatus = items[i].json.status || '';\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    category: categoryToPause,\n    rowIndex,\n    found: rowIndex > 0,\n    currentStatus\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        740
+      ],
+      "id": "df100001-0001-0001-0001-000000000024",
+      "name": "Find Row for Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-found-status",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        740
+      ],
+      "id": "df100001-0001-0001-0001-000000000025",
+      "name": "Check Found for Status"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "paused"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "handlingExtraData": "ignoreIt"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "category",
+              "lookupValue": "={{ $('Parse Command').first().json.category }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        940,
+        680
+      ],
+      "id": "df100001-0001-0001-0001-000000000026",
+      "name": "Update to Paused",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=⏸️ Paused \"{{ $('Parse Command').first().json.category }}\" - won't appear in digests",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1160,
+        680
+      ],
+      "id": "df100001-0001-0001-0001-000000000027",
+      "name": "Confirm Pause",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=❌ Category \"{{ $json.category }}\" not found in watchlist",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        820
+      ],
+      "id": "df100001-0001-0001-0001-000000000028",
+      "name": "Not Found for Status",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        280,
+        940
+      ],
+      "id": "df100001-0001-0001-0001-000000000029",
+      "name": "Load for Resume",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find row to resume by category\nconst categoryToResume = $('Parse Command').first().json.category;\nconst items = $input.all();\n\nlet rowIndex = -1;\nfor (let i = 0; i < items.length; i++) {\n  if ((items[i].json.category || '').toLowerCase() === categoryToResume) {\n    rowIndex = i + 2;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    category: categoryToResume,\n    rowIndex,\n    found: rowIndex > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        940
+      ],
+      "id": "df100001-0001-0001-0001-000000000030",
+      "name": "Find Row for Resume"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-found-resume",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        940
+      ],
+      "id": "df100001-0001-0001-0001-000000000031",
+      "name": "Check Found for Resume"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "active"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "handlingExtraData": "ignoreIt"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "category",
+              "lookupValue": "={{ $('Parse Command').first().json.category }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        940,
+        880
+      ],
+      "id": "df100001-0001-0001-0001-000000000032",
+      "name": "Update to Active",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=▶️ Resumed \"{{ $('Parse Command').first().json.category }}\" - will appear in digests",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1160,
+        880
+      ],
+      "id": "df100001-0001-0001-0001-000000000033",
+      "name": "Confirm Resume",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=❌ Category \"{{ $json.category }}\" not found in watchlist",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        1020
+      ],
+      "id": "df100001-0001-0001-0001-000000000034",
+      "name": "Not Found for Resume",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Deal Finder\n\nPersonal shopping advisor using Perplexity to research products.\nRegion, retailers, and currency are configurable in the Config node.\n\n**Commands:**\n- `/deals` - Get recommendations for all active categories\n- `/deals phone` - Get recommendations for specific category\n- `/deals add phone 800CHF flagship camera` - Add requirement\n- `/deals remove phone` - Remove requirement\n- `/deals pause phone` - Pause (won't appear in digests)\n- `/deals resume phone` - Resume paused requirement\n\n**Config (with defaults):**\n- `region`: Switzerland\n- `retailers`: Digitec, Galaxus, Toppreise, etc.\n- `currency`: CHF\n\nCallers can override via Execute Workflow input.",
+        "height": 380,
+        "width": 340
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -200,
-        60
+        -600,
+        -80
       ],
-      "id": "df100001-0001-0001-0001-000000000003",
-      "name": "Sticky Note - Future Plans"
+      "id": "df100001-0001-0001-0001-000000000035",
+      "name": "Sticky Note - Overview"
+    },
+    {
+      "parameters": {
+        "content": "### Google Sheet Schema\n\n| Column | Example |\n|--------|--------|\n| category | Phone |\n| constraints | flagship, good camera |\n| max_price | 800 CHF |\n| priority | high / medium / low |\n| status | active / paused |",
+        "height": 200,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -80
+      ],
+      "id": "df100001-0001-0001-0001-000000000036",
+      "name": "Sticky Note - Schema"
     }
   ],
   "connections": {
@@ -55,7 +966,334 @@
       "main": [
         [
           {
-            "node": "Send Stub Message",
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Command": {
+      "main": [
+        [
+          {
+            "node": "Route Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Operation": {
+      "main": [
+        [
+          {
+            "node": "Load Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append Requirement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load for Remove",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load for Pause",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load for Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Requirements": {
+      "main": [
+        [
+          {
+            "node": "Filter Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          {
+            "node": "Check Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Empty": {
+      "main": [
+        [
+          {
+            "node": "Send Empty Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Requirements": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Perplexity Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Research": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Loop Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Requirement": {
+      "main": [
+        [
+          {
+            "node": "Confirm Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load for Remove": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Check Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Found": {
+      "main": [
+        [
+          {
+            "node": "Delete Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row": {
+      "main": [
+        [
+          {
+            "node": "Confirm Remove",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load for Pause": {
+      "main": [
+        [
+          {
+            "node": "Find Row for Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row for Status": {
+      "main": [
+        [
+          {
+            "node": "Check Found for Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Found for Status": {
+      "main": [
+        [
+          {
+            "node": "Update to Paused",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found for Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Paused": {
+      "main": [
+        [
+          {
+            "node": "Confirm Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load for Resume": {
+      "main": [
+        [
+          {
+            "node": "Find Row for Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row for Resume": {
+      "main": [
+        [
+          {
+            "node": "Check Found for Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Found for Resume": {
+      "main": [
+        [
+          {
+            "node": "Update to Active",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found for Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Active": {
+      "main": [
+        [
+          {
+            "node": "Confirm Resume",
             "type": "main",
             "index": 0
           }

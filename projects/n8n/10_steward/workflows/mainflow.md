@@ -1,6 +1,6 @@
 # Steward
 
-> Morning calendar + interactive menu via Telegram. Two workflows + two subworkflows.
+> Morning calendar + interactive menu via Telegram. Two workflows + three subworkflows.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ daily-briefing.json        Scheduled morning message with inline buttons
 menu-handler.json          Always-on hub: routes buttons, /commands, and free text
   -> expense-trend-report  (project 04, called via Execute Workflow)
   -> learning-notes        Notion AI summary
-  -> deal-finder           Stub
+  -> deal-finder           Shopping advisor with Perplexity research (region-configurable)
   -> LLM classifier        Groq/Brave Search/Perplexity (inlined from mini-dave)
 ```
 
@@ -158,10 +158,124 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 - Postgres: `Postgres account` (`CREDENTIAL_ID_POSTGRES`)
 - Telegram: `n8n_house_bot` (`CREDENTIAL_ID_TELEGRAM`)
 
-## deal-finder.json (Stub Subworkflow)
+## deal-finder.json (Subworkflow)
+
+Personal shopping advisor that stores product requirements in Google Sheets and uses Perplexity to research the best current options. Region, retailers, and currency are configurable (defaults to Switzerland).
+
+### Commands
+
+| Command | Example | Action |
+|---------|---------|--------|
+| `/deals` | `/deals` | Get recommendations for all active categories |
+| `/deals <category>` | `/deals phone` | Get recommendations for specific category only |
+| `/deals add <category> <price> <constraints>` | `/deals add phone 800CHF flagship camera` | Add requirement to watchlist |
+| `/deals remove <category>` | `/deals remove phone` | Remove category from watchlist |
+| `/deals pause <category>` | `/deals pause phone` | Pause category (won't appear in digests) |
+| `/deals resume <category>` | `/deals resume phone` | Resume paused category |
+
+### Flow Diagram
 
 ```
-Execute Workflow Trigger --> Send "Deal Finder is not yet set up."
+Execute Workflow Trigger
+  ↓
+Config (sheet ID, chat ID)
+  ↓
+Parse Command → Route Operation
+                    |
+                    |-- digest  → Load Requirements → Filter Active → Check Empty
+                    |                                                     |-- empty → Send Empty Message
+                    |                                                     |-- has items → Loop → Perplexity → Format → Collect → Build Digest → Send
+                    |
+                    |-- add     → Append Requirement → Confirm Add
+                    |
+                    |-- remove  → Load for Remove → Find Row → Check Found
+                    |                                              |-- found → Delete Row → Confirm Remove
+                    |                                              |-- not found → Not Found message
+                    |
+                    |-- pause   → Load → Find → Check Found → Update to Paused → Confirm
+                    |
+                    └-- resume  → Load → Find → Check Found → Update to Active → Confirm
 ```
 
-3 nodes. Sticky note documents future plans: product watchlist, web price search, drop alerts.
+### Google Sheet Schema
+
+Create a Google Sheet named "Deal Finder Requirements" with these columns:
+
+| Column | Type | Example |
+|--------|------|---------|
+| category | string | Phone |
+| constraints | string | flagship, good camera, OLED |
+| max_price | string | 800 CHF |
+| priority | string | high / medium / low |
+| status | string | active / paused |
+
+### Perplexity Prompt Template
+
+The Perplexity node uses this prompt for each requirement (values from Config):
+
+```
+You are a shopping advisor for {{ region }}. Find the current best value option for:
+
+Category: {{ category }}
+Requirements: {{ constraints }}
+Budget: {{ max_price }}
+Priority: {{ priority }}
+
+Search retailers in {{ region }} ({{ retailers }}, etc.) and recommend 2-3 options with:
+- Product name and model
+- Current price in {{ currency }}
+- Where to buy (retailer name)
+- Why it's a good value
+
+Focus on products actually available in {{ region }}.
+```
+
+### Config Parameters
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `sheetId` | `YOUR_DEAL_FINDER_SHEET_ID` | Google Sheet document ID |
+| `sheetName` | `Requirements` | Sheet/tab name |
+| `chatId` | `YOUR_CHAT_ID_1` | Telegram chat for responses |
+| `region` | `Switzerland` | Country/region for shopping |
+| `retailers` | `Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot` | Comma-separated retailer list |
+| `currency` | `CHF` | Currency code for prices |
+
+Callers can override any of these by passing values in the Execute Workflow input. For example:
+```json
+{ "region": "Germany", "currency": "EUR", "retailers": "Amazon.de, Saturn, MediaMarkt" }
+```
+
+### Node Details
+
+| Node | Type | Purpose |
+|------|------|---------|
+| Config | code | Merges defaults with input overrides |
+| Parse Command | code | Parses `/deals` command variants, extracts operation/category/constraints |
+| Route Operation | switch | 5 outputs: digest, add, remove, pause, resume |
+| Load Requirements | googleSheets | Reads all rows from requirements sheet |
+| Filter Active | code | Filters to status=active, optional category filter |
+| Check Empty | if | Routes empty results to message vs. Perplexity loop |
+| Loop Requirements | splitInBatches | Processes one requirement at a time |
+| Perplexity Research | perplexity | Swiss shopping research via Perplexity API |
+| Format Result | code | Adds emoji header, formats Perplexity response |
+| Collect Results | aggregate | Aggregates all formatted results |
+| Build Digest | code | Combines results into final Telegram message |
+| Send Digest | telegram | Sends digest with Markdown formatting |
+| Append Requirement | googleSheets (append) | Adds new row to sheet |
+| Delete Row | googleSheets (delete) | Removes row by index |
+| Update to Paused/Active | googleSheets (update) | Changes status field |
+
+### Credentials
+
+| Service | n8n Credential Type | Purpose |
+|---------|-------------------|---------|
+| Google Sheets | Google Sheets OAuth2 (`CREDENTIAL_ID_GOOGLE_DRIVE`) | Read/write requirements |
+| Perplexity | Built-in Perplexity API (`CREDENTIAL_ID_PERPLEXITY`) | Shopping research |
+| Telegram | Built-in Telegram API (`CREDENTIAL_ID_TELEGRAM`) | Send results |
+
+### Post-Import Setup
+
+1. Create Google Sheet with the schema above
+2. Update Config node with your sheet ID
+3. Verify Perplexity and Telegram credential IDs match your n8n instance

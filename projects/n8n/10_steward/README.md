@@ -1,5 +1,7 @@
 # 10 - Steward
 
+> **WIP** - Work in progress note
+
 Personal assistant via Telegram — morning briefing, on-demand dispatch, and subworkflow delegation.
 
 ## What It Does
