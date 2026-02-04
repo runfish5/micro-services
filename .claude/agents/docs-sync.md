@@ -69,7 +69,7 @@ Scan all projects for workflow JSON files and update their mainflow.md documenta
 
 **Sync after changes:**
 ```
-The workflow at projects/n8n/03_inbox-attachment-organizer/ was updated. Regenerate its docs.
+The workflow at projects/n8n/04_inbox-attachment-organizer/ was updated. Regenerate its docs.
 ```
 
 ## n8n JSON Structure Reference

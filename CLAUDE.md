@@ -47,7 +47,7 @@ projects/n8n/
 ├── 02_smart-table-fill/               - Text in, structured data out
 ├── 03_any-file2json-converter/        - File to JSON converter (subworkflow)
 ├── 04_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
-├── 04_expense-analytics/              - Monthly expense chart to Telegram
+|   └── 04_expense-analytics/              - Monthly expense chart to Telegram
 ├── 10_steward/                        - Personal assistant: briefing, dispatch, subworkflows
 └── 11_n8n-ops-center/                 - Workflow monitoring: /status, /failures, /retry
 ```
