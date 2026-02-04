@@ -19,7 +19,7 @@ Actual values belong in `.env` files (already gitignored) or in the n8n instance
 This repository supports a **home lab automation setup**. Key infrastructure:
 
 - **n8n instance**: Hosted on Railway at `YOUR_N8N_INSTANCE.up.railway.app`
-- **Claude's role**: Supervisor - monitors executions, debugs failures, retries workflows       
+- **Claude's role**: Supervisor - monitors executions, debugs failures, retries workflows
 - **API credentials**: Stored in `.claude/n8n-api.env`
 
 
@@ -45,13 +45,14 @@ projects/n8n/
 ├── 00_telegram-invoice-ocr-to-excel/  - Photo → Telegram bot → Google Sheets
 ├── 01_LLM-bulk-responses/             - Batch process spreadsheet rows with AI
 ├── 02_smart-table-fill/               - Text in, structured data out
-├── 03_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
+├── 03_any-file2json-converter/        - File to JSON converter (subworkflow)
+├── 04_inbox-attachment-organizer/     - Email attachments → AI → Google Drive
 ├── 04_expense-analytics/              - Monthly expense chart to Telegram
 ├── 10_steward/                        - Personal assistant: briefing, dispatch, subworkflows
 └── 11_n8n-ops-center/                 - Workflow monitoring: /status, /failures, /retry
 ```
 
-Projects 02 and 03 have their own `CLAUDE.md` files with detailed architecture documentation.
+Projects 02, 03, and 04 have their own `CLAUDE.md` files with detailed architecture documentation.
 
 ## n8n Workflows
 
@@ -82,7 +83,7 @@ n8n workflows are JSON-based node configurations. Key practices:
 
 **Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
 
-**Incident retry mechanism**: For workflows that retry failed executions, ALWAYS use the n8n API retry endpoint (`POST /api/v1/executions/{id}/retry`), NOT Execute Workflow nodes. API retry preserves original trigger data (Gmail messages, webhooks, etc.) while Execute Workflow starts fresh with no context. See `projects/n8n/03_inbox-attachment-organizer/config/8-hour-incident-resolver-docs.md` for rationale
+**Incident retry mechanism**: For workflows that retry failed executions, ALWAYS use the n8n API retry endpoint (`POST /api/v1/executions/{id}/retry`), NOT Execute Workflow nodes. API retry preserves original trigger data (Gmail messages, webhooks, etc.) while Execute Workflow starts fresh with no context. See `projects/n8n/04_inbox-attachment-organizer/config/8-hour-incident-resolver-docs.md` for rationale
 
 
 ### Key Documentation

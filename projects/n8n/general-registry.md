@@ -41,7 +41,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | telegram-invoice-ocr-to-excel | `00_telegram-invoice-ocr-to-excel/telegram-invoice-ocr-to-excel.n8n.json` |
 | - | LLM-bulk-responses | `01_LLM-bulk-responses/1_LLM-bulk-responses.n8n.json` |
 | `Lw53fM7EghZm7Qxy` | smart-table-fill | `02_smart-table-fill/workflows/smart-table-fill.n8n.json` |
-| `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `03_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
+| `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `04_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
 | - | expense-trend-report | `04_expense-analytics/workflows/expense-trend-report.json` |
 | - | daily-briefing | `10_steward/workflows/daily-briefing.json` |
 | - | menu-handler | `10_steward/workflows/menu-handler.json` |
@@ -51,9 +51,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 
 | Workflow ID | Name | File Path | Called By |
 |-------------|------|-----------|-----------|
-| `GtcLjBMusAUB0h30` | any-file2json-converter | `03_inbox-attachment-organizer/workflows/subworkflows/any-file2json-converter.json` | inbox-attachment-organizer |
-| `vFnk7s9sqVnrt4hC` | google-drive-folder-id-lookup | `03_inbox-attachment-organizer/workflows/subworkflows/google-drive-folder-id-lookup.json` | inbox-attachment-organizer, self (recursive) |
-| - | gmail-processor-datesize | `03_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual batch runs |
+| `GtcLjBMusAUB0h30` | any-file2json-converter | `03_any-file2json-converter/workflows/any-file2json-converter.json` | inbox-attachment-organizer, folder-processor |
+| `vFnk7s9sqVnrt4hC` | google-drive-folder-id-lookup | `04_inbox-attachment-organizer/workflows/subworkflows/google-drive-folder-id-lookup.json` | inbox-attachment-organizer, self (recursive) |
+| - | gmail-processor-datesize | `04_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual batch runs |
 | `ZPJYCwXcmisoSkuz` | record-search | `02_smart-table-fill/workflows/subworkflows/record-search.json` | inbox-attachment-organizer |
 | `AP7QbVnt424dz8dD` | contact-memory-update | `02_smart-table-fill/workflows/subworkflows/contact-memory-update.json` | smart-table-fill |
 | - | learning-notes | `10_steward/workflows/subworkflows/learning-notes.json` | menu-handler |
@@ -64,7 +64,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 
 | Workflow ID | Name | File Path |
 |-------------|------|-----------|
-| - | 8-hour-incident-resolver | `03_inbox-attachment-organizer/config/8-hour-incident-resolver.n8n.json` |
+| - | 8-hour-incident-resolver | `04_inbox-attachment-organizer/config/8-hour-incident-resolver.n8n.json` |
 | - | error-handler | `shared/error-handler.n8n.json` |
 
 ## Notes

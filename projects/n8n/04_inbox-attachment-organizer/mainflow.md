@@ -179,13 +179,19 @@ Both AI nodes use **gpt-oss-120b** via Groq (free tier).
 
 ### 1. any-file2json-converter
 - **Called by**: Create Attachment Profile
+- **Location**: `../03_any-file2json-converter/workflows/any-file2json-converter.json`
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
+- **Input** (optional):
+  - `extraction_prompt`: Custom prompt for image OCR (default: "Extract all visible data from this document.")
+  - `metadata`: Passthrough object preserved in output
 - **Output**:
+  - `status`: `resolved` | `unresolved`
   - `data.text`: Extracted text content (string or JSON)
   - `data.content_class`: `primary_document` | `style_element` | `unclassified` | `UNK`
   - `data.class_confidence`: `0.0-1.0` | `UNK`
-- **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`.
+  - `metadata`: Passthrough from input
+- **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`. Unsupported MIME types return `status: "unresolved"` with resolver_hint.
 
 ### 2. google-drive-folder-id-lookup
 - **Called by**: Call 'gdrive-recursion'
