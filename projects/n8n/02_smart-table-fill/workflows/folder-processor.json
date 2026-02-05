@@ -5,8 +5,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -800,
-        300
+        7520,
+        848
       ],
       "id": "fp-manual-trigger",
       "name": "Manual Trigger"
@@ -16,8 +16,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -800,
-        500
+        7520,
+        1040
       ],
       "id": "fp-workflow-trigger",
       "name": "When Executed by Another Workflow"
@@ -81,89 +81,15 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -580,
-        300
+        7744,
+        944
       ],
       "id": "fp-config",
       "name": "Config"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $('Config').first().json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $('Config').first().json.schema_sheet_name }}",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        -220,
-        300
-      ],
-      "id": "fp-read-schema-sheet",
-      "name": "Read Schema Sheet",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const schemaRows = $('Read Schema Sheet').all();\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\n\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.json.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nif (userColumns.length === 0) {\n  return $input.all().map(item => ({\n    json: { ...item.json, _extraction: {} }\n  }));\n}\n\nconst focus_fields = userColumns.map(row => row.json.ColumnName);\n\n// Build field_schemas array with type info for JSON Schema generation\nconst field_schemas = userColumns.map(row => ({\n  name: row.json.ColumnName,\n  type: row.json.Type || 'str',\n  description: row.json.Description || '',\n  classes: row.json.Classes || ''\n}));\n\nconst instructionLines = userColumns.map(row => {\n  const name = row.json.ColumnName;\n  const type = row.json.Type || 'str';\n  const desc = row.json.Description || '';\n  const classes = row.json.Classes || '';\n\n  let line = `- ${name}`;\n  if (type === 'class' && classes) line += ` (enum: ${classes})`;\n  else if (type === 'list') line += ` (array)`;\n  else if (type === 'date') line += ` (date)`;\n  else if (type === 'int') line += ` (number)`;\n  if (desc) line += `: ${desc}`;\n  return line;\n});\n\nconst extraction = {\n  type: 'document_analysis',\n  focus_fields,\n  field_schemas,\n  instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n};\n\nreturn $input.all().map(item => ({\n  json: { ...item.json, _extraction: extraction }\n}));"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -60,
-        300
-      ],
-      "id": "fp-build-extraction",
-      "name": "Build Extraction Object"
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $json.spreadsheet_id }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "={{ $json.data_sheet_name }}",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        100,
-        300
-      ],
-      "id": "fp-read-processed",
-      "name": "Read Processed Files",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "resource": "fileFolder",
-        "operation": "search",
         "returnAll": true,
         "filter": {
           "folderId": {
@@ -178,8 +104,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        340,
-        300
+        8416,
+        944
       ],
       "id": "fp-list-drive-files",
       "name": "List Drive Files",
@@ -192,27 +118,26 @@
     },
     {
       "parameters": {
-        "jsCode": "const driveFiles = $('List Drive Files').all();\nconst sheetRows = $('Read Processed Files').all();\nconst col = $('Config').first().json.source_file_column;\n\nconst done = new Set();\nfor (const r of sheetRows) {\n  const val = (r.json[col] || '').trim();\n  if (!val) continue;\n  done.add(val.toLowerCase());\n}\n\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n});"
+        "jsCode": "const config = $('Config').first().json;\nconst valueRanges = $('Batch Read Sheets').first().json.valueRanges || [];\nconst driveFiles = $input.all();\n\n// Schema sheet is first range\nconst schemaValues = valueRanges[0]?.values || [];\nconst schemaHeaders = schemaValues[0] || [];\nconst schemaRows = schemaValues.slice(1).map(row => {\n  const obj = {};\n  schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\n// Data sheet is second range - for filtering already-processed files\nconst dataValues = valueRanges[1]?.values || [];\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\n// Return filtered files with extraction attached for downstream access\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n}).map(f => ({ json: { ...f.json, _extraction: extraction } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        580,
-        300
+        8640,
+        944
       ],
-      "id": "fp-filter-processed",
-      "name": "Filter Already-Processed"
+      "id": "fp-prepare-and-filter",
+      "name": "Prepare & Filter"
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        820,
-        300
+        8864,
+        944
       ],
       "id": "fp-loop",
       "name": "Loop Over Files"
@@ -230,8 +155,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1060,
-        300
+        9088,
+        960
       ],
       "id": "fp-download-file",
       "name": "Download File",
@@ -253,7 +178,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "extraction": "={{ $('Build Extraction Object').first().json._extraction || {} }}"
+            "extraction": "={{ $('Prepare & Filter').first().json._extraction || {} }}"
           },
           "matchingColumns": [],
           "schema": [],
@@ -267,8 +192,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1300,
-        300
+        9312,
+        872
       ],
       "id": "fp-convert-file",
       "name": "Convert File to Text",
@@ -276,14 +201,13 @@
     },
     {
       "parameters": {
-        "amount": "={{ $('Config').first().json.rate_limit_wait_seconds || 0 }}",
-        "unit": "seconds"
+        "amount": "={{ $('Config').first().json.rate_limit_wait_seconds || 0 }}"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1420,
-        300
+        9536,
+        872
       ],
       "id": "fp-rate-limit-wait",
       "name": "Rate Limit Wait"
@@ -295,8 +219,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1640,
-        300
+        9760,
+        872
       ],
       "id": "fp-prepare-stf-input",
       "name": "Prepare STF Input"
@@ -324,8 +248,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1880,
-        300
+        9984,
+        944
       ],
       "id": "fp-call-stf",
       "name": "Call smart-table-fill",
@@ -333,7 +257,7 @@
     },
     {
       "parameters": {
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/{{ encodeURIComponent($json.data_sheet_name) }}!1:1",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values:batchGet?ranges={{ encodeURIComponent($json.schema_sheet_name) }}&ranges={{ encodeURIComponent($json.data_sheet_name) }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "options": {}
@@ -341,11 +265,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -400,
-        300
+        7968,
+        944
       ],
-      "id": "fp-fetch-headers",
-      "name": "Fetch Headers",
+      "id": "fp-batch-read-sheets",
+      "name": "Batch Read Sheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -361,14 +285,14 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const headers = $json.values?.[0] || []; const sheetName = $('Config').first().json.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "jsonBody": "={{ (() => { const headers = $json.valueRanges?.[1]?.values?.[0] || []; const sheetName = $('Config').first().json.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -280,
-        300
+        8192,
+        944
       ],
       "id": "fp-ensure-headers",
       "name": "Ensure Headers",
@@ -382,14 +306,14 @@
     {
       "parameters": {
         "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node (used as defaults)\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Two entry points:**\n- Manual Trigger: Uses Config defaults (0s rate limit wait)\n- When Executed by Another Workflow: Receives config + rate_limit_wait_seconds from error handler\n\n**Schema-aware extraction:** Reads schema sheet columns and passes them to the converter.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column.",
-        "height": 320,
-        "width": 520
+        "height": 352,
+        "width": 728
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -800,
-        -20
+        7712,
+        560
       ],
       "id": "fp-sticky-setup",
       "name": "Sticky Note - Setup"
@@ -397,30 +321,29 @@
     {
       "parameters": {
         "content": "### Loop: 1 file at a time\nDownload → Convert → Write → next file.\nIf file #6 fails, files 1-5 are already written.\nOn retry, resumability check skips those 5.",
-        "height": 120,
+        "height": 104,
         "width": 340
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        780,
-        200
+        8848,
+        816
       ],
       "id": "fp-sticky-mode",
       "name": "Sticky Note - Loop"
     },
     {
       "parameters": {
-        "content": "### Convert File to Text - Workflow Inputs\n\n**n8n bug:** Execute Workflow inputs get cleared on re-import. Copy-paste these:\n\n**extraction:**\n```\n{{ $('Build Extraction Object').first().json._extraction || {} }}\n```\n\n**binary_files:** (drag from Download File)\n\n**metadata:**\n```\n{}\n```",
-        "height": 280,
-        "width": 340,
-        "color": 5
+        "content": "### Convert File to Text - Workflow Inputs\n\n\n\n\n\n\n\n\n\n\n\nExecute Workflow inputs get cleared on re-import. Only **extraction** required here.\nCopy-paste this:\n```\n{{ $('Prepare & Filter').first().json._extraction || {} }}\n```",
+        "height": 328,
+        "width": 308
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1260,
-        480
+        9200,
+        816
       ],
       "id": "fp-sticky-inputs",
       "name": "Sticky Note - Inputs"
@@ -428,15 +351,14 @@
     {
       "parameters": {
         "content": "### Dynamic Rate Limit\n\n**Start fast, adapt on error:**\n1. Manual run: rate_limit_wait_seconds = 0 (no delay)\n2. On 429 error: error handler extracts \"retry in Xs\"\n3. Error handler calls folder-processor via Execute Workflow\n   with rate_limit_wait_seconds = extracted timing\n4. Resumability: Already-processed files are skipped\n\n**Config reads from workflow input with fallbacks:**\nManual Trigger → Config uses defaults (0s wait)\nExecute Workflow → Config uses passed values",
-        "height": 220,
-        "width": 320,
-        "color": 4
+        "height": 112,
+        "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1360,
-        100
+        9520,
+        816
       ],
       "id": "fp-sticky-rate-limit",
       "name": "Sticky Note - Rate Limit"
@@ -469,14 +391,14 @@
       "main": [
         [
           {
-            "node": "Fetch Headers",
+            "node": "Batch Read Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Headers": {
+    "Batch Read Sheets": {
       "main": [
         [
           {
@@ -491,39 +413,6 @@
       "main": [
         [
           {
-            "node": "Read Schema Sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Read Schema Sheet": {
-      "main": [
-        [
-          {
-            "node": "Build Extraction Object",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Extraction Object": {
-      "main": [
-        [
-          {
-            "node": "Read Processed Files",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Read Processed Files": {
-      "main": [
-        [
-          {
             "node": "List Drive Files",
             "type": "main",
             "index": 0
@@ -535,14 +424,14 @@
       "main": [
         [
           {
-            "node": "Filter Already-Processed",
+            "node": "Prepare & Filter",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter Already-Processed": {
+    "Prepare & Filter": {
       "main": [
         [
           {
