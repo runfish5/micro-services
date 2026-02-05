@@ -74,6 +74,49 @@
       "parameters": {
         "documentId": {
           "__rl": true,
+          "value": "={{ $('Config').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.schema_sheet_name }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -220,
+        300
+      ],
+      "id": "fp-read-schema-sheet",
+      "name": "Read Schema Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const schemaRows = $('Read Schema Sheet').all();\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\n\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.json.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nif (userColumns.length === 0) {\n  return $input.all().map(item => ({\n    json: { ...item.json, _extraction: {} }\n  }));\n}\n\nconst focus_fields = userColumns.map(row => row.json.ColumnName);\n\n// Build field_schemas array with type info for JSON Schema generation\nconst field_schemas = userColumns.map(row => ({\n  name: row.json.ColumnName,\n  type: row.json.Type || 'str',\n  description: row.json.Description || '',\n  classes: row.json.Classes || ''\n}));\n\nconst instructionLines = userColumns.map(row => {\n  const name = row.json.ColumnName;\n  const type = row.json.Type || 'str';\n  const desc = row.json.Description || '';\n  const classes = row.json.Classes || '';\n\n  let line = `- ${name}`;\n  if (type === 'class' && classes) line += ` (enum: ${classes})`;\n  else if (type === 'list') line += ` (array)`;\n  else if (type === 'date') line += ` (date)`;\n  else if (type === 'int') line += ` (number)`;\n  if (desc) line += `: ${desc}`;\n  return line;\n});\n\nconst extraction = {\n  type: 'document_analysis',\n  focus_fields,\n  field_schemas,\n  instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n};\n\nreturn $input.all().map(item => ({\n  json: { ...item.json, _extraction: extraction }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        300
+      ],
+      "id": "fp-build-extraction",
+      "name": "Build Extraction Object"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
           "value": "={{ $json.spreadsheet_id }}",
           "mode": "id"
         },
@@ -87,7 +130,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        -100,
+        100,
         300
       ],
       "id": "fp-read-processed",
@@ -118,7 +161,7 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        140,
+        340,
         300
       ],
       "id": "fp-list-drive-files",
@@ -137,7 +180,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        380,
+        580,
         300
       ],
       "id": "fp-filter-processed",
@@ -151,7 +194,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        620,
+        820,
         300
       ],
       "id": "fp-loop",
@@ -170,7 +213,7 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        860,
+        1060,
         300
       ],
       "id": "fp-download-file",
@@ -192,11 +235,13 @@
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {},
+          "value": {
+            "extraction": "={{ $('Build Extraction Object').first().json._extraction || {} }}"
+          },
           "matchingColumns": [],
           "schema": [],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": true
+          "convertFieldsToString": false
         },
         "options": {
           "waitForSubWorkflow": true
@@ -205,7 +250,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1100,
+        1300,
         300
       ],
       "id": "fp-convert-file",
@@ -219,7 +264,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1340,
+        1540,
         300
       ],
       "id": "fp-prepare-stf-input",
@@ -248,7 +293,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1580,
+        1780,
         300
       ],
       "id": "fp-call-stf",
@@ -338,8 +383,8 @@
     },
     {
       "parameters": {
-        "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Header auto-ensure:** On first run, checks if both `source_file` and `Text_to_interpret` headers exist. Adds any missing headers automatically via Sheets batchUpdate.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column directly. `Text_to_interpret` contains only the converter text (no prefix).",
-        "height": 280,
+        "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Schema-aware extraction:** Reads schema sheet columns and passes them to the converter. Gemini receives field hints (names, types, descriptions) to prioritize schema columns while still extracting all visible information.\n\n**Header auto-ensure:** On first run, checks if both `source_file` and `Text_to_interpret` headers exist. Adds any missing headers automatically via Sheets batchUpdate.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column directly.",
+        "height": 320,
         "width": 520
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -360,11 +405,27 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        580,
+        780,
         200
       ],
       "id": "fp-sticky-mode",
       "name": "Sticky Note - Loop"
+    },
+    {
+      "parameters": {
+        "content": "### Convert File to Text - Workflow Inputs\n\n**n8n bug:** Execute Workflow inputs get cleared on re-import. Copy-paste these:\n\n**extraction:**\n```\n{{ $('Build Extraction Object').first().json._extraction || {} }}\n```\n\n**binary_files:** (drag from Download File)\n\n**metadata:**\n```\n{}\n```",
+        "height": 280,
+        "width": 340,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        480
+      ],
+      "id": "fp-sticky-inputs",
+      "name": "Sticky Note - Inputs"
     }
   ],
   "connections": {
@@ -405,7 +466,7 @@
       "main": [
         [
           {
-            "node": "Read Processed Files",
+            "node": "Read Schema Sheet",
             "type": "main",
             "index": 0
           }
@@ -420,6 +481,28 @@
       ]
     },
     "Add Missing Headers": {
+      "main": [
+        [
+          {
+            "node": "Read Schema Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Schema Sheet": {
+      "main": [
+        [
+          {
+            "node": "Build Extraction Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Extraction Object": {
       "main": [
         [
           {

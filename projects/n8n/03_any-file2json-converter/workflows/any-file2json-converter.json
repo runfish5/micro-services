@@ -295,7 +295,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"metadata\": {}\n}"
+        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"extraction\": {\n    \"type\": \"document_analysis\",\n    \"focus_fields\": [\"vendor_name\", \"invoice_number\"],\n    \"instructions\": \"Extract priority fields with these exact key names\"\n  },\n  \"metadata\": {}\n}"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -387,7 +387,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nreturn items.flatMap(item => {\n  // Check for URL input (no binary data, has url field)\n  const url = item.json.url || item.json.source_url || null;\n  const isUrl = url && /^https?:\\/\\/.+/.test(url) && !item.binary;\n\n  if (isUrl) {\n    // Return item with pseudo-MIME for Switch routing\n    return [{\n      json: {\n        ...item.json,\n        _inputType: 'url',\n        _jinaUrl: `https://r.jina.ai/${url}`\n      },\n      binary: {\n        data: {\n          mimeType: 'text/x-url',\n          data: '',\n          fileName: url\n        }\n      }\n    }];\n  }\n\n  // Existing logic: flatten binary files\n  return item.binary\n    ? Object.keys(item.binary).map(key => ({\n        json: item.json,\n        binary: { data: item.binary[key] }\n      }))\n    : [item];\n});"
+        "jsCode": "const items = $input.all();\nconst extraction = items[0]?.json?.extraction || {};\nconst fieldSchemas = extraction.field_schemas || [];\n\nconst schema = {\n  type: 'object',\n  properties: {\n    content_class: { type: 'string', enum: ['primary_document', 'style_element', 'unclassified'] },\n    class_confidence: { type: 'number' }\n  },\n  required: ['content_class', 'class_confidence'],\n  additionalProperties: true\n};\n\nfor (const field of fieldSchemas) {\n  const prop = {};\n  if (field.type === 'int') prop.type = 'number';\n  else if (field.type === 'list') { prop.type = 'array'; prop.items = { type: 'string' }; }\n  else if (field.type === 'class' && field.classes) { prop.type = 'string'; prop.enum = field.classes.split(',').map(c => c.trim()); }\n  else prop.type = 'string';\n  schema.properties[field.name] = prop;\n  schema.required.push(field.name);\n}\n\nreturn items.flatMap(item => {\n  const url = item.json.url || item.json.source_url || null;\n  const isUrl = url && /^https?:\\/\\/.+/.test(url) && !item.binary;\n  if (isUrl) {\n    return [{ json: { ...item.json, output_schema: schema, _inputType: 'url', _jinaUrl: 'https://r.jina.ai/' + url }, binary: { data: { mimeType: 'text/x-url', data: '', fileName: url } } }];\n  }\n  return item.binary ? Object.keys(item.binary).map(key => ({ json: { ...item.json, output_schema: schema }, binary: { data: item.binary[key] } })) : [{ json: { ...item.json, output_schema: schema } }];\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -396,7 +396,7 @@
         400
       ],
       "id": "29d01b4b-ec16-496e-9b9f-d551ae815bff",
-      "name": "(File-rename)"
+      "name": "Modify File & Input"
     },
     {
       "parameters": {
@@ -507,7 +507,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"content_class\": {\n      \"type\": \"string\",\n      \"enum\": [\"primary_document\", \"style_element\", \"unclassified\"]\n    },\n    \"class_confidence\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\"content_class\", \"class_confidence\"],\n  \"additionalProperties\": true\n}"
+        "inputSchema": "={{ JSON.stringify($('Modify File & Input').first().json.output_schema) }}"
       },
       "id": "eb1fbc57-1ab1-4776-934d-5a7a3124ee0c",
       "name": "Output Schema",
@@ -881,7 +881,7 @@
         ]
       ]
     },
-    "(File-rename)": {
+    "Modify File & Input": {
       "main": [
         [
           {
@@ -896,7 +896,7 @@
       "main": [
         [
           {
-            "node": "(File-rename)",
+            "node": "Modify File & Input",
             "type": "main",
             "index": 0
           }

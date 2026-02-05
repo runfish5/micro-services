@@ -307,8 +307,12 @@ Config (Set node: folder_id, spreadsheet_id, data_sheet_name, etc.)
 Fetch Headers (HTTP GET: read row 1 of data sheet)
      ↓
 IF: All Headers Present? (check if source_file + Text_to_interpret exist)
-     ├─ TRUE → Read Processed Files
-     └─ FALSE → Add Missing Headers (POST batchUpdate: add missing headers) → Read Processed Files
+     ├─ TRUE → Read Schema Sheet
+     └─ FALSE → Add Missing Headers → Read Schema Sheet
+     ↓
+Read Schema Sheet (Google Sheets: read schema columns for extraction hints)
+     ↓
+Build Extraction Object (Code: transform schema into extraction instructions)
      ↓
 Read Processed Files (Google Sheets: read all rows from target sheet)
      ↓
@@ -320,7 +324,7 @@ Loop Over Files (1 at a time)
      ↓
 Download File (Google Drive: download binary per item)
      ↓
-Convert File to Text (Execute Workflow: any-file2json-converter, mode: each)
+Convert File to Text (Execute Workflow: any-file2json-converter with extraction hints)
      ↓
 Prepare STF Input (Code: shape converter text + filename for smart-table-fill)
      ↓
@@ -348,14 +352,16 @@ Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
 | 3 | Fetch Headers | httpRequest | Read row 1 headers from data sheet |
 | 4 | IF: All Headers Present? | if | Check if `source_file` + `Text_to_interpret` headers exist |
 | 5 | Add Missing Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
-| 6 | Read Processed Files | googleSheets | Read existing rows for resumability check |
-| 7 | List Drive Files | googleDrive | List all files in target folder |
-| 8 | Filter Already-Processed | code | Skip files already in the sheet |
-| 9 | Loop Over Files | splitInBatches | Process one file at a time |
-| 10 | Download File | googleDrive | Download file binary data |
-| 11 | Convert File to Text | executeWorkflow | Calls any-file2json-converter |
-| 12 | Prepare STF Input | code | Shape data for smart-table-fill input |
-| 13 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
+| 6 | Read Schema Sheet | googleSheets | Read schema columns for extraction hints |
+| 7 | Build Extraction Object | code | Transform schema into extraction instructions for converter |
+| 8 | Read Processed Files | googleSheets | Read existing rows for resumability check |
+| 9 | List Drive Files | googleDrive | List all files in target folder |
+| 10 | Filter Already-Processed | code | Skip files already in the sheet |
+| 11 | Loop Over Files | splitInBatches | Process one file at a time |
+| 12 | Download File | googleDrive | Download file binary data |
+| 13 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
+| 14 | Prepare STF Input | code | Shape data for smart-table-fill input |
+| 15 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
 
 #### Resumability (Skip-on-Retry)
 
@@ -365,6 +371,65 @@ Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
 4. Already-done files are skipped; only new/failed files are processed
 
 The `source_file` column is auto-created by the header-ensure logic. `Text_to_interpret` contains only the converter output text (no prefix). The `convertFieldsToString: false` setting in Call smart-table-fill preserves boolean types so `match_same_row: false` evaluates correctly in STF.
+
+#### Schema-Aware Extraction
+
+The Build Extraction Object node reads the schema sheet and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
+
+**Extraction object format:**
+```json
+{
+  "type": "document_analysis",
+  "focus_fields": ["color tone", "object", "emotional mood"],
+  "field_schemas": [
+    {"name": "color tone", "type": "str", "description": "Dominant color palette", "classes": ""},
+    {"name": "object", "type": "str", "description": "Main visible object", "classes": ""},
+    {"name": "emotional mood", "type": "class", "description": "Overall feeling", "classes": "calm,neutral,excited"}
+  ],
+  "instructions": "Extract ALL visible information... PRIORITIZE these fields:\n- color tone: Dominant color palette\n- object: Main visible object\n- emotional mood (enum: calm,neutral,excited): Overall feeling"
+}
+```
+
+**Data flow:**
+```
+folder-processor                    any-file2json-converter
+─────────────────                   ───────────────────────
+Build Extraction Object
+  ↓ extraction: {
+      focus_fields: [...],
+      field_schemas: [...]
+    }
+────────────────────────────────────→ Input Validator
+                                      ↓
+                                    Build Output Schema (Code node)
+                                      ↓ builds JSON Schema from field_schemas
+                                    (File-rename)
+                                      ↓ preserves output_schema
+                                    Output Schema node
+                                      ↓ uses dynamic schema expression
+                                    Image-to-text LLM
+                                      ↓ enforced schema!
+```
+
+**field_schemas type mapping (converter's Build Output Schema):**
+| Schema Type | JSON Schema Type | Notes |
+|-------------|-----------------|-------|
+| `str` | `string` | Default |
+| `int` | `number` | |
+| `list` | `array` (items: string) | |
+| `class` | `string` with `enum` | Uses comma-separated Classes |
+| `date` | `string` | |
+
+**Why this works:**
+The `outputParserStructured` node enforces JSON Schema validation on LLM output. By making user columns **required properties**, the LLM MUST include them or the output fails validation and retries. This is much stronger than prompt hints alone.
+
+**Backward compatibility:**
+Callers that don't pass `field_schemas` get the fallback base schema (content_class, class_confidence only). Existing integrations continue to work.
+
+**Edge cases:**
+- No schema sheet yet: Empty extraction passed → generic extraction → smart-table-fill creates schema
+- Only internal columns (`source_file`, `text_to_interpret`, `row_number`): Empty extraction passed
+- Non-image files: Extraction ignored (PDF/CSV extractors don't use it)
 
 #### Why mode: each (not batch)
 

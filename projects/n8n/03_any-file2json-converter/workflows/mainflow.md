@@ -1,8 +1,8 @@
 # any-file2json-converter Flow
 
 ```
-Trigger → Input Validator → (File-rename) → Switch
-                                              │
+Trigger → Input Validator → Modify File & Input → Switch
+                                                                    │
    ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐
    0      1      2      3      4      5      6      7      8
  image   pdf   json  excel  gsheet  doc   csv   URL  fallback
@@ -28,12 +28,37 @@ Trigger → Input Validator → (File-rename) → Switch
 
 ## Key Nodes
 
-- **Input Validator**: Defaults `extraction_prompt`, passes `metadata`
-- **(File-rename)**: Flattens binary files; detects URL input and sets pseudo-MIME `text/x-url`
-- **Image-to-text**: Uses dynamic prompt from Input Validator
+- **Input Validator**: Defaults `extraction`, passes `metadata`
+- **Modify File & Input**: Builds dynamic JSON Schema from `extraction.field_schemas`, flattens binary files, detects URL input and sets pseudo-MIME `text/x-url`
+- **Output Schema**: Uses dynamic expression `$json.output_schema` with fallback to base schema
+- **Image-to-text**: Uses dynamic prompt from Input Validator, enforced by Output Schema
 - **Fetch URL (Jina)**: HTTP GET to `https://r.jina.ai/{url}` for markdown conversion
 - **Unresolved Handler**: Returns structured error for unknown types
 - **Return node**: Normalizes all paths to unified output
+
+## Schema-Aware Extraction
+
+When callers pass `extraction.field_schemas`, the Build Output Schema node dynamically expands the JSON Schema:
+
+```
+extraction: {
+  field_schemas: [
+    {name: "color tone", type: "str", description: "..."},
+    {name: "object", type: "str", description: "..."},
+    {name: "emotional mood", type: "class", classes: "calm,neutral,excited"}
+  ]
+}
+```
+
+**Type mapping:**
+| Schema Type | JSON Schema Type |
+|-------------|-----------------|
+| `str` | `string` |
+| `int` | `number` |
+| `list` | `array` (items: string) |
+| `class` | `string` with `enum` from classes |
+
+User columns become **required** properties, forcing the LLM to include them or fail validation.
 
 ## LLM
 
