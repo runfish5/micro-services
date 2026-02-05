@@ -341,8 +341,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -340,
-        500
+        -400,
+        300
       ],
       "id": "fp-fetch-headers",
       "name": "Fetch Headers",
@@ -355,56 +355,23 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "fp-has-headers-condition",
-              "leftValue": "={{ $json.values[0].includes('Text_to_interpret') && $json.values[0].includes('source_file') }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -340,
-        300
-      ],
-      "id": "fp-if-has-text-col",
-      "name": "IF: All Headers Present?"
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.spreadsheet_id }}/values:batchUpdate",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const headers = $json.values[0]; const sheetName = $('Config').first().json.data_sheet_name; const needed = ['source_file', 'Text_to_interpret'].filter(h => !headers.includes(h)); const data = needed.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "jsonBody": "={{ (() => { const headers = $json.values?.[0] || []; const sheetName = $('Config').first().json.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -340,
-        500
+        -280,
+        300
       ],
-      "id": "fp-add-text-header",
-      "name": "Add Missing Headers",
+      "id": "fp-ensure-headers",
+      "name": "Ensure Headers",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -513,32 +480,14 @@
       "main": [
         [
           {
-            "node": "IF: All Headers Present?",
+            "node": "Ensure Headers",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF: All Headers Present?": {
-      "main": [
-        [
-          {
-            "node": "Read Schema Sheet",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Add Missing Headers",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Add Missing Headers": {
+    "Ensure Headers": {
       "main": [
         [
           {
