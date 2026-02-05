@@ -1,0 +1,751 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        7520,
+        848
+      ],
+      "id": "fp-manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        7520,
+        1040
+      ],
+      "id": "fp-workflow-trigger",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fp-folder-id",
+              "name": "folder_id",
+              "value": "={{ $json.folder_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-spreadsheet-id",
+              "name": "spreadsheet_id",
+              "value": "={{ $json.spreadsheet_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-data-sheet-name",
+              "name": "data_sheet_name",
+              "value": "={{ $json.data_sheet_name || 'Sheet1' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-source-file-col",
+              "name": "source_file_column",
+              "value": "={{ $json.source_file_column || 'source_file' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-match-column",
+              "name": "match_column",
+              "value": "={{ $json.match_column || 'source_file' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-batch-size",
+              "name": "batch_size",
+              "value": "={{ $json.batch_size || 10 }}",
+              "type": "number"
+            },
+            {
+              "id": "fp-schema-sheet-name",
+              "name": "schema_sheet_name",
+              "value": "={{ $json.schema_sheet_name || 'Description_hig7f6' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-rate-limit-wait",
+              "name": "rate_limit_wait_seconds",
+              "value": "={{ $json.rate_limit_wait_seconds || 0 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7744,
+        944
+      ],
+      "id": "fp-config",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}?fields=sheets(properties.title,data.rowData.values.userEnteredValue)&includeGridData=true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7968,
+        944
+      ],
+      "id": "fp-batch-read-sheets",
+      "name": "Batch Read Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config').first().json;\nconst sheets = $json.sheets || [];\n\n// Helper to extract values from rowData\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\n// Find schema sheet\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\n\n// Find data sheet\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\nreturn [{\n  json: {\n    schemaExists: schemaValues.length > 1,\n    schemaValues,\n    dataValues\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8080,
+        944
+      ],
+      "id": "fp-parse-sheet-data",
+      "name": "Parse Sheet Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "schema-exists-condition",
+              "leftValue": "={{ $json.schemaExists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fp-schema-exists",
+      "name": "IF: Schema Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8304,
+        944
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ $('Parse Sheet Data').first().json.dataValues?.[0] || [] }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "fp-llm-generate-schema",
+      "name": "LLM: Generate Schema",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        8192,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "id": "fp-schema-llm",
+      "name": "Schema LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        8192,
+        1360
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"ColumnName\": { \"type\": \"string\" },\n      \"Type\": { \"type\": \"string\", \"enum\": [\"str\", \"int\", \"date\", \"list\", \"class\"] },\n      \"Description\": { \"type\": \"string\" },\n      \"Classes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"ColumnName\", \"Type\", \"Description\", \"Classes\"]\n  }\n}"
+      },
+      "id": "fp-schema-output-parser",
+      "name": "Schema Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        8336,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.spreadsheet_id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const id = Date.now() % 1000000; const name = $('Config').first().json.schema_sheet_name; const rows = $input.first().json.output; return JSON.stringify({ requests: [{ addSheet: { properties: { sheetId: id, title: name } } }, { updateCells: { rows: [{ values: [\"ColumnName\",\"Type\",\"Description\",\"Classes\"].map(h => ({ userEnteredValue: { stringValue: h } })) }].concat(rows.map(r => ({ values: [\"ColumnName\",\"Type\",\"Description\",\"Classes\"].map(c => ({ userEnteredValue: { stringValue: String(r[c]||\"\") } })) }))), fields: \"userEnteredValue\", start: { sheetId: id, rowIndex: 0, columnIndex: 0 } } }] }); })() }}",
+        "options": {}
+      },
+      "id": "fp-create-schema-sheet",
+      "name": "Create & Write Schema Sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8480,
+        1184
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.spreadsheet_id }}/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const headers = $('Parse Sheet Data').first().json.dataValues?.[0] || []; const sheetName = $('Config').first().json.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8704,
+        944
+      ],
+      "id": "fp-ensure-headers",
+      "name": "Ensure Headers",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Config').first().json.folder_id || 'ERROR_config_EMPTY_FOLDER_ID' }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        8928,
+        944
+      ],
+      "id": "fp-list-drive-files",
+      "name": "List Drive Files",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config').first().json;\nconst parsedData = $('Parse Sheet Data').first().json;\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, use Parse Sheet Data\nif (schemaRows.length === 0) {\n  const schemaValues = parsedData.schemaValues || [];\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataValues = parsedData.dataValues || [];\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\n// Return filtered files with extraction attached for downstream access\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n}).map(f => ({ json: { ...f.json, _extraction: extraction } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9152,
+        944
+      ],
+      "id": "fp-prepare-and-filter",
+      "name": "Prepare & Filter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        9376,
+        944
+      ],
+      "id": "fp-loop",
+      "name": "Loop Over Files"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        9600,
+        960
+      ],
+      "id": "fp-download-file",
+      "name": "Download File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GtcLjBMusAUB0h30",
+          "mode": "list",
+          "cachedResultName": "any-file2json-converter"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "extraction": "={{ $('Prepare & Filter').first().json._extraction || {} }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        9824,
+        872
+      ],
+      "id": "fp-convert-file",
+      "name": "Convert File to Text",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Config').first().json.rate_limit_wait_seconds || 0 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        10048,
+        872
+      ],
+      "id": "fp-rate-limit-wait",
+      "name": "Rate Limit Wait"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config').first().json;\nconst fileName = $('Download File').first().json.name || 'unknown';\nconst converterOutput = $input.first().json;\n\n// Get the extracted text from converter\nconst rawText = converterOutput?.data?.text || converterOutput?.text || '';\n\nif (!rawText.trim()) return []; // skip failed conversion\n\n// Parse the extracted JSON from the LLM output\nlet extractedData = {};\ntry {\n  extractedData = JSON.parse(rawText);\n} catch (e) {\n  // If not valid JSON, treat as plain text\n  extractedData = { Text_to_interpret: rawText };\n}\n\n// Build the row data\nconst rowData = {\n  source_file: fileName,\n  Text_to_interpret: rawText,\n  ...extractedData\n};\n\n// Remove internal fields that shouldn't be written\ndelete rowData.content_class;\ndelete rowData.class_confidence;\ndelete rowData.confidence;\n\nreturn [{ json: rowData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10272,
+        872
+      ],
+      "id": "fp-prepare-write-data",
+      "name": "Prepare Write Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.data_sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        }
+      },
+      "id": "fp-write-to-sheet",
+      "name": "Write to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        10496,
+        944
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## smart-folder2table\nProcesses all files in a Google Drive folder through any-file2json-converter and writes directly to sheet.\n\n**Key difference from smart-table-fill:** Takes folder of images → extracts to table rows (vs text → columns).\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node (used as defaults)\n2. Ensure your data sheet has column headers for the fields you want to extract\n\n**Two entry points:**\n- Manual Trigger: Uses Config defaults (0s rate limit wait)\n- When Executed by Another Workflow: Receives config + rate_limit_wait_seconds from error handler\n\n**Schema-aware extraction:** Reads/creates schema sheet and passes extraction hints to the converter.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column.",
+        "height": 352,
+        "width": 728
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        7712,
+        560
+      ],
+      "id": "fp-sticky-setup",
+      "name": "Sticky Note - Setup"
+    },
+    {
+      "parameters": {
+        "content": "### Schema Check & Creation\nIf schema sheet doesn't exist:\n1. LLM generates schema from column headers\n2. Creates schema sheet via batchUpdate\n\nBoth paths merge at Ensure Headers.",
+        "height": 160,
+        "width": 300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        8160,
+        752
+      ],
+      "id": "fp-sticky-schema",
+      "name": "Sticky Note - Schema"
+    },
+    {
+      "parameters": {
+        "content": "### Loop: 1 file at a time\nDownload → Convert → Write → next file.\nIf file #6 fails, files 1-5 are already written.\nOn retry, resumability check skips those 5.",
+        "height": 104,
+        "width": 340
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9360,
+        816
+      ],
+      "id": "fp-sticky-mode",
+      "name": "Sticky Note - Loop"
+    },
+    {
+      "parameters": {
+        "content": "### Convert File to Text - Workflow Inputs\n\n\n\n\n\n\n\n\n\n\n\nExecute Workflow inputs get cleared on re-import. Only **extraction** required here.\nCopy-paste this:\n```\n{{ $('Prepare & Filter').first().json._extraction || {} }}\n```",
+        "height": 328,
+        "width": 308
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9712,
+        816
+      ],
+      "id": "fp-sticky-inputs",
+      "name": "Sticky Note - Inputs"
+    },
+    {
+      "parameters": {
+        "content": "### Dynamic Rate Limit\n\n**Start fast, adapt on error:**\n1. Manual run: rate_limit_wait_seconds = 0 (no delay)\n2. On 429 error: error handler extracts \"retry in Xs\"\n3. Error handler calls folder-processor via Execute Workflow\n   with rate_limit_wait_seconds = extracted timing\n4. Resumability: Already-processed files are skipped\n\n**Config reads from workflow input with fallbacks:**\nManual Trigger → Config uses defaults (0s wait)\nExecute Workflow → Config uses passed values",
+        "height": 112,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10032,
+        752
+      ],
+      "id": "fp-sticky-rate-limit",
+      "name": "Sticky Note - Rate Limit"
+    },
+    {
+      "parameters": {
+        "content": "### v2: Direct Write\nConverter output (data.text) is already\nstructured JSON from the LLM extraction.\n\nWe parse it and write directly to sheet,\neliminating the redundant smart-table-fill call.",
+        "height": 140,
+        "width": 260
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10256,
+        752
+      ],
+      "id": "fp-sticky-v2",
+      "name": "Sticky Note - v2"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Batch Read Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Read Sheets": {
+      "main": [
+        [
+          {
+            "node": "Parse Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "IF: Schema Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Schema Exists?": {
+      "main": [
+        [
+          {
+            "node": "Ensure Headers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Generate Schema": {
+      "main": [
+        [
+          {
+            "node": "Create & Write Schema Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "LLM: Generate Schema",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create & Write Schema Sheet": {
+      "main": [
+        [
+          {
+            "node": "Ensure Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Headers": {
+      "main": [
+        [
+          {
+            "node": "List Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Prepare & Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare & Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Convert File to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert File to Text": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Prepare Write Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Write Data": {
+      "main": [
+        [
+          {
+            "node": "Write to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

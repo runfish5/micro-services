@@ -53,6 +53,37 @@ Add to your `Description_hig7f6` sheet to replicate:
 
 ---
 
+## Two Workflows
+
+This project contains two complementary extraction workflows:
+
+### smart-table-fill (main workflow)
+**Text → Table**: Takes unstructured text, extracts structured data to columns.
+- Input: Text string (email body, notes, etc.)
+- Uses column batching for complex extractions (10+ fields)
+- Cartesian product: each row × each batch = multiple LLM calls
+- Best for: Complex schemas, many columns, existing text data
+
+### smart-folder2table
+**Folder → Table**: Takes a folder of images, extracts descriptions to table rows.
+- Input: Google Drive folder of images
+- Single LLM pass per file (no column batching)
+- Handles schema creation, resumability, direct writes
+- Best for: Batch image processing, visual inspection pipelines
+
+### Which to use?
+
+| Scenario | Workflow |
+|----------|----------|
+| Extract from email/text | smart-table-fill |
+| Process folder of images | smart-folder2table |
+| Many columns (10+) | smart-table-fill (has batching) |
+| Simple extraction | Either works |
+
+**Missing in smart-folder2table**: Column batching. All columns are extracted in a single LLM call, which may hit context limits with very wide schemas (15+ columns).
+
+---
+
 ## What it does
 
 > **Auto-Schema Discovery** — Point it at any table. The workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping.

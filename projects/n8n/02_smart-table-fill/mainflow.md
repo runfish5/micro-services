@@ -281,22 +281,21 @@ ContactManager-lineage → RecordSearch → Prepare Contact Input → smart-tabl
 
 ---
 
-### Folder Processor
+### smart-folder2table
 
-**File:** `workflows/folder-processor.json`
+**File:** `workflows/smart-folder2table.json`
 
-**Purpose:** Process all files in a Google Drive folder through any-file2json-converter + smart-table-fill, with skip-on-retry resumability.
+**Purpose:** Process all files in a Google Drive folder through any-file2json-converter and write directly to sheet, with skip-on-retry resumability.
 
-#### Architecture
+#### Architecture (v2)
 ```
-[folder-processor]
+[smart-folder2table v2]
         |
         |-- calls --> any-file2json-converter  (existing subworkflow)
-        |-- calls --> smart-table-fill         (existing workflow, Write_Excel mode)
+        |-- writes directly to sheet           (no smart-table-fill call!)
 ```
 
-#### Prerequisites
-In smart-table-fill (n8n UI): disable `[CRM] Write via Apps Script`, enable `Write_Excel`, then republish.
+**Key change from v1:** Eliminated the smart-table-fill call. The any-file2json-converter already extracts data with the schema - calling smart-table-fill was redundant (it would re-read headers, re-check schema, and do ANOTHER LLM extraction).
 
 #### Flow
 ```
@@ -304,21 +303,19 @@ Manual Trigger ──────┬──→ Config (Set node with fallbacks)
                      │
 When Executed ───────┘   (receives config + rate_limit_wait_seconds from error handler)
      ↓
-Fetch Headers (HTTP GET: read row 1 of data sheet)
+Batch Read Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
      ↓
-IF: All Headers Present? (check if source_file + Text_to_interpret exist)
-     ├─ TRUE → Read Schema Sheet
-     └─ FALSE → Add Missing Headers → Read Schema Sheet
+Parse Sheet Data (Code: normalize response, extract schemaValues/dataValues)
      ↓
-Read Schema Sheet (Google Sheets: read schema columns for extraction hints)
+IF: Schema Exists? (check if schema sheet has rows)
+     ├─ TRUE → Ensure Headers
+     └─ FALSE → LLM: Generate Schema → Create & Write Schema Sheet → Ensure Headers
      ↓
-Build Extraction Object (Code: transform schema into extraction instructions)
-     ↓
-Read Processed Files (Google Sheets: read all rows from target sheet)
+Ensure Headers (HTTP POST: add source_file/Text_to_interpret if missing)
      ↓
 List Drive Files (Google Drive: list files in folder)
      ↓
-Filter Already-Processed (Code: compare filenames against source_file column)
+Prepare & Filter (Code: build extraction object + filter already-processed)
      ↓
 Loop Over Files (1 at a time)
      ↓
@@ -328,9 +325,11 @@ Convert File to Text (Execute Workflow: any-file2json-converter with extraction 
      ↓
 Rate Limit Wait (dynamic: from Config, default 0s)
      ↓
-Prepare STF Input (Code: shape converter text + filename for smart-table-fill)
+Prepare Write Data (Code: parse converter JSON output)
      ↓
-Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
+Write to Sheet (Google Sheets: append row directly)
+     ↓
+(loop back)
 ```
 
 #### Config Parameters
@@ -341,7 +340,7 @@ Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
 | `spreadsheet_id` | *(user fills)* | Target Google Sheet |
 | `data_sheet_name` | `Sheet1` | Sheet tab name |
 | `source_file_column` | `source_file` | Column to check for already-processed filenames |
-| `match_column` | `source_file` | For Build Output Schema row grouping |
+| `match_column` | `source_file` | For extraction row grouping |
 | `batch_size` | `10` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
 | `rate_limit_wait_seconds` | `0` | Delay between files (passed by error handler on retry) |
@@ -353,20 +352,22 @@ Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
 | 1 | Manual Trigger | trigger | Manual execution |
 | 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
 | 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
-| 4 | Fetch Headers | httpRequest | Read row 1 headers from data sheet |
-| 5 | IF: All Headers Present? | if | Check if `source_file` + `Text_to_interpret` headers exist |
-| 6 | Add Missing Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
-| 7 | Read Schema Sheet | googleSheets | Read schema columns for extraction hints |
-| 8 | Build Extraction Object | code | Transform schema into extraction instructions for converter |
-| 9 | Read Processed Files | googleSheets | Read existing rows for resumability check |
-| 10 | List Drive Files | googleDrive | List all files in target folder |
-| 11 | Filter Already-Processed | code | Skip files already in the sheet |
-| 12 | Loop Over Files | splitInBatches | Process one file at a time |
-| 13 | Download File | googleDrive | Download file binary data |
-| 14 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
-| 15 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
-| 16 | Prepare STF Input | code | Shape data for smart-table-fill input |
-| 17 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
+| 4 | Batch Read Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
+| 5 | Parse Sheet Data | code | Normalize response, extract schemaValues/dataValues, set schemaExists boolean |
+| 6 | IF: Schema Exists? | if | Check if schema sheet has data rows |
+| 7 | LLM: Generate Schema | chainLlm | Generate schema definitions from column headers |
+| 8 | Schema LLM | lmChatGroq | Language model for schema generation |
+| 9 | Schema Output Parser | outputParser | Parse schema JSON array |
+| 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
+| 11 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
+| 12 | List Drive Files | googleDrive | List all files in target folder |
+| 13 | Prepare & Filter | code | Build extraction object + skip already-processed files |
+| 14 | Loop Over Files | splitInBatches | Process one file at a time |
+| 15 | Download File | googleDrive | Download file binary data |
+| 16 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
+| 17 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
+| 18 | Prepare Write Data | code | Parse converter JSON output for sheet write |
+| 19 | Write to Sheet | googleSheets | Append row directly to data sheet |
 
 #### Dynamic Rate Limiting (Start Fast, Adapt on Error)
 
@@ -378,7 +379,7 @@ The workflow uses an adaptive rate limiting pattern via Execute Workflow paramet
 
 **Pattern:**
 ```
-folder-processor runs fast (0s wait)
+smart-folder2table runs fast (0s wait)
        ↓
 Rate Limit Error (429) on file #6
        ↓
@@ -388,10 +389,10 @@ Extract "retry in 55s" from error message
        ↓
 Extract Config values from execution.runData['Config']
        ↓
-Call folder-processor via Execute Workflow
+Call smart-folder2table via Execute Workflow
   with: original Config + rate_limit_wait_seconds = 55
        ↓
-folder-processor starts fresh
+smart-folder2table starts fresh
        ↓
 Files 1-5 already in sheet → skipped (resumability check)
        ↓
@@ -410,16 +411,16 @@ File #6 onwards with 55s waits
 
 #### Resumability (Skip-on-Retry)
 
-1. Each smart-table-fill call appends a row with `source_file` = filename and `Text_to_interpret` = converter text
-2. On retry, `Read Processed Files` reads all rows from the sheet
-3. `Filter Already-Processed` reads the `source_file` column directly to get processed filenames
+1. Each Write to Sheet appends a row with `source_file` = filename and `Text_to_interpret` = converter output
+2. On retry, `Batch Read Sheets` reads both schema and data sheets in one call
+3. `Prepare & Filter` checks the `source_file` column to get processed filenames
 4. Already-done files are skipped; only new/failed files are processed
 
-The `source_file` column is auto-created by the header-ensure logic. `Text_to_interpret` contains only the converter output text (no prefix). The `convertFieldsToString: false` setting in Call smart-table-fill preserves boolean types so `match_same_row: false` evaluates correctly in STF.
+The `source_file` column is auto-created by the Ensure Headers logic. `Text_to_interpret` contains the raw converter output (JSON string with extracted fields).
 
 #### Schema-Aware Extraction
 
-The Build Extraction Object node reads the schema sheet and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
+The Prepare & Filter node reads the schema (from sheet or freshly-generated LLM output) and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
 
 **Extraction object format:**
 ```json
@@ -435,11 +436,11 @@ The Build Extraction Object node reads the schema sheet and constructs an extrac
 }
 ```
 
-**Data flow:**
+**Data flow (v2):**
 ```
-folder-processor                    any-file2json-converter
-─────────────────                   ───────────────────────
-Build Extraction Object
+smart-folder2table v2                 any-file2json-converter
+───────────────────                 ───────────────────────
+Prepare & Filter
   ↓ extraction: {
       focus_fields: [...],
       field_schemas: [...]
@@ -454,6 +455,11 @@ Build Extraction Object
                                       ↓ uses dynamic schema expression
                                     Image-to-text LLM
                                       ↓ enforced schema!
+────────────────────────────────────← returns data.text (JSON string)
+Prepare Write Data
+  ↓ parses JSON, merges with source_file
+Write to Sheet
+  ↓ appends directly (no smart-table-fill!)
 ```
 
 **field_schemas type mapping (converter's Build Output Schema):**
@@ -472,27 +478,56 @@ The `outputParserStructured` node enforces JSON Schema validation on LLM output.
 Callers that don't pass `field_schemas` get the fallback base schema (content_class, class_confidence only). Existing integrations continue to work.
 
 **Edge cases:**
-- No schema sheet yet: Empty extraction passed → generic extraction → smart-table-fill creates schema
+- No schema sheet yet: LLM generates schema from column headers, then extraction proceeds
 - Only internal columns (`source_file`, `text_to_interpret`, `row_number`): Empty extraction passed
 - Non-image files: Extraction ignored (PDF/CSV extractors don't use it)
 
 #### Why mode: each (not batch)
 
-Per-file execution means each file gets its own smart-table-fill run and its own Write_Excel append. If file #6 fails, files 1-5 are already written. On retry, the resumability check skips those 5.
+Per-file execution means each file gets its own Write to Sheet append. If file #6 fails, files 1-5 are already written. On retry, the resumability check skips those 5.
+
+#### v2 Data Parsing
+
+The any-file2json-converter returns structured JSON in `data.text`:
+```json
+{
+  "data": {
+    "text": "{\"field1\": \"value1\", \"field2\": \"value2\"}",
+    "content_class": "primary_document",
+    "class_confidence": 0.95
+  }
+}
+```
+
+The Prepare Write Data node:
+1. Parses `data.text` as JSON to get the extracted fields
+2. Adds `source_file` (filename) and `Text_to_interpret` (raw JSON string)
+3. Removes internal fields (content_class, class_confidence, confidence)
+4. Returns clean row data for Write to Sheet
 
 #### Target Sheet Setup
 
-The user's Google Sheet needs column headers for their data fields. Both `source_file` and `Text_to_interpret` columns are auto-created by the header-ensure logic if missing.
+The user's Google Sheet needs column headers for their data fields. Both `source_file` and `Text_to_interpret` columns are auto-created by the Ensure Headers logic if missing.
 
 | Column | Required | Purpose |
 |--------|----------|---------|
 | `source_file` | Auto-created | Filename identifier for resumability matching |
-| `Text_to_interpret` | Auto-created | Converter output text (no prefix) |
+| `Text_to_interpret` | Auto-created | Raw converter JSON output |
 | *(user's data columns)* | Yes | Whatever structured data to extract |
 
 **Note:** Delete the `Description_hig7f6` schema sheet if it was generated before adding these columns, so it regenerates with the new headers.
 
-#### match_value Flow (STF Integration)
+#### Schema Auto-Creation (v2)
 
-folder-processor sends `match_column: "source_file"` + `source_file: "image.png"` to STF. STF's String Input dynamically resolves `match_value = $json[$json.match_column]` = the filename. Build Output Schema uses `match_value` as the row ID fallback when the match_column field itself isn't in the String Input assignments. This enables Merge Outputs to correlate batched LLM results back to the correct file.
+On first run, if the schema sheet doesn't exist:
+1. `Batch Read Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
+2. `Parse Sheet Data` normalizes the response, finds schema/data sheets by title, sets `schemaExists` boolean
+3. `IF: Schema Exists?` branches on `schemaExists` (false on first run)
+4. `LLM: Generate Schema` generates schema from data sheet column headers
+5. `Create & Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
+6. Flow continues to Ensure Headers → normal processing
+
+**Why spreadsheets.get instead of batchGet:** The `values:batchGet` API fails entirely if ANY range references a non-existent sheet. With `spreadsheets.get`, missing sheets simply aren't in the response - no error thrown. This enables graceful first-run handling without try/catch workarounds.
+
+The schema generation uses the same LLM chain pattern as smart-table-fill (Groq with gpt-oss-120b, structured output parser).
 

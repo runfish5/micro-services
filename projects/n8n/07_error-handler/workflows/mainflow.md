@@ -10,7 +10,7 @@ Error Trigger → Prepare Error Record → Classify Error → IF: Rate Limit Aut
                                            │                              │
                                     Wait (Rate Limit)     ┌───────────────┴───────────────┐
                                            │             YES                              NO
-                                Execute folder-processor  │                               │
+                                Execute smart-folder2table  │                               │
                                            │       CODE RED Alert           Append to FailedItems
                                 Send Auto-Retry Alert     │                               │
                                                           └──────────────┬────────────────┘
@@ -36,7 +36,7 @@ Error Trigger → Prepare Error Record → Classify Error → IF: Rate Limit Aut
 | **IF: Rate Limit Auto-Retry?** | Checks if error_type is rate_limit AND workflow is in auto-retry registry |
 | **Extract Config for Retry** | Extracts original Config values from failed execution's runData + adds rate_limit_wait_seconds |
 | **Wait (Rate Limit)** | Waits retry_after_seconds (extracted from error or default 60s) |
-| **Execute folder-processor** | Calls folder-processor via Execute Workflow with original config + rate_limit_wait_seconds |
+| **Execute smart-folder2table** | Calls smart-folder2table via Execute Workflow with original config + rate_limit_wait_seconds |
 | **Send Auto-Retry Alert** | Telegram notification that auto-retry is happening |
 | **Is Resolver Failure?** | Checks if the 8-hour Task Resolver itself failed (watchdog scenario) |
 | **CODE RED Alert** | Immediate critical alert before normal processing |
@@ -50,7 +50,7 @@ Error Trigger → Prepare Error Record → Classify Error → IF: Rate Limit Aut
 Workflows in the registry get immediate automatic retry on rate limit errors instead of waiting for the 8-hour resolver.
 
 **Current registry:**
-- `folder-processor`
+- `smart-folder2table`
 - `any-file2json-converter`
 
 **How it works:**
@@ -63,11 +63,11 @@ Workflows in the registry get immediate automatic retry on rate limit errors ins
 
 ## Execute Workflow Retry (No Sheet Storage)
 
-When a rate limit error occurs for folder-processor, the error handler restarts it via Execute Workflow instead of API retry. This passes the rate limit timing directly as a parameter.
+When a rate limit error occurs for smart-folder2table, the error handler restarts it via Execute Workflow instead of API retry. This passes the rate limit timing directly as a parameter.
 
 **Pattern: Start Fast, Adapt on Error**
 ```
-folder-processor runs fast (0s wait)
+smart-folder2table runs fast (0s wait)
        ↓
 Rate Limit Error (429) on file #6
        ↓
@@ -77,10 +77,10 @@ Extract "retry in 55s" from error message
        ↓
 Extract Config values from execution.runData['Config']
        ↓
-Call folder-processor via Execute Workflow
+Call smart-folder2table via Execute Workflow
   with: original Config + rate_limit_wait_seconds = 55
        ↓
-folder-processor starts fresh
+smart-folder2table starts fresh
        ↓
 Files 1-5 already in sheet → skipped (resumability check)
        ↓
@@ -89,7 +89,7 @@ File #6 onwards with 55s waits
 
 **Why Execute Workflow instead of API Retry?**
 - API retry preserves original trigger data (good for Gmail workflows)
-- folder-processor doesn't need trigger data - it reads folder_id from Config
+- smart-folder2table doesn't need trigger data - it reads folder_id from Config
 - Execute Workflow lets us pass `rate_limit_wait_seconds` as a parameter
 - Resumability is sheet-based (already-processed files are skipped)
 
