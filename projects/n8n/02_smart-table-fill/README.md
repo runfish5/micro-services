@@ -2,44 +2,65 @@
 
 Extract structured data from unstructured text into any Google Sheets table — zero schema configuration required.
 
-## Workflow Preview
-
 <p align="center">
   <img src="assets/cover.png" alt="Workflow Preview">
 </p>
 
-## ⚡ Quick Start
-- [setup-guide.md](docs/setup-guide.md)
-- [credentials-guide.md](../credentials-guide.md)
-- [json-worksheet.md](docs/json-worksheet.md): (Learning Resource) Introduction to JSON and structured data.
+---
+
+## See It Work: Image Classification
+
+> **6 images. 8 extraction fields. 4 mistakes.**
+>
+> Jensen Huang at a keynote, AI-generated cyberpunk art, a movie poster — can an LLM classify them all?
+
+| Image | image_type | primary_subject | action_happening | person_count | source_hint |
+|-------|------------|-----------------|------------------|--------------|-------------|
+| Jensen Huang + robot | photograph | Jensen Huang with Disney robot | presenting robot at keynote | 1 | camera_photo |
+| Neon cyberpunk | digital_art | computer monitor with neon lighting | displaying code with glitch effects | 0 | ai_generated |
+| Movie poster | poster | three western characters | facing viewer in triptych | 3 | graphic_design |
+| Fox character | illustration | anthropomorphic fox with device | holding glowing gadget | 0 | ai_generated |
+| Logic puzzle | diagram | visual reasoning grids | presenting puzzle challenge | 0 | graphic_design |
+| Spectacles | photograph | glasses and document | resting on surface | 0 | camera_photo |
+
+<details>
+<summary><b>Where did the LLM get it wrong?</b></summary>
+
+1. **Neon cyberpunk** — "displaying code with glitch effects" is wrong; it's stylized text, not code
+2. **Movie poster** — `source_hint` should be `ai_generated`, not `graphic_design`
+3. **Spectacles** — `image_type` is not `photograph`; it's a graphic design piece
+4. **Spectacles** — `source_hint` should be `ai_generated`, not `camera_photo`
+
+</details>
+
+<details>
+<summary><b>Schema used (copy to your sheet)</b></summary>
+
+Add to your `Description_hig7f6` sheet to replicate:
+
+| ColumnName | Type | Description | Classes |
+|------------|------|-------------|---------|
+| image_type | class | Category of image content | photograph,screenshot,illustration,poster,diagram,digital_art,meme |
+| primary_subject | str | Main subject or focus of the image | |
+| action_happening | str | What activity or event is taking place | |
+| key_objects | list | Notable items, objects, or features visible | |
+| visual_complexity | class | How busy or dense the image is | minimal,moderate,busy |
+| source_hint | class | Likely origin of the image | camera_photo,ai_generated,graphic_design,screen_capture,scan |
+| person_count | int | Number of people visible in the image | |
+| faces_visible | class | Whether human faces are clearly visible | none,partial,clear |
+
+</details>
 
 ---
+
 ## What it does
 
-> ### Auto-Schema Discovery
->
-> Point it at any table — the workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping needed.
+> **Auto-Schema Discovery** — Point it at any table. The workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping.
 
 **📝 Input** → Paste unstructured text (notes, emails, etc.)
 **🔍 Discover** → Reads your table's column headers automatically
 **🧠 Extract** → LLM structures data to match your schema
 **📊 Store** → Updates the matching row in Google Sheets
-
-
-## Video Tutorial
-
-[**Watch on YouTube**](https://www.youtube.com/watch?v=OqA7aKWQ1q8) ![views](https://img.shields.io/youtube/views/OqA7aKWQ1q8?style=flat&label=)
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=OqA7aKWQ1q8">
-    <img src="https://img.youtube.com/vi/OqA7aKWQ1q8/mqdefault.jpg" alt="Watch the tutorial" width="400">
-  </a>
-</p>
-
-## Who it's for
-
-Anyone converting unstructured notes into structured data — sales teams logging calls, researchers organizing notes, anyone with a messy inbox.
-
 
 ```mermaid
 flowchart LR
@@ -53,9 +74,31 @@ flowchart LR
     class F hidden
 ```
 
+## Rate Limit Handling
+
+**Manual mode**: If you hit rate limits, increase `rate_limit_wait_seconds` in Config (try 60s, or more if needed). Restart - resumability skips already-processed files.
+
+**Production mode**: When published and called via subworkflow trigger, the 007-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
+
+
+## Who it's for
+
+Anyone converting unstructured notes into structured data — sales teams logging calls, researchers organizing notes, anyone with a messy inbox.
 
 > **Want a full CRM?** Combine with [04_inbox-attachment-organizer](../04_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).
 
-## 🔗 Links
+## Quick Start
 
-- [Video Tutorial](https://www.youtube.com/watch?v=OqA7aKWQ1q8)
+- [setup-guide.md](docs/setup-guide.md)
+- [credentials-guide.md](../credentials-guide.md)
+- [json-worksheet.md](docs/json-worksheet.md) — Introduction to JSON and structured data
+
+## Video Tutorial
+
+[**Watch on YouTube**](https://www.youtube.com/watch?v=OqA7aKWQ1q8) ![views](https://img.shields.io/youtube/views/OqA7aKWQ1q8?style=flat&label=)
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=OqA7aKWQ1q8">
+    <img src="https://img.youtube.com/vi/OqA7aKWQ1q8/mqdefault.jpg" alt="Watch the tutorial" width="400">
+  </a>
+</p>

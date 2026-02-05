@@ -12,50 +12,67 @@
       "name": "Manual Trigger"
     },
     {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        500
+      ],
+      "id": "fp-workflow-trigger",
+      "name": "When Executed by Another Workflow"
+    },
+    {
       "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "fp-folder-id",
               "name": "folder_id",
-              "value": "",
+              "value": "={{ $json.folder_id || '' }}",
               "type": "string"
             },
             {
               "id": "fp-spreadsheet-id",
               "name": "spreadsheet_id",
-              "value": "",
+              "value": "={{ $json.spreadsheet_id || '' }}",
               "type": "string"
             },
             {
               "id": "fp-data-sheet-name",
               "name": "data_sheet_name",
-              "value": "Sheet1",
+              "value": "={{ $json.data_sheet_name || 'Sheet1' }}",
               "type": "string"
             },
             {
               "id": "fp-source-file-col",
               "name": "source_file_column",
-              "value": "source_file",
+              "value": "={{ $json.source_file_column || 'source_file' }}",
               "type": "string"
             },
             {
               "id": "fp-match-column",
               "name": "match_column",
-              "value": "source_file",
+              "value": "={{ $json.match_column || 'source_file' }}",
               "type": "string"
             },
             {
               "id": "fp-batch-size",
               "name": "batch_size",
-              "value": 10,
+              "value": "={{ $json.batch_size || 10 }}",
               "type": "number"
             },
             {
               "id": "fp-schema-sheet-name",
               "name": "schema_sheet_name",
-              "value": "Description_hig7f6",
+              "value": "={{ $json.schema_sheet_name || 'Description_hig7f6' }}",
               "type": "string"
+            },
+            {
+              "id": "fp-rate-limit-wait",
+              "name": "rate_limit_wait_seconds",
+              "value": "={{ $json.rate_limit_wait_seconds || 0 }}",
+              "type": "number"
             }
           ]
         },
@@ -259,12 +276,26 @@
     },
     {
       "parameters": {
+        "amount": "={{ $('Config').first().json.rate_limit_wait_seconds || 0 }}",
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        300
+      ],
+      "id": "fp-rate-limit-wait",
+      "name": "Rate Limit Wait"
+    },
+    {
+      "parameters": {
         "jsCode": "const config = $('Config').first().json;\nconst fileName = $('Download File').first().json.name || 'unknown';\nconst text = $input.first().json?.data?.text || $input.first().json?.text || '';\n\nif (!text.trim()) return []; // skip failed conversion\n\nreturn [{\n  json: {\n    body_core: text,\n    source_file: fileName,\n    spreadsheet_id: config.spreadsheet_id,\n    data_sheet_name: config.data_sheet_name,\n    schema_sheet_name: config.schema_sheet_name,\n    match_column: config.match_column,\n    match_same_row: false,\n    batch_size: config.batch_size,\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
+        1640,
         300
       ],
       "id": "fp-prepare-stf-input",
@@ -293,7 +324,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1780,
+        1880,
         300
       ],
       "id": "fp-call-stf",
@@ -310,8 +341,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -460,
-        300
+        -340,
+        500
       ],
       "id": "fp-fetch-headers",
       "name": "Fetch Headers",
@@ -383,7 +414,7 @@
     },
     {
       "parameters": {
-        "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Schema-aware extraction:** Reads schema sheet columns and passes them to the converter. Gemini receives field hints (names, types, descriptions) to prioritize schema columns while still extracting all visible information.\n\n**Header auto-ensure:** On first run, checks if both `source_file` and `Text_to_interpret` headers exist. Adds any missing headers automatically via Sheets batchUpdate.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column directly.",
+        "content": "## Folder Processor\nProcesses all files in a Google Drive folder through any-file2json-converter + smart-table-fill.\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node (used as defaults)\n2. In smart-table-fill: disable `[CRM] Write via Apps Script`, enable `Write_Excel`\n3. Republish smart-table-fill after changes\n\n**Two entry points:**\n- Manual Trigger: Uses Config defaults (0s rate limit wait)\n- When Executed by Another Workflow: Receives config + rate_limit_wait_seconds from error handler\n\n**Schema-aware extraction:** Reads schema sheet columns and passes them to the converter.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column.",
         "height": 320,
         "width": 520
       },
@@ -426,10 +457,37 @@
       ],
       "id": "fp-sticky-inputs",
       "name": "Sticky Note - Inputs"
+    },
+    {
+      "parameters": {
+        "content": "### Dynamic Rate Limit\n\n**Start fast, adapt on error:**\n1. Manual run: rate_limit_wait_seconds = 0 (no delay)\n2. On 429 error: error handler extracts \"retry in Xs\"\n3. Error handler calls folder-processor via Execute Workflow\n   with rate_limit_wait_seconds = extracted timing\n4. Resumability: Already-processed files are skipped\n\n**Config reads from workflow input with fallbacks:**\nManual Trigger → Config uses defaults (0s wait)\nExecute Workflow → Config uses passed values",
+        "height": 220,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        100
+      ],
+      "id": "fp-sticky-rate-limit",
+      "name": "Sticky Note - Rate Limit"
     }
   ],
   "connections": {
     "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
       "main": [
         [
           {
@@ -570,6 +628,17 @@
       ]
     },
     "Convert File to Text": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
       "main": [
         [
           {

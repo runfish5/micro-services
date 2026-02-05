@@ -300,9 +300,9 @@ In smart-table-fill (n8n UI): disable `[CRM] Write via Apps Script`, enable `Wri
 
 #### Flow
 ```
-Manual Trigger
-     ↓
-Config (Set node: folder_id, spreadsheet_id, data_sheet_name, etc.)
+Manual Trigger ──────┬──→ Config (Set node with fallbacks)
+                     │
+When Executed ───────┘   (receives config + rate_limit_wait_seconds from error handler)
      ↓
 Fetch Headers (HTTP GET: read row 1 of data sheet)
      ↓
@@ -326,6 +326,8 @@ Download File (Google Drive: download binary per item)
      ↓
 Convert File to Text (Execute Workflow: any-file2json-converter with extraction hints)
      ↓
+Rate Limit Wait (dynamic: from Config, default 0s)
+     ↓
 Prepare STF Input (Code: shape converter text + filename for smart-table-fill)
      ↓
 Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
@@ -342,26 +344,69 @@ Call smart-table-fill (Execute Workflow: smart-table-fill, mode: each)
 | `match_column` | `source_file` | For Build Output Schema row grouping |
 | `batch_size` | `10` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
+| `rate_limit_wait_seconds` | `0` | Delay between files (passed by error handler on retry) |
 
 #### Node Details
 
 | # | Node | Type | Purpose |
 |---|------|------|---------|
 | 1 | Manual Trigger | trigger | Manual execution |
-| 2 | Config | set | All configuration variables |
-| 3 | Fetch Headers | httpRequest | Read row 1 headers from data sheet |
-| 4 | IF: All Headers Present? | if | Check if `source_file` + `Text_to_interpret` headers exist |
-| 5 | Add Missing Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
-| 6 | Read Schema Sheet | googleSheets | Read schema columns for extraction hints |
-| 7 | Build Extraction Object | code | Transform schema into extraction instructions for converter |
-| 8 | Read Processed Files | googleSheets | Read existing rows for resumability check |
-| 9 | List Drive Files | googleDrive | List all files in target folder |
-| 10 | Filter Already-Processed | code | Skip files already in the sheet |
-| 11 | Loop Over Files | splitInBatches | Process one file at a time |
-| 12 | Download File | googleDrive | Download file binary data |
-| 13 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
-| 14 | Prepare STF Input | code | Shape data for smart-table-fill input |
-| 15 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
+| 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
+| 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
+| 4 | Fetch Headers | httpRequest | Read row 1 headers from data sheet |
+| 5 | IF: All Headers Present? | if | Check if `source_file` + `Text_to_interpret` headers exist |
+| 6 | Add Missing Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
+| 7 | Read Schema Sheet | googleSheets | Read schema columns for extraction hints |
+| 8 | Build Extraction Object | code | Transform schema into extraction instructions for converter |
+| 9 | Read Processed Files | googleSheets | Read existing rows for resumability check |
+| 10 | List Drive Files | googleDrive | List all files in target folder |
+| 11 | Filter Already-Processed | code | Skip files already in the sheet |
+| 12 | Loop Over Files | splitInBatches | Process one file at a time |
+| 13 | Download File | googleDrive | Download file binary data |
+| 14 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
+| 15 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
+| 16 | Prepare STF Input | code | Shape data for smart-table-fill input |
+| 17 | Call smart-table-fill | executeWorkflow | Calls smart-table-fill per file |
+
+#### Dynamic Rate Limiting (Start Fast, Adapt on Error)
+
+The workflow uses an adaptive rate limiting pattern via Execute Workflow parameters (no sheet storage):
+
+**Two entry points:**
+- **Manual Trigger**: Uses Config defaults (`rate_limit_wait_seconds = 0`, no delay)
+- **When Executed by Another Workflow**: Receives config + `rate_limit_wait_seconds` from error handler
+
+**Pattern:**
+```
+folder-processor runs fast (0s wait)
+       ↓
+Rate Limit Error (429) on file #6
+       ↓
+Error Handler catches it
+       ↓
+Extract "retry in 55s" from error message
+       ↓
+Extract Config values from execution.runData['Config']
+       ↓
+Call folder-processor via Execute Workflow
+  with: original Config + rate_limit_wait_seconds = 55
+       ↓
+folder-processor starts fresh
+       ↓
+Files 1-5 already in sheet → skipped (resumability check)
+       ↓
+File #6 onwards with 55s waits
+```
+
+**Benefits:**
+- Starts fast when rate limits aren't an issue
+- Automatically learns the correct delay from API errors
+- No external sheet storage needed - timing passed as parameter
+- Resumability ensures already-processed files are skipped
+
+**Usage:**
+- **Manual mode**: If you hit rate limits, increase `rate_limit_wait_seconds` in Config (try 60s, or more if needed). Restart the workflow - resumability skips already-processed files.
+- **Production mode**: When published and called via subworkflow trigger, the 007-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
 
 #### Resumability (Skip-on-Retry)
 
