@@ -384,7 +384,7 @@
     },
     {
       "parameters": {
-        "amount": "={{ $('Config').first().json.rate_limit_wait_seconds || 0 }}"
+        "amount": "={{ $('Loop Over Files').context['currentRunIndex'] === 0 ? 0 : ($('Config').first().json.rate_limit_wait_seconds || 0) }}"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,

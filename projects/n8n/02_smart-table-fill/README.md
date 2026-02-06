@@ -22,6 +22,19 @@ Give it any text and any table. The workflow reads your column headers, builds e
 
 ---
 
+## 📋 Features
+
+| Feature | STF | F2T |
+|---------|:---:|:---:|
+| Auto-creates schema sheet on first run — no manual field mapping | ✅ | ✅ |
+| Update existing rows or append-only (`match_same_row`) | ✅ | ✅ |
+| Column batching — splits wide schemas across multiple LLM calls (`batch_size`) | ✅ | ❌ |
+| Resumability — skips already-processed files on retry | ❌ | ✅ |
+| File filtering — `file_include`, `file_exclude`, `file_limit` | ❌ | ✅ |
+| Adaptive rate limiting — starts fast, error handler injects delay on 429 | ❌ | ✅ |
+
+> **STF** = smart-table-fill · **F2T** = smart-folder2table
+
 ## Try It Yourself
 
 > **`15 min` · Free tier · No coding required**
@@ -143,7 +156,6 @@ flowchart LR
 
 - [Email-CRM Guide](docs/email-crm-guide.md) — Combine with inbox-attachment-organizer for auto-capture of contacts from incoming emails
 - [JSON Worksheet](docs/json-worksheet.md) — Introduction to JSON and structured data
-- [Parameters Reference](docs/parameters.md) — LIST MODE configuration for batch processing
 
 
 ---

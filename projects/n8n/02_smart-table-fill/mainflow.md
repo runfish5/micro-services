@@ -342,6 +342,7 @@ Write Extracted Row (Google Sheets: append row directly)
 | `file_exclude` | *(empty)* | Comma-separated filenames to skip (applied after include filter) |
 | `file_limit` | `null` | `null` = no limit; set to a number (e.g. `5`) to cap files processed |
 | `match_column` | `source_file` | For extraction row grouping |
+| `match_same_row` | `false` | `true` = update existing row, `false` = always append |
 | `batch_size` | `10` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
 | `rate_limit_wait_seconds` | `0` | Delay between files (passed by error handler on retry) |

@@ -5,7 +5,7 @@
 Paste raw text, get a structured row in your Google Sheet.
 
 > **Go further:**
-> [Email-CRM Guide](email-crm-guide.md) · [JSON Worksheet](json-worksheet.md) · [Parameters Reference](parameters.md)
+> [Email-CRM Guide](email-crm-guide.md) · [JSON Worksheet](json-worksheet.md)
 
 ---
 
