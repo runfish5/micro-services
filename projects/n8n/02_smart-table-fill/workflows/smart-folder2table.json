@@ -35,12 +35,6 @@
               "type": "string"
             },
             {
-              "id": "fp-source-file-col",
-              "name": "source_file_column",
-              "value": "={{ $json.source_file_column || 'source_file' }}",
-              "type": "string"
-            },
-            {
               "id": "fp-spreadsheet-id",
               "name": "spreadsheet_id",
               "value": "={{ $json.spreadsheet_id || '' }}",
@@ -51,6 +45,36 @@
               "name": "data_sheet_name",
               "value": "={{ $json.data_sheet_name || 'Sheet1' }}",
               "type": "string"
+            },
+            {
+              "id": "fp-rate-limit-wait",
+              "name": "rate_limit_wait_seconds",
+              "value": "={{ $json.rate_limit_wait_seconds || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "fp-source-file-col",
+              "name": "source_file_column",
+              "value": "={{ $json.source_file_column || 'source_file' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-file-include",
+              "name": "file_include",
+              "value": "={{ $json.file_include || 'all' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-file-exclude",
+              "name": "file_exclude",
+              "value": "={{ $json.file_exclude || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-file-limit",
+              "name": "file_limit",
+              "value": "={{ $json.file_limit || null }}",
+              "type": "number"
             },
             {
               "id": "fp-schema-sheet-name",
@@ -74,12 +98,6 @@
               "id": "fp-batch-size",
               "name": "batch_size",
               "value": "={{ $json.batch_size || 10 }}",
-              "type": "number"
-            },
-            {
-              "id": "fp-rate-limit-wait",
-              "name": "rate_limit_wait_seconds",
-              "value": "={{ $json.rate_limit_wait_seconds || 0 }}",
               "type": "number"
             }
           ]
@@ -283,7 +301,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Fetch Data & Schema Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\n// Return filtered files with extraction attached for downstream access\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n}).map(f => ({ json: { ...f.json, _extraction: extraction } }));"
+        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Fetch Data & Schema Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files (resumability)\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\nlet filtered = driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n});\n\n// Include filter: if not \"all\", only keep files in the list\nconst includeRaw = (config.file_include || 'all').trim();\nif (includeRaw.toLowerCase() !== 'all') {\n  const includeSet = new Set(\n    includeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    includeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Exclude filter: remove files in the list\nconst excludeRaw = (config.file_exclude || '').trim();\nif (excludeRaw) {\n  const excludeSet = new Set(\n    excludeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    !excludeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Limit: cap the number of files to process\nconst fileLimit = config.file_limit;\nif (fileLimit != null && fileLimit > 0) {\n  filtered = filtered.slice(0, fileLimit);\n}\n\nreturn filtered.map(f => ({ json: { ...f.json, _extraction: extraction } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -447,7 +465,7 @@
     },
     {
       "parameters": {
-        "content": "## smart-folder2table\nProcesses all files in a Google Drive folder through any-file2json-converter and writes directly to sheet.\n\n**Key difference from smart-table-fill:** Takes folder of images → extracts to table rows (vs text → columns).\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node (used as defaults)\n2. Ensure your data sheet has column headers for the fields you want to extract\n\n**Two entry points:**\n- Manual Trigger: Uses Config defaults (0s rate limit wait)\n- When Executed by Another Workflow: Receives config + rate_limit_wait_seconds from error handler\n\n**Schema-aware extraction:** Reads/creates schema sheet and passes extraction hints to the converter.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column.",
+        "content": "## smart-folder2table\nProcesses all files in a Google Drive folder through any-file2json-converter and writes directly to sheet.\n\n**Key difference from smart-table-fill:** Takes folder of images → extracts to table rows (vs text → columns).\n\n**Setup:**\n1. Fill `folder_id` and `spreadsheet_id` in Config node (used as defaults)\n2. Ensure your data sheet has column headers for the fields you want to extract\n\n**File selection (optional):**\n- `file_include`: `\"all\"` (default) or comma-separated filenames to process\n- `file_exclude`: comma-separated filenames to skip\n- `file_limit`: `null` (default, no limit) or a number like `5`\n\n**Two entry points:**\n- Manual Trigger: Uses Config defaults (0s rate limit wait)\n- When Executed by Another Workflow: Receives config + rate_limit_wait_seconds from error handler\n\n**Schema-aware extraction:** Reads/creates schema sheet and passes extraction hints to the converter.\n\n**Resumability:** On retry, already-processed files are skipped by checking the `source_file` column.",
         "height": 352,
         "width": 968
       },

@@ -338,6 +338,9 @@ Write Extracted Row (Google Sheets: append row directly)
 | `spreadsheet_id` | *(user fills)* | Target Google Sheet |
 | `data_sheet_name` | `Sheet1` | Sheet tab name |
 | `source_file_column` | `source_file` | Column to check for already-processed filenames |
+| `file_include` | `all` | `"all"` = process every file; or comma-separated filenames to process only those |
+| `file_exclude` | *(empty)* | Comma-separated filenames to skip (applied after include filter) |
+| `file_limit` | `null` | `null` = no limit; set to a number (e.g. `5`) to cap files processed |
 | `match_column` | `source_file` | For extraction row grouping |
 | `batch_size` | `10` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
