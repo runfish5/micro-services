@@ -41,7 +41,7 @@ Trigger → String Input (config)
                               Merge Outputs
                                         ↓
                     ┌─────────────────────────────────────────┐
-                    │ Standalone: Write_Excel (native Sheets) │
+                    │ Standalone: Write Extracted Row (native Sheets) │
                     └─────────────────────────────────────────┘
                                         │
                                         │ (or CRM mode)
@@ -84,7 +84,7 @@ START: Manual Trigger / When Executed by Another Workflow
                           │
                           └→ Merge Outputs
                                │
-                               ├→ Write_Excel (disabled, standalone mode)
+                               ├→ Write Extracted Row (disabled, standalone mode)
                                │
                                └→ [CRM] Write via Apps Script (HTTP POST to doPost)
                                     │  - Writes all extracted fields to sheet
@@ -129,7 +129,7 @@ START: Manual Trigger / When Executed by Another Workflow
 | 11 | Build Output Schema | code | Build JSON schema; row_id from match_column → match_value → email |
 | 12 | Call llm-extract-rate-limited | executeWorkflow | Subworkflow for rate-limited LLM extraction |
 | 13 | Merge Outputs | code | Merge batch outputs + confidence data |
-| 14 | Write_Excel | googleSheets | Standalone mode write (disabled by default) |
+| 14 | Write Extracted Row | googleSheets | Standalone mode write (disabled by default) |
 | 15 | [CRM] Write via Apps Script | httpRequest | Write data + create folder via doPost |
 | 16 | [CRM] Prep Email Store Input | set | Prepare data for email store subworkflow |
 | 17 | [CRM] Call contact-email-store | executeWorkflow | Store email metadata in contact memory |
@@ -142,16 +142,16 @@ START: Manual Trigger / When Executed by Another Workflow
 - **Rate limiting**: Configure `llm_rate_limit` (requests before pause) and `llm_rate_delay` (seconds to wait) for Groq free tier
 - **Apps Script handles both writing and folder creation** - no triggers needed (CRM mode)
 
-### Update-or-Append Logic (Merge Outputs + Write_Excel)
+### Update-or-Append Logic (Merge Outputs + Write Extracted Row)
 
-The Merge Outputs node prepares clean data for Write_Excel:
+The Merge Outputs node prepares clean data for Write Extracted Row:
 
 1. **Dynamic match column**: Sets `merged[matchColumn]` from the `match_column` config
-2. **Write_Excel compatibility**: Always copies match value to `merged.email` (Write_Excel hardcoded to match on "email" column)
+2. **Write Extracted Row compatibility**: Always copies match value to `merged.email` (Write Extracted Row hardcoded to match on "email" column)
 3. **Overwrite prevention**: Only sets `merged[textColumn]` if `textColumn !== matchColumn` to prevent the text body from overwriting the match value
-4. **Clean output**: Confidence/observability fields are logged but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write_Excel.
+4. **Clean output**: Confidence/observability fields are logged but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write Extracted Row.
 
-Write_Excel reads `match_same_row` directly from String Input to decide `append` vs `appendOrUpdate`. The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
+Write Extracted Row reads `match_same_row` directly from String Input to decide `append` vs `appendOrUpdate`. The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
 
 ### Caller-Overridable Config (String Input)
 
@@ -159,7 +159,7 @@ When called as a subworkflow, callers can override these fields (defaults apply 
 
 | Field | Default | Purpose |
 |-------|---------|---------|
-| `spreadsheet_id` | `1xGxyFu3...` | Google Sheets document ID |
+| `spreadsheet_id` | *(caller must provide)* | Google Sheets document ID |
 | `data_sheet_name` | `Sheet1` | Sheet tab name |
 | `schema_sheet_name` | `Description_hig7f6` | Schema definition sheet |
 | `batch_size` | `10` | Fields per LLM batch |
@@ -303,7 +303,7 @@ Manual Trigger ──────┬──→ Config (Set node with fallbacks)
                      │
 When Executed ───────┘   (receives config + rate_limit_wait_seconds from error handler)
      ↓
-Batch Read Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
+Fetch Data & Schema Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
      ↓
 IF: Schema Exists? (inline check on raw response for schema sheet with data rows)
      ├─ TRUE → Ensure Headers
@@ -313,7 +313,7 @@ Ensure Headers (HTTP POST: add source_file/Text_to_interpret if missing)
      ↓
 List Drive Files (Google Drive: list files in folder)
      ↓
-Prepare & Filter (Code: build extraction object + filter already-processed)
+Build Output Schema & Filter (Code: build extraction object + filter already-processed)
      ↓
 Loop Over Files (1 at a time)
      ↓
@@ -325,7 +325,7 @@ Rate Limit Wait (dynamic: from Config, default 0s)
      ↓
 Prepare Write Data (Code: parse converter JSON output)
      ↓
-Write to Sheet (Google Sheets: append row directly)
+Write Extracted Row (Google Sheets: append row directly)
      ↓
 (loop back)
 ```
@@ -350,7 +350,7 @@ Write to Sheet (Google Sheets: append row directly)
 | 1 | Manual Trigger | trigger | Manual execution |
 | 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
 | 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
-| 4 | Batch Read Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
+| 4 | Fetch Data & Schema Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
 | 5 | IF: Schema Exists? | if | Inline check on raw response for schema sheet with data rows |
 | 6 | LLM: Generate Schema | chainLlm | Generate schema definitions from column headers |
 | 7 | Schema LLM | lmChatGroq | Language model for schema generation |
@@ -358,13 +358,13 @@ Write to Sheet (Google Sheets: append row directly)
 | 9 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
 | 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response; uses `colLetter()` helper to support columns past Z (AA, AB, …) |
 | 11 | List Drive Files | googleDrive | List all files in target folder |
-| 12 | Prepare & Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
+| 12 | Build Output Schema & Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
 | 13 | Loop Over Files | splitInBatches | Process one file at a time |
 | 14 | Download File | googleDrive | Download file binary data |
 | 15 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
 | 16 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
 | 17 | Prepare Write Data | code | Parse converter JSON output for sheet write |
-| 18 | Write to Sheet | googleSheets | Append row directly to data sheet |
+| 18 | Write Extracted Row | googleSheets | Append row directly to data sheet |
 
 #### Dynamic Rate Limiting (Start Fast, Adapt on Error)
 
@@ -408,16 +408,16 @@ File #6 onwards with 55s waits
 
 #### Resumability (Skip-on-Retry)
 
-1. Each Write to Sheet appends a row with `source_file` = filename and `Text_to_interpret` = converter output
-2. On retry, `Batch Read Sheets` reads both schema and data sheets in one call
-3. `Prepare & Filter` checks the `source_file` column to get processed filenames
+1. Each Write Extracted Row appends a row with `source_file` = filename and `Text_to_interpret` = converter output
+2. On retry, `Fetch Data & Schema Sheets` reads both schema and data sheets in one call
+3. `Build Output Schema & Filter` checks the `source_file` column to get processed filenames
 4. Already-done files are skipped; only new/failed files are processed
 
 The `source_file` column is auto-created by the Ensure Headers logic. `Text_to_interpret` contains the raw converter output (JSON string with extracted fields).
 
 #### Schema-Aware Extraction
 
-The Prepare & Filter node reads the schema (from sheet or freshly-generated LLM output) and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
+The Build Output Schema & Filter node reads the schema (from sheet or freshly-generated LLM output) and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
 
 **Extraction object format:**
 ```json
@@ -437,7 +437,7 @@ The Prepare & Filter node reads the schema (from sheet or freshly-generated LLM 
 ```
 smart-folder2table v2                 any-file2json-converter
 ───────────────────                 ───────────────────────
-Prepare & Filter
+Build Output Schema & Filter
   ↓ extraction: {
       focus_fields: [...],
       field_schemas: [...]
@@ -455,7 +455,7 @@ Prepare & Filter
 ────────────────────────────────────← returns data.text (JSON string)
 Prepare Write Data
   ↓ parses JSON, merges with source_file
-Write to Sheet
+Write Extracted Row
   ↓ appends directly (no smart-table-fill!)
 ```
 
@@ -481,7 +481,7 @@ Callers that don't pass `field_schemas` get the fallback base schema (content_cl
 
 #### Why mode: each (not batch)
 
-Per-file execution means each file gets its own Write to Sheet append. If file #6 fails, files 1-5 are already written. On retry, the resumability check skips those 5.
+Per-file execution means each file gets its own Write Extracted Row append. If file #6 fails, files 1-5 are already written. On retry, the resumability check skips those 5.
 
 #### v2 Data Parsing
 
@@ -501,7 +501,7 @@ The Prepare Write Data node:
 2. Parses `data.text` as JSON; if the LLM returned an array (`[{...}]`), unwraps the first element; non-object results are discarded
 3. Spreads extracted fields first, then sets `source_file` and `Text_to_interpret` **after** the spread — this guarantees internal fields are never overwritten by LLM output with colliding keys
 4. Removes internal fields (content_class, class_confidence, confidence)
-5. Returns clean row data for Write to Sheet
+5. Returns clean row data for Write Extracted Row
 
 #### Target Sheet Setup
 
@@ -518,7 +518,7 @@ The user's Google Sheet needs column headers for their data fields. Both `source
 #### Schema Auto-Creation (v2)
 
 On first run, if the schema sheet doesn't exist:
-1. `Batch Read Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
+1. `Fetch Data & Schema Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
 2. `IF: Schema Exists?` checks the raw response inline for a schema sheet with data rows (no intermediate parse node)
 3. `LLM: Generate Schema` generates schema from data sheet column headers (extracted inline from raw response)
 4. `Create & Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
@@ -528,3 +528,22 @@ On first run, if the schema sheet doesn't exist:
 
 The schema generation uses the same LLM chain pattern as smart-table-fill (Groq with gpt-oss-120b, structured output parser).
 
+---
+
+## Node Mapping: smart-table-fill ↔ smart-folder2table
+
+| Phase | smart-table-fill | smart-folder2table | Notes |
+|-------|------------------|--------------------|-------|
+| Trigger | When Executed by Another Workflow | When Executed by Another Workflow | Both passthrough |
+| Config | String Input | Config | Different names by design |
+| Read sheets | Fetch Data Sheet Headers + Try Fetch Schema Sheet | Fetch Data & Schema Sheets | 1 call vs 2 |
+| Schema check | IF: Schema Exists? | IF: Schema Exists? | string exists vs boolean |
+| Schema gen | LLM: Generate Schema | LLM: Generate Schema | Identical |
+| Schema LLM | Schema LLM | Schema LLM | Identical |
+| Schema parser | Schema Output Parser | Schema Output Parser | Identical |
+| Schema write | Create & Write Schema Sheet | Create & Write Schema Sheet | Identical (refs differ) |
+| Header setup | — | Ensure Headers | folder2table-only |
+| Schema build | Build Output Schema | Build Output Schema & Filter (inline) | Different scope |
+| Extraction | Extract Data from String | Convert File to Text (subworkflow) | LLM chain vs subworkflow |
+| Post-process | Merge Outputs | Prepare Write Data | Different merge needs |
+| Write | Write Extracted Row / [CRM] Apps Script | Write Extracted Row | Different targets |

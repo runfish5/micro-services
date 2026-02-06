@@ -12,7 +12,9 @@
       "name": "Manual Trigger"
     },
     {
-      "parameters": {},
+      "parameters": {
+        "inputSource": "passthrough"
+      },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -33,6 +35,12 @@
               "type": "string"
             },
             {
+              "id": "fp-source-file-col",
+              "name": "source_file_column",
+              "value": "={{ $json.source_file_column || 'source_file' }}",
+              "type": "string"
+            },
+            {
               "id": "fp-spreadsheet-id",
               "name": "spreadsheet_id",
               "value": "={{ $json.spreadsheet_id || '' }}",
@@ -45,9 +53,9 @@
               "type": "string"
             },
             {
-              "id": "fp-source-file-col",
-              "name": "source_file_column",
-              "value": "={{ $json.source_file_column || 'source_file' }}",
+              "id": "fp-schema-sheet-name",
+              "name": "schema_sheet_name",
+              "value": "={{ $json.schema_sheet_name || 'Description_hig7f6' }}",
               "type": "string"
             },
             {
@@ -61,12 +69,6 @@
               "name": "batch_size",
               "value": "={{ $json.batch_size || 10 }}",
               "type": "number"
-            },
-            {
-              "id": "fp-schema-sheet-name",
-              "name": "schema_sheet_name",
-              "value": "={{ $json.schema_sheet_name || 'Description_hig7f6' }}",
-              "type": "string"
             },
             {
               "id": "fp-rate-limit-wait",
@@ -101,7 +103,8 @@
         384
       ],
       "id": "a1f9ce38-aa27-4425-afc8-f07bab9d9b26",
-      "name": "Batch Read Sheets",
+      "name": "Fetch Data & Schema Sheets",
+      "notes": "= Fetch Data Sheet Headers + Try Fetch Schema Sheet in table-fill",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -134,6 +137,7 @@
       },
       "id": "9f8dfaa5-80d0-434e-982f-1c37ddcbf55a",
       "name": "IF: Schema Exists?",
+      "notes": "Checks boolean from batch response (table-fill checks string exists)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -144,7 +148,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ (() => { const config = $('Config').first().json; const sheets = $('Batch Read Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; return row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; })() }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data & Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; return row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; })() }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -225,7 +229,7 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Batch Read Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const colLetter = (n) => { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + colLetter(headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data & Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const colLetter = (n) => { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + colLetter(headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -236,6 +240,7 @@
       ],
       "id": "085413c5-74c1-4604-9f5d-3753431e080e",
       "name": "Ensure Headers",
+      "notes": "folder2table-only; no equivalent in smart-table-fill",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -274,7 +279,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Batch Read Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\n// Return filtered files with extraction attached for downstream access\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n}).map(f => ({ json: { ...f.json, _extraction: extraction } }));"
+        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Fetch Data & Schema Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\n// Return filtered files with extraction attached for downstream access\nreturn driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n}).map(f => ({ json: { ...f.json, _extraction: extraction } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -283,7 +288,7 @@
         384
       ],
       "id": "fp-prepare-and-filter",
-      "name": "Prepare & Filter"
+      "name": "Build Output Schema & Filter"
     },
     {
       "parameters": {
@@ -334,7 +339,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "extraction": "={{ $('Prepare & Filter').first().json._extraction || {} }}"
+            "extraction": "={{ $('Build Output Schema & Filter').first().json._extraction || {} }}"
           },
           "matchingColumns": [],
           "schema": [],
@@ -407,7 +412,7 @@
         }
       },
       "id": "fp-write-to-sheet",
-      "name": "Write to Sheet",
+      "name": "Write Extracted Row",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
@@ -468,7 +473,7 @@
     },
     {
       "parameters": {
-        "content": "### Convert File to Text - Workflow Inputs\n\n\n\n\n\n\n\n\n\n\n\nExecute Workflow inputs get cleared on re-import. Only **extraction** required here.\nCopy-paste this:\n```\n{{ $('Prepare & Filter').first().json._extraction || {} }}\n```",
+        "content": "### Convert File to Text - Workflow Inputs\n\n\n\n\n\n\n\n\n\n\n\nExecute Workflow inputs get cleared on re-import. Only **extraction** required here.\nCopy-paste this:\n```\n{{ $('Build Output Schema & Filter').first().json._extraction || {} }}\n```",
         "height": 328,
         "width": 308
       },
@@ -539,14 +544,14 @@
       "main": [
         [
           {
-            "node": "Batch Read Sheets",
+            "node": "Fetch Data & Schema Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Batch Read Sheets": {
+    "Fetch Data & Schema Sheets": {
       "main": [
         [
           {
@@ -634,14 +639,14 @@
       "main": [
         [
           {
-            "node": "Prepare & Filter",
+            "node": "Build Output Schema & Filter",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare & Filter": {
+    "Build Output Schema & Filter": {
       "main": [
         [
           {
@@ -701,14 +706,14 @@
       "main": [
         [
           {
-            "node": "Write to Sheet",
+            "node": "Write Extracted Row",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Write to Sheet": {
+    "Write Extracted Row": {
       "main": [
         [
           {

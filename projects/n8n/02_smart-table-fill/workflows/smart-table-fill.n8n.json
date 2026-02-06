@@ -145,7 +145,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n}\n\n// Group by row_id; index fallback handles pinned data (no Build Output Schema)\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  const originalItem = buildOutputItems[i]?.json || {};\n  const rowId = originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowId]) {\n    rowGroups[rowId] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowId].items.push(item);\n}\n\nconst results = [];\nfor (const [rowId, group] of Object.entries(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n\n  for (const item of items) {\n    const output = item.json.output;\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write_Excel is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
+        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n}\n\n// Group by row_id; index fallback handles pinned data (no Build Output Schema)\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  const originalItem = buildOutputItems[i]?.json || {};\n  const rowId = originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowId]) {\n    rowGroups[rowId] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowId].items.push(item);\n}\n\nconst results = [];\nfor (const [rowId, group] of Object.entries(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n\n  for (const item of items) {\n    const output = item.json.output;\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -188,7 +188,7 @@
             {
               "id": "a1b2c3d4-1111-2222-3333-444455556666",
               "name": "spreadsheet_id",
-              "value": "={{ $json.spreadsheet_id || '1xGxyFu3pIpasYjA2nSPymQmtSj0EPumFd78VB8s54JE' }}",
+              "value": "={{ $json.spreadsheet_id || '' }}",
               "type": "string"
             },
             {
@@ -196,48 +196,6 @@
               "name": "data_sheet_name",
               "value": "={{ $json.data_sheet_name || 'Sheet1' }}",
               "type": "string"
-            },
-            {
-              "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
-              "name": "email",
-              "value": "={{ $json.contact_email }}",
-              "type": "string"
-            },
-            {
-              "id": "2af3e327-ba41-41d7-818b-6608d82566d0",
-              "name": "match_column",
-              "value": "={{ $json.match_column || 'email' }}",
-              "type": "string"
-            },
-            {
-              "id": "match-value-generic",
-              "name": "match_value",
-              "value": "={{ $json[$json.match_column] || $json.contact_email }}",
-              "type": "string"
-            },
-            {
-              "id": "d4e5f6a7-b8c9-0123-4567-890abcdef001",
-              "name": "contact_name",
-              "value": "={{ $json.contact_name }}",
-              "type": "string"
-            },
-            {
-              "id": "e5f6a7b8-c9d0-1234-5678-90abcdef0012",
-              "name": "subject",
-              "value": "={{ $json.subject || '' }}",
-              "type": "string"
-            },
-            {
-              "id": "1d5f5798-24d9-46f6-871d-5b8e2ca44222",
-              "name": "contact_email",
-              "value": "={{ $json.contact_email }}",
-              "type": "string"
-            },
-            {
-              "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
-              "name": "batch_size",
-              "value": "={{ $json.batch_size || 10 }}",
-              "type": "number"
             },
             {
               "id": "a1b2c3d4-aaaa-bbbb-cccc-ddddeeeeffff",
@@ -252,10 +210,52 @@
               "type": "boolean"
             },
             {
+              "id": "2af3e327-ba41-41d7-818b-6608d82566d0",
+              "name": "match_column",
+              "value": "={{ $json.match_column || 'email' }}",
+              "type": "string"
+            },
+            {
+              "id": "match-value-generic",
+              "name": "match_value",
+              "value": "={{ $json[$json.match_column] || $json.contact_email }}",
+              "type": "string"
+            },
+            {
+              "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
+              "name": "batch_size",
+              "value": "={{ $json.batch_size || 10 }}",
+              "type": "number"
+            },
+            {
               "id": "f1a2b3c4-2345-6789-0abc-def012345678",
               "name": "row_number",
               "value": "={{ $json.row_number || null }}",
               "type": "number"
+            },
+            {
+              "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
+              "name": "email",
+              "value": "={{ $json.contact_email }}",
+              "type": "string"
+            },
+            {
+              "id": "e5f6a7b8-c9d0-1234-5678-90abcdef0012",
+              "name": "subject",
+              "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d4e5f6a7-b8c9-0123-4567-890abcdef001",
+              "name": "contact_name",
+              "value": "={{ $json.contact_name }}",
+              "type": "string"
+            },
+            {
+              "id": "1d5f5798-24d9-46f6-871d-5b8e2ca44222",
+              "name": "contact_email",
+              "value": "={{ $json.contact_email }}",
+              "type": "string"
             }
           ]
         },
@@ -312,7 +312,7 @@
         }
       },
       "id": "6536b77a-7731-4c24-b55a-c1deb3242860",
-      "name": "Write_Excel",
+      "name": "Write Extracted Row",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
@@ -336,6 +336,7 @@
       },
       "id": "4bd29691-a7fa-450b-9af5-3a38a86ae810",
       "name": "Fetch Data Sheet Headers",
+      "notes": "folder2table combines this into Fetch Data & Schema Sheets",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -365,6 +366,7 @@
       },
       "id": "6162e68b-1dc3-44bb-898d-c9140732a2eb",
       "name": "Try Fetch Schema Sheet",
+      "notes": "folder2table combines this into Fetch Data & Schema Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
@@ -531,17 +533,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M",
+          "value": "YOUR_TEST_SPREADSHEET_ID",
           "mode": "list",
-          "cachedResultName": "survey_replies",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M/edit?usp=drivesdk"
+          "cachedResultName": "Your Test Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_TEST_SPREADSHEET_ID/edit"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QbADOr739Z2hPCm1eHyE62GOBBkUyCvFkRQ13fvGj0M/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_TEST_SPREADSHEET_ID/edit"
         },
         "options": {}
       },
@@ -737,7 +739,7 @@
             "index": 0
           },
           {
-            "node": "Write_Excel",
+            "node": "Write Extracted Row",
             "type": "main",
             "index": 0
           }

@@ -140,7 +140,7 @@ Find the sticky note titled **"## Mode B: Email-CRM Setup"**. The 3 nodes in fro
    - `[CRM] Call contact-memory-update`
 
 2. **Deactivate the Mode A node** (right-click → Deactivate):
-   - `Write_Excel`
+   - `Write Extracted Row`
 
 3. **Connect the flow:** Wire **Merge Outputs** → **[CRM] Write via Apps Script**
 
