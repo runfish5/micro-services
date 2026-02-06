@@ -4,9 +4,7 @@ Converts files (images, PDFs, spreadsheets) to structured JSON. Images use Gemin
 
 ## Input
 
-Binary data + optional JSON:
-- `extraction_prompt` - Custom prompt for image OCR (default: "Extract all visible data")
-- `metadata` - Passthrough object
+Binary data + optional `extraction` object (see schema below).
 
 ## Output
 
@@ -16,7 +14,6 @@ Binary data + optional JSON:
 | `data.text` | string | Extracted content |
 | `data.content_class` | string | `primary_document`, `style_element`, `unclassified`, `UNK` |
 | `data.class_confidence` | number \| `UNK` | 0.0-1.0 for images |
-| `metadata` | object | Passthrough |
 
 Unsupported types return `status: "unresolved"` with `error_code: "UNSUPPORTED_MIME_TYPE"`.
 
@@ -27,9 +24,7 @@ Unsupported types return `status: "unresolved"` with `error_code: "UNSUPPORTED_M
 
   ## Input
 
-  Binary data + optional JSON:
-  - `extraction` - Object for dynamic extraction context (see schema below)
-  - `metadata` - Passthrough object
+  Binary data + optional `extraction` object for dynamic extraction context:
 
   ### Extraction Object Schema
 

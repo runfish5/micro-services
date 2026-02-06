@@ -37,7 +37,7 @@ Trigger → Input Validator → Modify File & Input → Switch
 
 ## Key Nodes
 
-- **Input Validator**: Defaults `extraction`, passes `metadata`
+- **Input Validator**: Defaults `extraction`
 - **Modify File & Input**: Builds dynamic JSON Schema from `extraction.field_schemas`, flattens binary files, detects URL input and sets pseudo-MIME `text/x-url`
 - **Output Schema**: Uses dynamic expression `$json.output_schema` for image path
 - **Image-to-text**: Uses dynamic prompt from Input Validator, enforced by Output Schema (images only)

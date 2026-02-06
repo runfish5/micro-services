@@ -384,7 +384,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"extraction\": {\n    \"type\": \"document_analysis\",\n    \"focus_fields\": [\"vendor_name\", \"invoice_number\"],\n    \"instructions\": \"Extract priority fields with these exact key names\"\n  },\n  \"metadata\": {}\n}"
+        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"extraction\": {\n    \"type\": \"document_analysis\",\n    \"focus_fields\": [\"vendor_name\", \"invoice_number\"],\n    \"instructions\": \"Extract priority fields with these exact key names\"\n  }\n}"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -418,7 +418,7 @@
     },
     {
       "parameters": {
-        "content": "## Any‑file to JSON converter\n\n### How it works\n1. Another workflow triggers this sub‑workflow and sends a JSON payload containing `binary_files` and file metadata.\n2. The Input Validator extracts metadata, then a code node flattens each attachment into its own item.\n3. A Switch node examines the MIME type of each file and routes it:\n   - Images → editImage → Gemini OCR prompt → structured JSON.\n   - PDFs → PDF text extractor.\n   - JSON files → direct JSON extraction.\n   - CSV/Excel → text extraction, aggregation, and summarization.\n4. Each branch normalises the extracted text, runs an optional LLM summarizer, and returns a JSON object with `content_class` and `class_confidence`.\n5. Unsupported types are caught by the Unresolved Handler and marked for manual review.\n\n### Setup\n- [ ] Connect a Google Gemini (PaLM) credential for the image‑to‑text model.\n- [ ] Ensure the calling workflow sends a `binary_files` object with proper MIME types.\n- [ ] Verify the Output Schema node matches your desired JSON fields.\n- [ ] Test each file type (image, PDF, JSON, CSV, Excel) to confirm routing.\n- [ ] Adjust the Switch rules if you need to support additional MIME types.\n- [ ] Deploy the workflow and reference its ID in the parent workflow.",
+        "content": "## Any‑file to JSON converter\n\n### How it works\n1. Another workflow triggers this sub‑workflow and sends binary files and an optional `extraction` object.\n2. The Input Validator defaults `extraction`, then a code node flattens each attachment into its own item.\n3. A Switch node examines the MIME type of each file and routes it:\n   - Images → editImage → Gemini OCR prompt → structured JSON.\n   - PDFs → PDF text extractor.\n   - JSON files → direct JSON extraction.\n   - CSV/Excel → text extraction, aggregation, and summarization.\n4. Each branch normalises the extracted text, runs an optional LLM summarizer, and returns a JSON object with `content_class` and `class_confidence`.\n5. Unsupported types are caught by the Unresolved Handler and marked for manual review.\n\n### Setup\n- [ ] Connect a Google Gemini (PaLM) credential for the image‑to‑text model.\n- [ ] Ensure the calling workflow sends binary files with proper MIME types.\n- [ ] Verify the Output Schema node matches your desired JSON fields.\n- [ ] Test each file type (image, PDF, JSON, CSV, Excel) to confirm routing.\n- [ ] Adjust the Switch rules if you need to support additional MIME types.\n- [ ] Deploy the workflow and reference its ID in the parent workflow.",
         "height": 796,
         "width": 460
       },
@@ -495,12 +495,6 @@
               "id": "input-validator-extraction",
               "name": "extraction",
               "value": "={{ $json.extraction || {} }}",
-              "type": "object"
-            },
-            {
-              "id": "input-validator-metadata",
-              "name": "metadata",
-              "value": "={{ $json.metadata || {} }}",
               "type": "object"
             }
           ]
@@ -668,12 +662,6 @@
               "type": "object"
             },
             {
-              "id": "uh-metadata",
-              "name": "metadata",
-              "value": "={{ $('Input Validator').first().json.metadata }}",
-              "type": "object"
-            },
-            {
               "id": "uh-resolver-hint",
               "name": "resolver_hint",
               "value": "Unsupported file type. Route to resolver workflow for AI interpretation or human review.",
@@ -719,12 +707,6 @@
               "name": "status",
               "value": "={{ $json.status || 'resolved' }}",
               "type": "string"
-            },
-            {
-              "id": "return-metadata",
-              "name": "metadata",
-              "value": "={{ $('Input Validator').first().json.metadata }}",
-              "type": "object"
             }
           ]
         },
@@ -761,7 +743,7 @@
     },
     {
       "parameters": {
-        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\", \"metadata\": {}}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  },\n  \"metadata\": {\"source\": \"test\"}\n}\n```",
+        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\"}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  }\n}\n```",
         "height": 504,
         "width": 460,
         "color": 7
