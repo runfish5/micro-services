@@ -305,9 +305,7 @@ When Executed ───────┘   (receives config + rate_limit_wait_seco
      ↓
 Batch Read Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
      ↓
-Parse Sheet Data (Code: normalize response, extract schemaValues/dataValues)
-     ↓
-IF: Schema Exists? (check if schema sheet has rows)
+IF: Schema Exists? (inline check on raw response for schema sheet with data rows)
      ├─ TRUE → Ensure Headers
      └─ FALSE → LLM: Generate Schema → Create & Write Schema Sheet → Ensure Headers
      ↓
@@ -353,21 +351,20 @@ Write to Sheet (Google Sheets: append row directly)
 | 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
 | 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
 | 4 | Batch Read Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
-| 5 | Parse Sheet Data | code | Normalize response, extract schemaValues/dataValues, set schemaExists boolean |
-| 6 | IF: Schema Exists? | if | Check if schema sheet has data rows |
-| 7 | LLM: Generate Schema | chainLlm | Generate schema definitions from column headers |
-| 8 | Schema LLM | lmChatGroq | Language model for schema generation |
-| 9 | Schema Output Parser | outputParser | Parse schema JSON array |
-| 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 11 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers via batchUpdate |
-| 12 | List Drive Files | googleDrive | List all files in target folder |
-| 13 | Prepare & Filter | code | Build extraction object + skip already-processed files |
-| 14 | Loop Over Files | splitInBatches | Process one file at a time |
-| 15 | Download File | googleDrive | Download file binary data |
-| 16 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
-| 17 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
-| 18 | Prepare Write Data | code | Parse converter JSON output for sheet write |
-| 19 | Write to Sheet | googleSheets | Append row directly to data sheet |
+| 5 | IF: Schema Exists? | if | Inline check on raw response for schema sheet with data rows |
+| 6 | LLM: Generate Schema | chainLlm | Generate schema definitions from column headers |
+| 7 | Schema LLM | lmChatGroq | Language model for schema generation |
+| 8 | Schema Output Parser | outputParser | Parse schema JSON array |
+| 9 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
+| 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response |
+| 11 | List Drive Files | googleDrive | List all files in target folder |
+| 12 | Prepare & Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
+| 13 | Loop Over Files | splitInBatches | Process one file at a time |
+| 14 | Download File | googleDrive | Download file binary data |
+| 15 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
+| 16 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
+| 17 | Prepare Write Data | code | Parse converter JSON output for sheet write |
+| 18 | Write to Sheet | googleSheets | Append row directly to data sheet |
 
 #### Dynamic Rate Limiting (Start Fast, Adapt on Error)
 
@@ -521,11 +518,10 @@ The user's Google Sheet needs column headers for their data fields. Both `source
 
 On first run, if the schema sheet doesn't exist:
 1. `Batch Read Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
-2. `Parse Sheet Data` normalizes the response, finds schema/data sheets by title, sets `schemaExists` boolean
-3. `IF: Schema Exists?` branches on `schemaExists` (false on first run)
-4. `LLM: Generate Schema` generates schema from data sheet column headers
-5. `Create & Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
-6. Flow continues to Ensure Headers → normal processing
+2. `IF: Schema Exists?` checks the raw response inline for a schema sheet with data rows (no intermediate parse node)
+3. `LLM: Generate Schema` generates schema from data sheet column headers (extracted inline from raw response)
+4. `Create & Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
+5. Flow continues to Ensure Headers → normal processing
 
 **Why spreadsheets.get instead of batchGet:** The `values:batchGet` API fails entirely if ANY range references a non-existent sheet. With `spreadsheets.get`, missing sheets simply aren't in the response - no error thrown. This enables graceful first-run handling without try/catch workarounds.
 
