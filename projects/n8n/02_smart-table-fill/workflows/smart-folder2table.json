@@ -59,6 +59,12 @@
               "type": "string"
             },
             {
+              "id": "fp-match-same-row",
+              "name": "match_same_row",
+              "value": "={{ $json.match_same_row === true }}",
+              "type": "boolean"
+            },
+            {
               "id": "fp-match-column",
               "name": "match_column",
               "value": "={{ $json.match_column || 'source_file' }}",
@@ -104,7 +110,6 @@
       ],
       "id": "a1f9ce38-aa27-4425-afc8-f07bab9d9b26",
       "name": "Fetch Data & Schema Sheets",
-      "notes": "= Fetch Data Sheet Headers + Try Fetch Schema Sheet in table-fill",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -137,7 +142,6 @@
       },
       "id": "9f8dfaa5-80d0-434e-982f-1c37ddcbf55a",
       "name": "IF: Schema Exists?",
-      "notes": "Checks boolean from batch response (table-fill checks string exists)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -388,7 +392,7 @@
     },
     {
       "parameters": {
-        "operation": "append",
+        "operation": "={{ $('Config').first().json.match_same_row ? 'appendOrUpdate' : 'append' }}",
         "documentId": {
           "__rl": true,
           "value": "={{ $('Config').first().json.spreadsheet_id }}",
@@ -401,9 +405,24 @@
         },
         "columns": {
           "mappingMode": "autoMapInputData",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
+          "value": {
+            "source_file": "={{ $json.source_file }}"
+          },
+          "matchingColumns": [
+            "source_file"
+          ],
+          "schema": [
+            {
+              "id": "source_file",
+              "displayName": "source_file",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
@@ -443,7 +462,7 @@
     },
     {
       "parameters": {
-        "content": "### Schema Check & Creation\nLLM generates schema\n from column headers and \nsends created schema to googe sheet.",
+        "content": "### Schema Check & Creation\nOn first run, if schema sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
         "height": 112,
         "width": 844
       },
