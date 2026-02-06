@@ -8,6 +8,46 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 ---
 
+## What You'll Build
+
+Give it any text and any table. The workflow reads your column headers, builds extraction rules on its own, and fills the table. Zero configuration.
+
+**Two workflows, same idea:**
+
+| | smart-table-fill | smart-folder2table |
+|---|---|---|
+| **Input** | Paste any text | Point at a Google Drive folder |
+| **Output** | One structured row | One row per file in the folder |
+| **Best for** | Emails, notes, scraped pages | Batch image/document processing |
+
+---
+
+## Try It Yourself
+
+> **`15 min` · Free tier · No coding required**
+>
+> Follow the step-by-step [Setup Guide](docs/setup-guide.md) to go from zero to your first extraction.
+
+---
+
+## Video Tutorials
+
+### smart-table-fill
+
+[**Watch on YouTube**](https://www.youtube.com/watch?v=OqA7aKWQ1q8) ![views](https://img.shields.io/youtube/views/OqA7aKWQ1q8?style=flat&label=)
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=OqA7aKWQ1q8">
+    <img src="https://img.youtube.com/vi/OqA7aKWQ1q8/mqdefault.jpg" alt="Watch the tutorial" width="400">
+  </a>
+</p>
+
+### smart-folder2table
+
+Video coming soon.
+
+---
+
 ## See It Work: Image Classification
 
 > **6 images. 8 extraction fields. 4 mistakes.**
@@ -57,53 +97,39 @@ Add to your `Description_hig7f6` sheet to replicate:
 
 This project contains two complementary extraction workflows:
 
-### smart-table-fill (main workflow)
-**Text → Table**: Takes unstructured text, extracts structured data to columns.
-- Input: Text string (email body, notes, etc.)
-- Uses column batching for complex extractions (10+ fields)
-- Cartesian product: each row × each batch = multiple LLM calls
-- Best for: Complex schemas, many columns, existing text data
-
-### smart-folder2table
-**Folder → Table**: Takes a folder of images, extracts descriptions to table rows.
-- Input: Google Drive folder of images
-- Single LLM pass per file (no column batching)
-- Handles schema creation, resumability, direct writes
-- Best for: Batch image processing, visual inspection pipelines
-
-### Which to use?
-
 | Scenario | Workflow |
 |----------|----------|
-| Extract from email/text | smart-table-fill |
-| Process folder of images | smart-folder2table |
-| Many columns (10+) | smart-table-fill (has batching) |
+| Extract from email/text | **smart-table-fill** — text in, structured row out |
+| Process folder of images | **smart-folder2table** — one LLM pass per file |
+| Many columns (10+) | smart-table-fill (has column batching) |
 | Simple extraction | Either works |
 
-**Missing in smart-folder2table**: Column batching. All columns are extracted in a single LLM call, which may hit context limits with very wide schemas (15+ columns).
+**smart-folder2table** does not have column batching — all columns are extracted in a single LLM call, which may hit context limits with very wide schemas (15+ columns).
 
 ---
 
-## What it does
+## How It Works
 
 > **Auto-Schema Discovery** — Point it at any table. The workflow reads your column headers and builds the extraction schema dynamically. No manual field mapping.
 
-**📝 Input** → Paste unstructured text (notes, emails, etc.)
-**🔍 Discover** → Reads your table's column headers automatically
-**🧠 Extract** → LLM structures data to match your schema
-**📊 Store** → Updates the matching row in Google Sheets
-
 ```mermaid
 flowchart LR
-    A[📥 Text Input] --> B{Extraction rules ready?}
-    B -->|No| C[🤖 Create column instructions]
+    A[Text Input] --> B{Extraction rules ready?}
+    B -->|No| C[Create column instructions]
     C --> D
-    B -->|Yes| D[🤖 Extract to columns]
-    D --> E[📊 Write to Sheet]
+    B -->|Yes| D[Extract to columns]
+    D --> E[Write to Sheet]
     E ~~~ F[ ]
     classDef hidden fill:none,stroke:none,color:none
     class F hidden
 ```
+
+1. **Input** — Paste unstructured text (notes, emails, etc.)
+2. **Discover** — Reads your table's column headers automatically
+3. **Extract** — LLM structures data to match your schema
+4. **Store** — Updates the matching row in Google Sheets
+
+---
 
 ## Rate Limit Handling
 
@@ -111,25 +137,19 @@ flowchart LR
 
 **Production mode**: When published and called via subworkflow trigger, the 007-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
 
+---
 
-## Who it's for
+## Go Further
+
+- [Email-CRM Guide](docs/email-crm-guide.md) — Combine with inbox-attachment-organizer for auto-capture of contacts from incoming emails
+- [JSON Worksheet](docs/json-worksheet.md) — Introduction to JSON and structured data
+- [Parameters Reference](docs/parameters.md) — LIST MODE configuration for batch processing
+
+
+---
+
+## Who It's For
 
 Anyone converting unstructured notes into structured data — sales teams logging calls, researchers organizing notes, anyone with a messy inbox.
 
 > **Want a full CRM?** Combine with [04_inbox-attachment-organizer](../04_inbox-attachment-organizer) for auto-capture of contacts from incoming emails, organized folders, and AI-maintained profiles. See [email-crm-guide.md](docs/email-crm-guide.md).
-
-## Quick Start
-
-- [setup-guide.md](docs/setup-guide.md)
-- [credentials-guide.md](../credentials-guide.md)
-- [json-worksheet.md](docs/json-worksheet.md) — Introduction to JSON and structured data
-
-## Video Tutorial
-
-[**Watch on YouTube**](https://www.youtube.com/watch?v=OqA7aKWQ1q8) ![views](https://img.shields.io/youtube/views/OqA7aKWQ1q8?style=flat&label=)
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=OqA7aKWQ1q8">
-    <img src="https://img.youtube.com/vi/OqA7aKWQ1q8/mqdefault.jpg" alt="Watch the tutorial" width="400">
-  </a>
-</p>
