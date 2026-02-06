@@ -17,6 +17,95 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-schema-condition",
+              "leftValue": "={{ $('Modify File & Input').first().json.extraction?.field_schemas?.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-has-schema-if",
+      "name": "Has Schema?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -416,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text || $json.data || (typeof $json.concatenated_data === 'string' ? $json.concatenated_data : JSON.stringify($json)) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a Document Data Extractor. Given extracted text from a document, organize the information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Input Validator').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-text-to-structured",
+      "name": "Text-to-Structured",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        -336,
+        640
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        800
+      ],
+      "id": "c3d4e5f6-text-language-model",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={{ JSON.stringify($('Modify File & Input').first().json.output_schema) }}"
+      },
+      "id": "d4e5f6g7-text-output-schema",
+      "name": "Text Output Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        -192,
+        800
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
         "operation": "pdf",
         "options": {}
       },
@@ -215,7 +304,7 @@
                 "conditions": [
                   {
                     "id": "f30330d4-a83c-4e9e-9a0b-7de8a1767dc2",
-                    "leftValue": "={{ $json.binary_files.mimeType }}",
+                    "leftValue": "={{ $binary.data.mimeType }}",
                     "rightValue": "text/csv",
                     "operator": {
                       "type": "string",
@@ -458,7 +547,7 @@
     },
     {
       "parameters": {
-        "content": "## Any-file2json converter\n# · image OCR\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n```\n```\n# · json\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
+        "content": "## Any-file2json converter\n# · Image Understanding\nOCR, captioning, object detection, and structured extraction\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n```\n```\n# · json\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
         "height": 1384,
         "width": 432,
         "color": 7
@@ -569,8 +658,8 @@
             {
               "id": "uh-file-size",
               "name": "fileSize",
-              "value": "={{ $binary.data?.fileSize || 0 }}",
-              "type": "number"
+              "value": "={{ $binary.data?.fileSize || 'unknown' }}",
+              "type": "string"
             },
             {
               "id": "uh-original-item",
@@ -597,8 +686,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -336,
-        912
+        -992,
+        784
       ],
       "id": "49859284-724f-4d50-b952-27fbe38e9696",
       "name": "Unresolved Handler"
@@ -644,7 +733,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -336,
+        -192,
         416
       ],
       "id": "1c9206c0-5927-4c4a-a124-72c9726e3668",
@@ -708,7 +797,7 @@
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Has Schema?",
             "type": "main",
             "index": 0
           }
@@ -719,7 +808,7 @@
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Has Schema?",
             "type": "main",
             "index": 0
           }
@@ -741,7 +830,7 @@
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Has Schema?",
             "type": "main",
             "index": 0
           }
@@ -918,7 +1007,7 @@
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Has Schema?",
             "type": "main",
             "index": 0
           }
@@ -962,8 +1051,59 @@
       "main": [
         [
           {
+            "node": "Has Schema?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Schema?": {
+      "main": [
+        [
+          {
+            "node": "Text-to-Structured",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Return node",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text-to-Structured": {
+      "main": [
+        [
+          {
+            "node": "Return node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text-to-Structured",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Output Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Text-to-Structured",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]
