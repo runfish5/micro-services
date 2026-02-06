@@ -29,7 +29,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ## Non-Obvious Architecture
 
-**Two AI stages (both gpt-oss-120b via Groq)**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check (disabled by default) sits between stages.
+**Two AI stages (both require structured output)**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check (disabled by default) sits between stages.
 
 **'n8n' label as processing indicator**: Tag Mail adds the 'n8n' label early (before Gmail downloads attachments). Remove label from message strips it after successful processing. Emails still carrying the label indicate incomplete or failed runs.
 

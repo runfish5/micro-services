@@ -36,7 +36,9 @@ Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for 
 
 ## Code Patterns
 
-Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on Groq and Gemini free tiers.
+Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on free-tier LLM APIs, but optional capabities that cost are also present.
+
+**LLM references in docs**: Never refer to models by provider or name (Groq, Gemini, gpt-oss-120b); describe by capability instead — "LLM", "vision-capable LLM", "TTS model" (not LLM), etc.
 
 ### Repository Structure
 
@@ -74,7 +76,7 @@ n8n workflows are JSON-based node configurations. Key practices:
 
 **Subworkflow changes not reflected**: You tested the subworkflow directly but forgot to republish. Fix: Republish the subworkflow. If publish fails with "1 node has issues", go to Executions → pick a successful run → Copy to Editor → Publish.
 
-**LLM structured output errors**: Model failed to return valid JSON. Use a model with better structured output support (gpt-oss-120b recommended for open-source) or simplify the schema.
+**LLM structured output errors**: Model failed to return valid JSON. Use a model with strong structured output support or simplify the schema.
 
 ### Cross-Project Patterns
 

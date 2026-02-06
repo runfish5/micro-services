@@ -14,7 +14,7 @@ Trigger → Input Validator → Modify File & Input → Switch
    │                  Yes        No                        │
    │                   │          │                        │
    │           Text-to-Structured │                        │
-   │              (Groq LLM)    │                        │
+   │              (LLM)         │                        │
    │                   │          │                        │
    └───────────────────┴──────────┴────────────────────────┘
                               │
@@ -25,7 +25,7 @@ Trigger → Input Validator → Modify File & Input → Switch
 
 | # | MIME | Handler |
 |---|------|---------|
-| 0 | `image/*` | conversion → Image-to-text (Gemini) |
+| 0 | `image/*` | conversion → Image-to-text (vision LLM) |
 | 1 | `application/pdf` | Extract PDF Text → Has Schema? |
 | 2 | `application/json` | Extract from JSON → Has Schema? |
 | 3 | `application/vnd.ms-excel` | Extract from Excel → Aggregate → Summarize → Has Schema? |
@@ -42,7 +42,7 @@ Trigger → Input Validator → Modify File & Input → Switch
 - **Output Schema**: Uses dynamic expression `$json.output_schema` for image path
 - **Image-to-text**: Uses dynamic prompt from Input Validator, enforced by Output Schema (images only)
 - **Has Schema?**: IF node checking `extraction.field_schemas.length > 0` - routes text extractors to LLM when schema provided
-- **Text-to-Structured**: LLM chain (Gemini) that converts extracted text to structured JSON using `output_schema`
+- **Text-to-Structured**: LLM chain that converts extracted text to structured JSON using `output_schema`
 - **Text Output Schema**: Same dynamic schema pattern as images, for text-based extraction
 - **Fetch URL (Jina)**: HTTP GET to `https://r.jina.ai/{url}` for markdown conversion
 - **Unresolved Handler**: Returns structured error for unknown types
@@ -76,16 +76,16 @@ User columns become **required** properties, forcing the LLM to include them or 
 
 | File Type | No Schema | With Schema |
 |-----------|-----------|-------------|
-| Image | Gemini OCR → structured JSON | Gemini OCR → structured JSON (same path) |
-| PDF | Raw text passthrough | Groq LLM → structured JSON |
-| JSON | Raw JSON passthrough | Groq LLM → structured JSON |
-| CSV/Excel | Concatenated text passthrough | Groq LLM → structured JSON |
-| Document | Raw text passthrough | Groq LLM → structured JSON |
-| URL | Markdown passthrough | Groq LLM → structured JSON |
+| Image | Vision LLM → structured JSON | Vision LLM → structured JSON (same path) |
+| PDF | Raw text passthrough | LLM → structured JSON |
+| JSON | Raw JSON passthrough | LLM → structured JSON |
+| CSV/Excel | Concatenated text passthrough | LLM → structured JSON |
+| Document | Raw text passthrough | LLM → structured JSON |
+| URL | Markdown passthrough | LLM → structured JSON |
 
 ## LLM
 
-- **Images**: Google Gemini via `CREDENTIAL_ID_GEMINI`
-- **Text-to-Structured**: Groq (`gpt-oss-120b`) via `CREDENTIAL_ID_GROQ`
+- **Images**: Vision-capable LLM (must accept image input)
+- **Text-to-Structured**: Any LLM with structured output support
 
 Classification required for all LLM paths (images and text-to-structured).

@@ -65,7 +65,7 @@ Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classi
                           ↓
                         Clean Email object
     ↓
-  email-info-hub → subject-classifier-LM (LM1: gpt-oss-120b)
+  email-info-hub → subject-classifier-LM (LM1)
     ↓
   Routing branches:
     ├→ financial doc router → [disabled] sender_whitelist
@@ -73,7 +73,7 @@ Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classi
     └→ [disabled] ContactManager-lineage → record-search → smart-table-fill
     ↓
   IF FINANCIAL:
-  Prepare Attachments → Accountant-concierge-LM (LM2: gpt-oss-120b)
+  Prepare Attachments → Accountant-concierge-LM (LM2)
     ↓
   If (has attachments?)
     ├─ Yes → input folder lookup → Call 'gdrive-recursion' → Get binary data2 → save doc to folder
@@ -144,11 +144,11 @@ ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 
 ## AI Models Nodes
 
-Both AI nodes use **gpt-oss-120b** via Groq (free tier).
+Both AI nodes use an LLM with structured output support.
 
 ### 1. Classification
 - **Node**: subject-classifier-LM
-- **Model**: gpt-oss-120b (Groq)
+- **Model**: LLM with structured output
 - **Input**: Email text + attachment content + contact context from email-info-hub
 - **Output**: Document type, action required, Telegram summary, body_core (stripped content), optional `contact_name_extracted`
 - **Classification Types**:
@@ -157,7 +157,7 @@ Both AI nodes use **gpt-oss-120b** via Groq (free tier).
 
 ### 2. Extraction
 - **Node**: Accountant-concierge-LM
-- **Model**: gpt-oss-120b (Groq)
+- **Model**: LLM with structured output
 - **Input**: Email context (subject, from, date, body_core) + parsed attachment text
 - **Output**: Structured invoice data following the **Billing_Ledger schema** + filing metadata (accounting_category, document_type, year, month)
 - **Key Capabilities**:
@@ -182,15 +182,12 @@ Both AI nodes use **gpt-oss-120b** via Groq (free tier).
 - **Location**: `../03_any-file2json-converter/workflows/any-file2json-converter.json`
 - **Purpose**: Converts various file formats to text/JSON
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
-- **Input** (optional):
-  - `extraction_prompt`: Custom prompt for image OCR (default: "Extract all visible data from this document.")
-  - `metadata`: Passthrough object preserved in output
+- **Input**: Binary data (per attachment). No extraction passed.
 - **Output**:
   - `status`: `resolved` | `unresolved`
   - `data.text`: Extracted text content (string or JSON)
   - `data.content_class`: `primary_document` | `style_element` | `unclassified` | `UNK`
   - `data.class_confidence`: `0.0-1.0` | `UNK`
-  - `metadata`: Passthrough from input
 - **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`. Unsupported MIME types return `status: "unresolved"` with resolver_hint.
 
 ### 2. google-drive-folder-id-lookup
