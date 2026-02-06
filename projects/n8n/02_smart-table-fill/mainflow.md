@@ -356,7 +356,7 @@ Write to Sheet (Google Sheets: append row directly)
 | 7 | Schema LLM | lmChatGroq | Language model for schema generation |
 | 8 | Schema Output Parser | outputParser | Parse schema JSON array |
 | 9 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response |
+| 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response; uses `colLetter()` helper to support columns past Z (AA, AB, …) |
 | 11 | List Drive Files | googleDrive | List all files in target folder |
 | 12 | Prepare & Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
 | 13 | Loop Over Files | splitInBatches | Process one file at a time |
@@ -497,10 +497,11 @@ The any-file2json-converter returns structured JSON in `data.text`:
 ```
 
 The Prepare Write Data node:
-1. Parses `data.text` as JSON to get the extracted fields
-2. Adds `source_file` (filename) and `Text_to_interpret` (raw JSON string)
-3. Removes internal fields (content_class, class_confidence, confidence)
-4. Returns clean row data for Write to Sheet
+1. Logs a `console.warn` and returns early (`return []`) if the converter output is empty — makes skipped files visible in n8n's execution log while preserving retry-on-next-run behavior
+2. Parses `data.text` as JSON; if the LLM returned an array (`[{...}]`), unwraps the first element; non-object results are discarded
+3. Spreads extracted fields first, then sets `source_file` and `Text_to_interpret` **after** the spread — this guarantees internal fields are never overwritten by LLM output with colliding keys
+4. Removes internal fields (content_class, class_confidence, confidence)
+5. Returns clean row data for Write to Sheet
 
 #### Target Sheet Setup
 

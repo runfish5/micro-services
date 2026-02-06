@@ -225,7 +225,7 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Batch Read Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + String.fromCharCode(65 + headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Batch Read Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const colLetter = (n) => { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + colLetter(headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -370,7 +370,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const fileName = $('Download File').first().json.name || 'unknown';\nconst converterOutput = $input.first().json;\n\n// Get the extracted text from converter\nconst rawText = converterOutput?.data?.text || converterOutput?.text || '';\n\nif (!rawText.trim()) return []; // skip failed conversion\n\n// Parse the extracted JSON from the LLM output\nlet extractedData = {};\ntry {\n  extractedData = JSON.parse(rawText);\n} catch (e) {\n  // If not valid JSON, treat as plain text\n  extractedData = { Text_to_interpret: rawText };\n}\n\n// Build the row data\nconst rowData = {\n  source_file: fileName,\n  Text_to_interpret: rawText,\n  ...extractedData\n};\n\n// Remove internal fields that shouldn't be written\ndelete rowData.content_class;\ndelete rowData.class_confidence;\ndelete rowData.confidence;\n\nreturn [{ json: rowData }];"
+        "jsCode": "const fileName = $('Download File').first().json.name || 'unknown';\nconst converterOutput = $input.first().json;\n\nconst rawText = converterOutput?.data?.text || converterOutput?.text || '';\n\nif (!rawText.trim()) {\n  console.warn(`Skipped file \"${fileName}\": converter returned empty output`);\n  return [];\n}\n\nlet extractedData = {};\ntry {\n  extractedData = JSON.parse(rawText);\n  if (Array.isArray(extractedData)) {\n    extractedData = extractedData[0] || {};\n  }\n  if (typeof extractedData !== 'object' || extractedData === null) {\n    extractedData = {};\n  }\n} catch (e) {\n  extractedData = { Text_to_interpret: rawText };\n}\n\nconst rowData = {\n  ...extractedData,\n  source_file: fileName,\n  Text_to_interpret: rawText,\n};\n\ndelete rowData.content_class;\ndelete rowData.class_confidence;\ndelete rowData.confidence;\n\nreturn [{ json: rowData }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -438,15 +438,15 @@
     },
     {
       "parameters": {
-        "content": "### Schema Check & Creation\nIf schema sheet doesn't exist:\n1. LLM generates schema from column headers\n2. Creates schema sheet via batchUpdate\n\nBoth paths merge at Ensure Headers.",
-        "height": 176,
-        "width": 892
+        "content": "### Schema Check & Creation\nLLM generates schema\n from column headers and \nsends created schema to googe sheet.",
+        "height": 112,
+        "width": 844
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         11376,
-        544
+        620
       ],
       "id": "79281892-ef49-4f17-962f-ebc251e1b38f",
       "name": "Sticky Note - Schema"
