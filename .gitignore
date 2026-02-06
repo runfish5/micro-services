@@ -20,4 +20,5 @@ Thumbs.db
 tmp/
 
 # Claude Code - track governance files, ignore local settings
-.claude/settings.local.json
+.claude/settings.local.json*.tmp
+.claude/HANDOFF.tmp

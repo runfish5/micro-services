@@ -28,7 +28,7 @@ Give it any text and any table. The workflow reads your column headers, builds e
 |---------|:---:|:---:|
 | Auto-creates schema sheet on first run — no manual field mapping | ✅ | ✅ |
 | Update existing rows or append-only (`match_same_row`) | ✅ | ✅ |
-| Column batching — splits wide schemas across multiple LLM calls (`batch_size`) | ✅ | ❌ |
+| Column batching — splits wide schemas across multiple LLM calls (`batch_size`) | ✅ | ✅ |
 | Resumability — skips already-processed files on retry | ❌ | ✅ |
 | File filtering — `file_include`, `file_exclude`, `file_limit` | ❌ | ✅ |
 | Adaptive rate limiting — starts fast, error handler injects delay on 429 | ❌ | ✅ |
@@ -114,10 +114,7 @@ This project contains two complementary extraction workflows:
 |----------|----------|
 | Extract from email/text | **smart-table-fill** — text in, structured row out |
 | Process folder of images | **smart-folder2table** — one LLM pass per file |
-| Many columns (10+) | smart-table-fill (has column batching) |
 | Simple extraction | Either works |
-
-**smart-folder2table** does not have column batching — all columns are extracted in a single LLM call, which may hit context limits with very wide schemas (15+ columns).
 
 ---
 

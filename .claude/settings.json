@@ -12,7 +12,6 @@
       "Bash(git commit:*)"
     ],
     "deny": [
-      "Edit(./CLAUDE.md)",
       "Edit(./.claude/settings.json)",
       "Edit(./.claude/settings.local.json)",
       "Edit(./projects/n8n/credentials-guide.md)",
