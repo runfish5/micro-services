@@ -6,7 +6,12 @@ Extract structured data from unstructured text into any Google Sheets table — 
   <img src="assets/cover.png" alt="Workflow Preview">
 </p>
 
+## ⚡ Quick Start
+- [Setup Guide](docs/setup-guide.md) — smart-table-fill
+- [Setup Guide](docs/setup-guide-folder2table.md) — smart-folder2table
+- [credentials-guide.md](../credentials-guide.md)
 ---
+
 
 ## What You'll Build
 
