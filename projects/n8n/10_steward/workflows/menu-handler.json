@@ -26,6 +26,20 @@
     },
     {
       "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        8720,
+        3792
+      ],
+      "id": "dd0f0bb0-9a5c-4579-98ad-e7cfb4b53407",
+      "name": "Chat Trigger",
+      "webhookId": "d58e7b3f-6c26-4209-a5d2-3b1473741293"
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -60,13 +74,26 @@
     },
     {
       "parameters": {
-        "jsCode": "const cb = $json.callback_query;\nconst msg = $json.message;\nconst chatInput = $json.chatInput;\n\nconst knownActions = ['expenses', 'learning', 'deals'];\nlet action = 'chat';\nlet chatId = '';\nlet text = '';\n\nif (chatInput) {\n  // n8n Chat Trigger → always free text for AI Classifier\n  text = chatInput.trim();\n  chatId = 'n8n-chat';\n} else if (cb) {\n  const data = cb.data || '';\n  const extracted = data.includes(':') ? data.split(':')[1] : data;\n  chatId = String(cb.message?.chat?.id || '');\n\n  if (knownActions.includes(extracted)) {\n    action = extracted;\n  } else {\n    // Unknown button → free text to AI Classifier\n    text = extracted;\n  }\n} else if (msg) {\n  chatId = String(msg.chat?.id || '');\n  const raw = (msg.text || '').trim();\n  if (raw.startsWith('/')) {\n    const parts = raw.substring(1).split(/\\s+/);\n    const cmd = parts[0].toLowerCase();\n    if (knownActions.includes(cmd)) {\n      action = cmd;\n    }\n    text = parts.slice(1).join(' ');\n  } else {\n    text = raw;\n  }\n}\n\nreturn [{ json: { action, chatId, text } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'HE11BD1klK-9ru2moDB70',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: '',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: false\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder for electronics, furniture, and retail items from Swiss retailers',\n    ready: false\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         9120,
-        3760
+        3720
+      ],
+      "id": "cfg00001-0001-0001-0001-000000000001",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "const agents = $json.agents;\nconst knownActions = Object.keys(agents).filter(k => agents[k].ready);\n\nconst cb = $json.callback_query;\nconst msg = $json.message;\nconst chatInput = $json.chatInput;\n\nlet action = 'chat';\nlet chatId = '';\nlet text = '';\n\nif (chatInput) {\n  text = chatInput.trim();\n  chatId = 'n8n-chat';\n} else if (cb) {\n  const data = cb.data || '';\n  const extracted = data.includes(':') ? data.split(':')[1] : data;\n  chatId = String(cb.message?.chat?.id || '');\n\n  if (knownActions.includes(extracted)) {\n    action = extracted;\n  } else {\n    text = extracted;\n  }\n} else if (msg) {\n  chatId = String(msg.chat?.id || '');\n  const raw = (msg.text || '').trim();\n  if (raw.startsWith('/')) {\n    const parts = raw.substring(1).split(/\\s+/);\n    const cmd = parts[0].toLowerCase();\n    if (knownActions.includes(cmd)) {\n      action = cmd;\n    }\n    text = parts.slice(1).join(' ');\n  } else {\n    text = raw;\n  }\n}\n\nconst workflowId = agents[action]?.workflowId || '';\nreturn [{ json: { action, chatId, text, workflowId, agents } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9328,
+        3720
       ],
       "id": "94110c9a-e70a-4a35-a1fa-055768533bb0",
       "name": "Normalize"
@@ -85,67 +112,19 @@
                 },
                 "conditions": [
                   {
-                    "id": "route-expenses",
+                    "id": "route-agent",
                     "leftValue": "={{ $json.action }}",
-                    "rightValue": "expenses",
+                    "rightValue": "chat",
                     "operator": {
                       "type": "string",
-                      "operation": "equals"
+                      "operation": "notEquals"
                     }
                   }
                 ],
                 "combinator": "and"
               },
               "renameOutput": true,
-              "outputKey": "expenses"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "route-learning",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "learning",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "learning"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "route-deals",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "deals",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "deals"
+              "outputKey": "agent"
             },
             {
               "conditions": {
@@ -173,13 +152,15 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        9328,
-        3712
+        9536,
+        3680
       ],
       "id": "5e349338-c82d-4cf6-a3a1-679dad5456c9",
       "name": "Route"
@@ -188,7 +169,7 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "HE11BD1klK-9ru2moDB70",
+          "value": "={{ $json.workflowId }}",
           "mode": "id"
         },
         "options": {}
@@ -196,60 +177,24 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        9952,
-        3696
+        9760,
+        3600
       ],
       "id": "a0e8c921-08ea-4f20-859b-3e1f6a2076b6",
-      "name": "Call Expenses"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "={{ /* learning-notes workflow ID — update after import */ '' }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        9744,
-        3712
-      ],
-      "id": "c7116494-e0d5-4662-b83f-1ae79b44b28b",
-      "name": "Call Learning Notes"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "={{ /* deal-finder workflow ID — update after import */ '' }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        9568,
-        3760
-      ],
-      "id": "92fe835d-41a5-4801-ba8f-e968e3f4bf70",
-      "name": "Call Deal Finder"
+      "name": "Call Agent"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a routing agent that analyzes user queries and decides which AI system should handle them.\n\nAnalyze the following user input and determine the best routing:\n\nUser Input: {{ $json.text }}\n\nRouting Options:\n- output_type 0: Groq Reasoning (for AI reasoning, analysis, creative writing, coding, complex problem solving)\n- output_type 1: Brave Search (for simple factual lookups, \"what is\", \"who is\", basic search queries)\n- output_type 2: Perplexity (for research, analysis, comparisons, investigations, comprehensive studies)\n\nProvide your routing decision with reasoning.",
+        "text": "=You are a routing agent. Analyze the user's input and conversation context, then route to the best handler.\n\nAvailable agents (use for domain-specific tasks):\n{{ Object.entries($json.agents).map(([k,v]) => '- ' + k + ': ' + v.desc + (v.ready ? '' : ' [coming soon — tell user this is not available yet]')).join('\\n') }}\n\nAvailable LLM backends (use for general queries):\n- groq_reasoning: AI reasoning, analysis, creative writing, coding, complex problem solving\n- brave_search: Simple factual lookups, \"what is\", \"who is\", basic search queries\n- perplexity: Research, comparisons, investigations, comprehensive studies\n\nUser Input: {{ $json.text }}\n\nRoute to the most specific handler. Prefer agents over LLM backends when the query clearly matches an agent's domain.",
         "hasOutputParser": true,
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        9296,
-        3984
+        9760,
+        3880
       ],
       "id": "de46fe69-de1e-41a7-b3c2-332c87038e99",
       "name": "AI Classifier"
@@ -262,8 +207,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        9296,
-        4176
+        9760,
+        4100
       ],
       "id": "bb5dc33a-944e-437a-878a-bfdf75fd2572",
       "name": "Groq Classifier LLM",
@@ -277,16 +222,36 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"output_type\": {\n\t\t\t\"type\": \"integer\",\n\t\t\t\"enum\": [0, 1, 2],\n\t\t\t\"description\": \"Which output to route to: 0=Groq Reasoning, 1=Brave Search, 2=Perplexity\"\n\t\t},\n\t\t\"query\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The original user query/input\"\n\t\t},\n\t\t\"reasoning\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Brief explanation of why this route was chosen\"\n\t\t},\n\t\t\"route_name\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"enum\": [\"groq_reasoning\", \"brave_search\", \"perplexity\"],\n\t\t\t\"description\": \"Human-readable name of the chosen route\"\n\t\t}\n\t},\n\t\"required\": [\n\t\t\"output_type\",\n\t\t\"query\",\n\t\t\"reasoning\",\n\t\t\"route_name\"\n\t]\n}"
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"route_type\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"enum\": [\"expenses\", \"learning\", \"deals\", \"groq_reasoning\", \"brave_search\", \"perplexity\"],\n\t\t\t\"description\": \"Which handler should process this request\"\n\t\t},\n\t\t\"query\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The original user query/input\"\n\t\t},\n\t\t\"reasoning\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Brief explanation of why this route was chosen\"\n\t\t}\n\t},\n\t\"required\": [\"route_type\", \"query\", \"reasoning\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        9424,
-        4176
+        9888,
+        4100
       ],
       "id": "94b2eb32-3622-4fb6-a45d-80826290b229",
       "name": "Classifier Output Parser"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Normalize').first().json.chatId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        9632,
+        4100
+      ],
+      "id": "mem00001-0001-0001-0001-000000000001",
+      "name": "Router Memory",
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_POSTGRES",
+          "name": "Postgres account"
+        }
+      }
     },
     {
       "parameters": {
@@ -302,16 +267,18 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.output.output_type }}",
-                    "rightValue": 0,
+                    "leftValue": "={{ $json.output.route_type }}",
+                    "rightValue": "groq_reasoning",
                     "operator": {
-                      "type": "number",
+                      "type": "string",
                       "operation": "equals"
                     }
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "groq"
             },
             {
               "conditions": {
@@ -323,16 +290,18 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.output.output_type }}",
-                    "rightValue": 1,
+                    "leftValue": "={{ $json.output.route_type }}",
+                    "rightValue": "brave_search",
                     "operator": {
-                      "type": "number",
+                      "type": "string",
                       "operation": "equals"
                     }
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "brave"
             },
             {
               "conditions": {
@@ -344,31 +313,64 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.output.output_type }}",
-                    "rightValue": 2,
+                    "leftValue": "={{ $json.output.route_type }}",
+                    "rightValue": "perplexity",
                     "operator": {
-                      "type": "number",
+                      "type": "string",
                       "operation": "equals"
                     }
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "perplexity"
             }
           ]
         },
         "options": {
-          "fallbackOutput": 0
+          "fallbackOutput": "extra"
         }
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        9632,
-        3968
+        10000,
+        3880
       ],
       "id": "1cdc9c5d-7fa2-4d08-b8c0-2f2fd80e967f",
       "name": "LLM Route"
+    },
+    {
+      "parameters": {
+        "jsCode": "const agents = $('Config').first().json.agents;\nconst routeType = $json.output.route_type;\nconst agent = agents[routeType];\nconst chatId = $('Normalize').first().json.chatId;\nconst text = $('Normalize').first().json.text;\n\nif (!agent || !agent.ready || !agent.workflowId) {\n  return [{ json: {\n    response: `I don't have the ${agent?.label || routeType} capability yet.`,\n    chatId\n  }}];\n}\n\nreturn [{ json: { workflowId: agent.workflowId, chatId, text, action: routeType } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10240,
+        3640
+      ],
+      "id": "res00001-0001-0001-0001-000000000001",
+      "name": "Resolve Agent"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $json.workflowId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        10464,
+        3640
+      ],
+      "id": "ewa00001-0001-0001-0001-000000000001",
+      "name": "Call Agent (AI)"
     },
     {
       "parameters": {
@@ -379,8 +381,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        9856,
-        3856
+        10240,
+        3800
       ],
       "id": "035f3fed-c25a-4a27-977c-700f8545101b",
       "name": "Groq Reasoning"
@@ -393,8 +395,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        9856,
-        4032
+        10240,
+        3980
       ],
       "id": "929c9914-1217-4860-b08c-8259cad0e44f",
       "name": "Groq Reasoning LLM",
@@ -437,14 +439,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        9856,
-        4160
+        10240,
+        4080
       ],
       "id": "41b1dac7-daa6-4486-aabe-f9142943c3fe",
       "name": "Brave Search",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "7QCzZjFHSrLnxyxs",
+          "id": "CREDENTIAL_ID_BRAVE_SEARCH",
           "name": "Brave Search API"
         }
       }
@@ -464,41 +466,12 @@
       "type": "n8n-nodes-base.perplexity",
       "typeVersion": 1,
       "position": [
-        9856,
-        4352
+        10240,
+        4280
       ],
       "id": "daf3c0c5-8ffa-40d5-ab86-9516fe0b10a3",
       "name": "Perplexity Research",
       "disabled": true
-    },
-    {
-      "parameters": {
-        "content": "## Menu Handler\n\nAlways-on workflow. Hub-and-spoke architecture:\n- **Buttons** and **/commands** route deterministically to subworkflows\n- **Free text** (no slash prefix) falls through to the LLM classifier\n\n### Setup\n1. **Whitelist**: Open the Whitelist node and replace `YOUR_CHAT_ID_1|YOUR_CHAT_ID_2` in the regex with your real Telegram user IDs (pipe-separated). To find your ID: search `@userinfobot` in Telegram, open a chat with it, send any message — it replies with your user ID.\n2. **Subworkflows**: Update the 3 Execute Workflow node IDs to point to the actual subworkflow IDs in your n8n instance.\n3. **Credentials**: Set Groq, Perplexity, and Telegram credential IDs.\n4. **Brave Search credential**: In n8n, go to **Credentials → Add Credential → Header Auth** — set Name: `X-Subscription-Token`, Value: your API key from [brave.com/search/api](https://brave.com/search/api/).",
-        "height": 548,
-        "width": 444
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        8224,
-        3648
-      ],
-      "id": "4502a13c-86c5-4d27-8247-d390de6580cb",
-      "name": "Sticky Note - Overview"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        8720,
-        3792
-      ],
-      "id": "dd0f0bb0-9a5c-4579-98ad-e7cfb4b53407",
-      "name": "Chat Trigger",
-      "webhookId": "d58e7b3f-6c26-4209-a5d2-3b1473741293"
     },
     {
       "parameters": {
@@ -507,8 +480,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10144,
-        4160
+        10480,
+        4080
       ],
       "id": "a3a5ce05-f339-423b-b35e-e11d37ee90d7",
       "name": "Format Response"
@@ -524,8 +497,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        10368,
-        4160
+        10704,
+        4080
       ],
       "id": "85d63d7d-2691-4d12-a879-21c6783cd497",
       "name": "Send Reply",
@@ -536,6 +509,54 @@
           "name": "n8n_house_bot"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "## Menu Handler v2 \u2014 Config-Driven + Memory\n\nHub-and-spoke with intelligent routing. Three enhancement layers:\n\n### 1. Agent Registry (Config node)\nAdd new agents by editing the Config node only. No other changes needed\nfor button/command routing. For AI routing, also add the key to the\nClassifier Output Parser enum.\n\n### 2. Conversation Memory\nRouter Memory (Postgres) gives the AI Classifier context across messages.\nFollow-up questions route correctly (\"What about their competitors?\" \u2192 same domain).\n\n### 3. Unified Routing\nThe AI Classifier routes to both agents (expenses, learning, deals)\nAND LLM backends (Groq, Brave, Perplexity). Natural language like\n\"check my expenses\" routes to the expense agent without needing /expenses.\n\n### Setup\n1. **Whitelist**: Replace `YOUR_CHAT_ID_1|YOUR_CHAT_ID_2` with real Telegram IDs\n2. **Config**: Update workflowId values to match your n8n instance\n3. **Credentials**: Set Groq, Brave, Telegram, Postgres credential IDs\n4. **Classifier enum**: When adding agents, update the enum in Classifier Output Parser",
+        "height": 600,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        8224,
+        3648
+      ],
+      "id": "4502a13c-86c5-4d27-8247-d390de6580cb",
+      "name": "Sticky Note - Overview"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "agent-available",
+              "leftValue": "={{ $json.workflowId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10352,
+        3640
+      ],
+      "id": "ifa00001-0001-0001-0001-000000000001",
+      "name": "Agent Available?"
     }
   ],
   "connections": {
@@ -551,6 +572,28 @@
       ]
     },
     "Whitelist": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
       "main": [
         [
           {
@@ -576,21 +619,7 @@
       "main": [
         [
           {
-            "node": "Call Expenses",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Learning Notes",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Deal Finder",
+            "node": "Call Agent",
             "type": "main",
             "index": 0
           }
@@ -637,6 +666,17 @@
         ]
       ]
     },
+    "Router Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Classifier",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "LLM Route": {
       "main": [
         [
@@ -656,6 +696,42 @@
         [
           {
             "node": "Perplexity Research",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolve Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Agent": {
+      "main": [
+        [
+          {
+            "node": "Agent Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Available?": {
+      "main": [
+        [
+          {
+            "node": "Call Agent (AI)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Response",
             "type": "main",
             "index": 0
           }
@@ -700,17 +776,6 @@
         [
           {
             "node": "Format Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Chat Trigger": {
-      "main": [
-        [
-          {
-            "node": "Normalize",
             "type": "main",
             "index": 0
           }

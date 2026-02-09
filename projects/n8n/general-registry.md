@@ -44,7 +44,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `04_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
 | - | expense-trend-report | `04_inbox-attachment-organizer/workflows/subworkflows/expense-trend-report.json` |
 | - | daily-briefing | `10_steward/workflows/daily-briefing.json` |
-| - | menu-handler | `10_steward/workflows/menu-handler.json` |
+| - | menu-handler | `10_steward/workflows/menu-handler.json` (config-driven routing + conversation memory) |
 | - | telegram-command-interface | `11_n8n-ops-center/telegram-command-interface.n8n.json` |
 
 ### Subworkflows
@@ -56,9 +56,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | gmail-processor-datesize | `04_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual batch runs |
 | `ZPJYCwXcmisoSkuz` | record-search | `02_smart-table-fill/workflows/subworkflows/record-search.json` | inbox-attachment-organizer |
 | `AP7QbVnt424dz8dD` | contact-memory-update | `02_smart-table-fill/workflows/subworkflows/contact-memory-update.json` | smart-table-fill |
-| - | learning-notes | `10_steward/workflows/subworkflows/learning-notes.json` | menu-handler |
-| - | deal-finder | `10_steward/workflows/subworkflows/deal-finder.json` | menu-handler |
-| - | runfish-inbox | `10_steward/workflows/subworkflows/runfish-inbox.json` | menu-handler |
+| - | learning-notes | `10_steward/workflows/subworkflows/learning-notes.json` | menu-handler (via Config registry) |
+| - | deal-finder | `10_steward/workflows/subworkflows/deal-finder.json` | menu-handler (via Config registry) |
+| - | runfish-inbox | `10_steward/workflows/subworkflows/runfish-inbox.json` | menu-handler (via Config registry) |
 
 ### Support Workflows
 
@@ -72,3 +72,4 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 - Workflow IDs marked `-` are standalone (not called by Execute Workflow nodes)
 - `cachedResultName` in Execute Workflow nodes should match the "Name" column
 - When renaming workflows in n8n, update both the JSON file and this registry
+- **Steward Config registry**: menu-handler uses a Config code node as agent registry. Subworkflows are dispatched via dynamic Execute Workflow (workflowId from registry). To add a new agent to the steward, update the Config node + Classifier Output Parser enum — see `10_steward/workflows/mainflow.md` for details

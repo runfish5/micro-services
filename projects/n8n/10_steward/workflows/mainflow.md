@@ -1,16 +1,21 @@
 # Steward
 
-> Morning calendar + interactive menu via Telegram. Two workflows + three subworkflows.
+> Morning calendar + config-driven personal assistant via Telegram. Two workflows + three subworkflows.
 
 ## Architecture
 
 ```
-daily-briefing.json        Scheduled morning message with inline buttons
-menu-handler.json          Always-on hub: routes buttons, /commands, and free text
-  -> expense-trend-report  (project 04, called via Execute Workflow)
-  -> learning-notes        Notion AI summary
-  -> deal-finder           Shopping advisor with Perplexity research (region-configurable)
-  -> LLM classifier        Groq/Brave Search/Perplexity (inlined from mini-dave)
+daily-briefing.json          Scheduled morning message with inline buttons
+menu-handler.json            Always-on hub with config-driven routing + conversation memory
+  -> Config registry         Defines agents: name → workflowId + description
+  -> Deterministic path      Buttons and /commands → dynamic Execute Workflow
+  -> AI Classifier path      Free text → LLM routes to agents OR LLM backends
+     -> expense-trend-report (project 04, via registry)
+     -> learning-notes       Notion AI summary (via registry)
+     -> deal-finder          Shopping advisor (via registry)
+     -> Groq Reasoning       Coding, analysis, creative tasks
+     -> Brave Search         Factual lookups
+     -> Perplexity           Research and comparisons
 ```
 
 ## daily-briefing.json
@@ -40,74 +45,147 @@ Manual Trigger ---------/
 
 ## menu-handler.json
 
-Hub-and-spoke architecture. Accepts four input types: button taps (`callback_query`), slash commands (`/expenses`), free text, and n8n Chat Trigger (for MCP access). A central **Normalize** node produces `{ action, chatId, text }` for all inputs. Known actions (`expenses`, `learning`, `deals`) route deterministically to subworkflows; unknown buttons and free text fall through to an LLM classifier.
+Config-driven hub-and-spoke with conversation-aware AI routing (21 nodes + 1 sticky note). Three architectural layers:
+
+1. **Agent Registry** (Config node) — single source of truth for available agents and their workflow IDs
+2. **Deterministic routing** — buttons and /commands match registry keys, dispatch via dynamic Execute Workflow
+3. **AI routing** — free text goes through a conversation-aware LLM classifier that routes to both agents and LLM backends
 
 ```
 Telegram Trigger (callback_query + message)
   --> Whitelist
-    --> Normalize --------> Route (switch on action)
-Chat Trigger ----/                |-- expenses  --> Call Expenses
-  (MCP access,                   |-- learning  --> Call Learning Notes
-   bypasses Whitelist)           |-- deals     --> Call Deal Finder
-                                 |-- chat (catch-all) --> AI Classifier --> LLM Route
-                                                              |                |-0-> Groq Reasoning --|
-                                                              |                |-1-> Brave Search ----|-> Format Response --> Send Reply
-                                                              |                |-2-> Perplexity ------|
-                                                            (sub-nodes)
-                                                            Groq Classifier LLM
-                                                            Classifier Output Parser
+    --> Config (agent registry) --> Normalize --> Route (2-way switch)
+Chat Trigger -----/                                  |            |
+  (MCP access,                                  [agent]      [chat]
+   bypasses Whitelist)                              |            |
+                                                    v            v
+                                              Call Agent    AI Classifier (+ Router Memory)
+                                              (dynamic)          |
+                                                           LLM Route (4-way)
+                                                          /    |     |     \
+                                                     agent  groq  brave  perplexity
+                                                       |     |     |      |
+                                                       v     └─────┴──────┘
+                                              Resolve Agent        |
+                                                   |          Format Response
+                                              Agent Available?     |
+                                              (IF node)       Send Reply
+                                               /       \
+                                          [true]      [false]
+                                             |            |
+                                        Call Agent (AI)   |
+                                        (dynamic)    Format Response
 ```
+
+### Config Node — Agent Registry
+
+The Config code node defines all available agents as a JSON registry. To add a new agent, add an entry here and update the Classifier Output Parser enum.
+
+```javascript
+const agents = {
+  expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
+  learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: false },
+  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Shopping and deal research',  ready: false }
+};
+```
+
+The registry key (e.g., `expenses`) is used as:
+- The button callback data suffix (`briefing:expenses`)
+- The slash command name (`/expenses`)
+- The AI classifier route target
+- The lookup key for the dynamic Execute Workflow
 
 ### Normalize Hub
 
-The Normalize code node handles four input shapes and outputs a unified object:
+The Normalize code node reads `knownActions` from the Config registry (only `ready: true` agents). Outputs a unified object:
 
-| Input | action | chatId | text |
-|-------|--------|--------|------|
-| Chat Trigger `Hello` | `chat` | `n8n-chat` | `"Hello"` |
-| Button tap `briefing:expenses` | `expenses` | from `callback_query.message.chat.id` | `""` |
-| Button tap `briefing:unknown` (unknown) | `chat` | from `callback_query.message.chat.id` | `"unknown"` |
-| Text `/expenses` | `expenses` | from `message.chat.id` | `""` |
-| Text `/expenses some context` | `expenses` | from `message.chat.id` | `"some context"` |
-| Text `/unknown foo` (unknown cmd) | `chat` | from `message.chat.id` | `"foo"` |
-| Text `What is AI?` (no slash) | `chat` | from `message.chat.id` | `"What is AI?"` |
-
-`action` defaults to `chat`. Only known actions (`expenses`, `learning`, `deals`) override it. This avoids empty-string matching issues in the n8n Switch node.
+| Input | action | chatId | text | workflowId |
+|-------|--------|--------|------|------------|
+| Chat Trigger `Hello` | `chat` | `n8n-chat` | `"Hello"` | `""` |
+| Button tap `briefing:expenses` | `expenses` | from callback_query | `""` | from registry |
+| Button tap `briefing:unknown` | `chat` | from callback_query | `"unknown"` | `""` |
+| Text `/expenses` | `expenses` | from message | `""` | from registry |
+| Text `/expenses some context` | `expenses` | from message | `"some context"` | from registry |
+| Text `What is AI?` (no slash) | `chat` | from message | `"What is AI?"` | `""` |
 
 ### Route Switch
 
-4 explicit outputs: 3 deterministic (`expenses`, `learning`, `deals`) plus a **catch-all** rule (output 3, named `chat`) that matches `action == "chat"`. Since Normalize defaults `action` to `"chat"` and only overrides it for known actions, all free text, unknown buttons, and unknown commands hit this rule. `fallbackOutput` is set to `"extra"` as a safety net (output 4, unconnected).
+2 outputs (simplified from 4):
+
+| Output | Condition | Destination |
+|--------|-----------|-------------|
+| 0 "agent" | `action` != "chat" | Call Agent (dynamic Execute Workflow) |
+| 1 "chat" | `action` == "chat" | AI Classifier |
+| fallback | safety net | Extra output (unconnected) |
+
+### AI Classifier — Conversation-Aware Unified Router
+
+The AI Classifier is a `chainLlm` node with three sub-nodes:
+
+| Sub-node | Type | Purpose |
+|----------|------|---------|
+| Groq Classifier LLM | lmChatGroq | LLM powering the classification |
+| Classifier Output Parser | outputParserStructured | Enforces `{route_type, query, reasoning}` schema |
+| Router Memory | memoryPostgresChat | Postgres-backed conversation memory, keyed by chatId |
+
+The classifier prompt dynamically lists all agents from the Config registry plus the 3 LLM backends. It routes free text to the most appropriate handler — including subworkflows. For example, "check my expenses" routes to the expense agent without needing `/expenses`.
+
+**Conversation memory** enables follow-up routing: asking "What is NVIDIA?" then "What about their competitors?" correctly maintains context across messages.
+
+### Classifier Output Schema
+
+```json
+{
+  "route_type": "expenses|learning|deals|groq_reasoning|brave_search|perplexity",
+  "query": "the original user query",
+  "reasoning": "why this route was chosen"
+}
+```
+
+### LLM Route Switch
+
+| Output | route_type | Destination |
+|--------|------------|-------------|
+| 0 "groq" | `groq_reasoning` | Groq Reasoning chain |
+| 1 "brave" | `brave_search` | Brave Search API |
+| 2 "perplexity" | `perplexity` | Perplexity Research |
+| fallback | any agent key | Resolve Agent → Agent Available? → Call Agent (AI) |
+
+The fallback catches agent route_types and passes them through **Resolve Agent** (registry lookup) → **Agent Available?** (IF node) → Call Agent (AI) or "not available" via Format Response.
 
 ### Node Details
 
 | Node | Type | Purpose |
 |------|------|---------|
 | Telegram Trigger | telegramTrigger | Listens for `callback_query` and `message` events |
-| Chat Trigger | chatTrigger | MCP-compatible entry point; bypasses Whitelist, connects directly to Normalize |
-| Whitelist | if | Checks sender ID from either `callback_query` or `message` against allowed chat IDs |
-| Normalize | code | Extracts `{ action, chatId, text }` from buttons, /commands, Chat Trigger, or free text |
-| Route | switch | 3 named outputs + explicit catch-all (`chat`) to LLM path |
-| Call Expenses | executeWorkflow | Dispatches to expense-trend-report (project 04) |
-| Call Learning Notes | executeWorkflow | Dispatches to learning-notes subworkflow |
-| Call Deal Finder | executeWorkflow | Dispatches to deal-finder subworkflow |
-| AI Classifier | chainLlm | LLM routing prompt — classifies free text into 3 categories |
-| Groq Classifier LLM | lmChatGroq | Llama 4 Maverick powering the classifier |
-| Classifier Output Parser | outputParserStructured | Enforces `{output_type, query, reasoning, route_name}` schema |
-| LLM Route | switch | 3-way on `output.output_type` (0, 1, 2), fallback=0 |
-| Groq Reasoning | chainLlm | Route 0: reasoning, coding, creative tasks |
+| Chat Trigger | chatTrigger | MCP-compatible entry point; bypasses Whitelist |
+| Whitelist | if (disabled) | Checks sender ID against allowed chat IDs |
+| Config | code | Agent registry: maps action names to workflow IDs and descriptions |
+| Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
+| Route | switch | 2 outputs: agent (known action) or chat (AI classifier) |
+| Call Agent | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output |
+| AI Classifier | chainLlm | Conversation-aware LLM router with memory, output parser |
+| Groq Classifier LLM | lmChatGroq | LLM powering the classifier |
+| Classifier Output Parser | outputParserStructured | Enforces `{route_type, query, reasoning}` |
+| Router Memory | memoryPostgresChat | Conversation context across messages, keyed by chatId |
+| LLM Route | switch | 4-way: groq, brave, perplexity, or agent (fallback) |
+| Resolve Agent | code | Looks up workflowId from Config registry; returns graceful "not available" message when agent is not ready |
+| Agent Available? | if | Routes to Call Agent (AI) when workflowId is present; routes to Format Response when not |
+| Call Agent (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent |
+| Groq Reasoning | chainLlm | Reasoning, coding, creative tasks |
 | Groq Reasoning LLM | lmChatGroq | Llama 4 Maverick for reasoning |
-| Brave Search | httpRequest | Route 1: Brave Search API (via HTTP Request) |
-| Perplexity Research | perplexity | Route 2: research and comparison queries |
-| Format Response | code | Normalizes all three route outputs into `{ response, chatId }` |
+| Brave Search | httpRequest | Brave Search API (via HTTP Request) |
+| Perplexity Research | perplexity | Research and comparison queries (currently disabled) |
+| Format Response | code | Normalizes all LLM route outputs into `{ response, chatId }` |
 | Send Reply | telegram | Sends the formatted response to chat |
 
-### LLM Classifier Routes
+### How to Add a New Agent
 
-| output_type | route_name | Use case | Backend |
-|-------------|------------|----------|---------|
-| 0 | groq_reasoning | Reasoning, coding, creative writing, analysis | Groq Llama 4 Maverick |
-| 1 | brave_search | Simple factual lookups ("what is", "who is") | Brave Search API |
-| 2 | perplexity | Research, comparisons, investigations | Perplexity API |
+1. **Config node**: Add entry with `workflowId`, `label`, `desc`, and `ready: false` (flip to `true` when production-ready)
+2. **Classifier Output Parser**: Add the agent key to the `route_type` enum array
+3. **daily-briefing** (optional): Add an inline button with callback data `briefing:<key>`
+
+Everything else adapts automatically.
 
 ### Allowed Chat IDs
 
@@ -122,12 +200,14 @@ The Normalize code node handles four input shapes and outputs a unified object:
 | Groq (classifier + reasoning) | Built-in Groq API (`CREDENTIAL_ID_GROQ`) | API key from [console.groq.com](https://console.groq.com) |
 | Perplexity | Built-in Perplexity API (`CREDENTIAL_ID_PERPLEXITY`) | API key from [perplexity.ai](https://perplexity.ai) |
 | Brave Search | **Header Auth** (`CREDENTIAL_ID_BRAVE_SEARCH`) | Name: `X-Subscription-Token`, Value: API key from [brave.com/search/api](https://brave.com/search/api/) |
+| Postgres | Built-in Postgres (`CREDENTIAL_ID_POSTGRES`) | Connection for Router Memory table |
 
 ### Post-Import Setup
 
-1. Update the 3 Execute Workflow node IDs to match actual subworkflow IDs in your n8n instance
-2. Set Groq, Perplexity, and Telegram credential IDs
-3. Create a **Header Auth** credential (Name: `X-Subscription-Token`, Value: API key from [brave.com/search/api](https://brave.com/search/api/))
+1. Update Config node workflowId values to match your n8n instance
+2. Set Groq, Perplexity, Telegram, and Postgres credential IDs
+3. Create a **Header Auth** credential for Brave Search (Name: `X-Subscription-Token`, Value: API key)
+4. Verify Postgres is accessible (same instance used by learning-notes)
 
 ### Import Collision Warning
 
