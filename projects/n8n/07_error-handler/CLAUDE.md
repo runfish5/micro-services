@@ -36,6 +36,21 @@ Calculates expected Groq/Google API calls for retry scheduling (rate-limit aware
 4. Activate workflow
 5. Set as Error Workflow in n8n Settings
 
+Full guide: [docs/setup-guide.md](docs/setup-guide.md)
+
+## Node Edits After Import
+
+Settings cleared on import that must be re-selected manually:
+
+| Node | Setting | Value |
+|------|---------|-------|
+| **Append to FailedItems** | Document | Your FailedItems spreadsheet |
+| **Append to FailedItems** | Sheet | `FailedItems` |
+| **Append to FailedItems** | Column to Match On | `execution_id` |
+| **Send Telegram Alert** | Chat ID | `YOUR_CHAT_ID_1` |
+| **CODE RED Alert** | Chat ID | `YOUR_CHAT_ID_1` |
+| **Send Auto-Retry Alert** | Chat ID | `YOUR_CHAT_ID_1` |
+
 ## Dependencies
 
 - Google Sheets (FailedItems logging)

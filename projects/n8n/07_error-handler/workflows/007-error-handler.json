@@ -539,6 +539,21 @@
       ],
       "id": "eh-sticky-auto-retry",
       "name": "Sticky Note - Auto-Retry"
+    },
+    {
+      "parameters": {
+        "content": "### If stops here\n\nSet document → your FailedItems spreadsheet,\nsheet → `FailedItems`,\nmatch column → `execution_id`",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        100,
+        560
+      ],
+      "id": "eh-sticky-faileditems-setup",
+      "name": "Sticky Note - FailedItems Setup"
     }
   ],
   "connections": {
@@ -699,7 +714,8 @@
           }
         ]
       ]
-    }
+    },
+    "Sticky Note - FailedItems Setup": {}
   },
   "pinData": {
     "Error Trigger": [
