@@ -48,7 +48,7 @@ Manual Trigger ---------/
 
 ## menu-handler.json
 
-Config-driven hub-and-spoke with conversation-aware AI routing (21 nodes + 1 sticky note). Three architectural layers:
+Config-driven hub-and-spoke with conversation-aware AI routing (22 nodes + 4 sticky notes). Three architectural layers:
 
 1. **Agent Registry** (Config node) — single source of truth for available agents and their workflow IDs
 2. **Deterministic routing** — buttons and /commands match registry keys, dispatch via dynamic Execute Workflow
@@ -59,25 +59,25 @@ Telegram Trigger (callback_query + message)
   --> Whitelist
     --> Config (agent registry) --> Normalize --> Route (2-way switch)
 Chat Trigger -----/                                  |            |
-  (MCP access,                                  [agent]      [chat]
-   bypasses Whitelist)                              |            |
-                                                    v            v
-                                              Call Agent    AI Classifier (+ Router Memory)
-                                              (dynamic)          |
-                                                           LLM Route (4-way)
-                                                          /    |     |     \
-                                                     agent  groq  brave  perplexity
-                                                       |     |     |      |
-                                                       v     └─────┴──────┘
-                                              Resolve Agent        |
-                                                   |          Format Response
-                                              Agent Available?     |
-                                              (IF node)       Send Reply
-                                               /       \
-                                          [true]      [false]
-                                             |            |
-                                        Call Agent (AI)   |
-                                        (dynamic)    Format Response
+Execute Workflow --/                            [agent]      [chat]
+Trigger                                              |            |
+  (subworkflow calls,                                v            v
+   bypass Whitelist)                           Run Skill    AI Classifier (+ Router Memory)
+                                               (dynamic)          |
+                                                            LLM Route (4-way)
+                                                           /    |     |     \
+                                                      agent  groq  brave  perplexity
+                                                        |     |     |      |
+                                                        v     +-----+------+
+                                               Resolve Agent        |
+                                                    |          Format Response
+                                               Agent Available?     |
+                                               (IF node)       Send Reply
+                                                /       \
+                                           [true]      [false]
+                                              |            |
+                                         Run Skill (AI)    |
+                                         (dynamic)    Format Response
 ```
 
 ### Config Node — Agent Registry
@@ -110,6 +110,7 @@ The Normalize code node reads `knownActions` from the Config registry (only `rea
 | Text `/expenses` | `expenses` | from message | `""` | from registry |
 | Text `/expenses some context` | `expenses` | from message | `"some context"` | from registry |
 | Text `What is AI?` (no slash) | `chat` | from message | `"What is AI?"` | `""` |
+| Execute Workflow `{ text: "check deals", chatId: "123" }` | `chat` | `"123"` | `"check deals"` | `""` |
 
 ### Route Switch
 
@@ -117,7 +118,7 @@ The Normalize code node reads `knownActions` from the Config registry (only `rea
 
 | Output | Condition | Destination |
 |--------|-----------|-------------|
-| 0 "agent" | `action` != "chat" | Call Agent (dynamic Execute Workflow) |
+| 0 "agent" | `action` != "chat" | Run Skill (dynamic Execute Workflow) |
 | 1 "chat" | `action` == "chat" | AI Classifier |
 | fallback | safety net | Extra output (unconnected) |
 
@@ -152,9 +153,9 @@ The classifier prompt dynamically lists all agents from the Config registry plus
 | 0 "groq" | `groq_reasoning` | Groq Reasoning chain |
 | 1 "brave" | `brave_search` | Brave Search API |
 | 2 "perplexity" | `perplexity` | Perplexity Research |
-| fallback | any agent key | Resolve Agent → Agent Available? → Call Agent (AI) |
+| fallback | any agent key | Resolve Agent → Agent Available? → Run Skill (AI) |
 
-The fallback catches agent route_types and passes them through **Resolve Agent** (registry lookup) → **Agent Available?** (IF node) → Call Agent (AI) or "not available" via Format Response.
+The fallback catches agent route_types and passes them through **Resolve Agent** (registry lookup) → **Agent Available?** (IF node) → Run Skill (AI) or "not available" via Format Response.
 
 ### Node Details
 
@@ -162,19 +163,20 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 |------|------|---------|
 | Telegram Trigger | telegramTrigger | Listens for `callback_query` and `message` events |
 | Chat Trigger | chatTrigger | MCP-compatible entry point; bypasses Whitelist |
+| Execute Workflow Trigger | executeWorkflowTrigger | Subworkflow entry point; accepts {text, chatId} from parent workflows; bypasses Whitelist |
 | Whitelist | if (disabled) | Checks sender ID against allowed chat IDs |
 | Config | code | Agent registry: maps action names to workflow IDs and descriptions |
 | Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
 | Route | switch | 2 outputs: agent (known action) or chat (AI classifier) |
-| Call Agent | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output |
+| Run Skill | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output |
 | AI Classifier | chainLlm | Conversation-aware LLM router with memory, output parser |
 | Groq Classifier LLM | lmChatGroq | LLM powering the classifier |
 | Classifier Output Parser | outputParserStructured | Enforces `{route_type, query, reasoning}` |
 | Router Memory | memoryPostgresChat | Conversation context across messages, keyed by chatId |
 | LLM Route | switch | 4-way: groq, brave, perplexity, or agent (fallback) |
 | Resolve Agent | code | Looks up workflowId from Config registry; returns graceful "not available" message when agent is not ready |
-| Agent Available? | if | Routes to Call Agent (AI) when workflowId is present; routes to Format Response when not |
-| Call Agent (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent |
+| Agent Available? | if | Routes to Run Skill (AI) when workflowId is present; routes to Format Response when not |
+| Run Skill (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent |
 | Groq Reasoning | chainLlm | Reasoning, coding, creative tasks |
 | Groq Reasoning LLM | lmChatGroq | Llama 4 Maverick for reasoning |
 | Brave Search | httpRequest | Brave Search API (via HTTP Request) |

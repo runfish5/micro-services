@@ -12,7 +12,7 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 2. Calls `price-checker.json` to get current prices for tracked products
 3. Formats a combined message with calendar + price tracker section, appends 3 inline keyboard buttons
 3. Sends to Telegram; user taps a button whenever they want
-4. `menu-handler.json` (always-on) receives the callback query, validates the chat ID
+4. `menu-handler.json` (always-on) receives the callback query, validates the chat ID. Also callable as a subworkflow via Execute Workflow Trigger for error handling and orchestration.
 5. **Config node** provides the agent registry (name → workflowId + description)
 6. **Normalize** parses input using the registry to identify known actions
 7. **Route** dispatches: known actions go to a dynamic Execute Workflow; free text goes to the AI Classifier
@@ -48,6 +48,7 @@ Everything else adapts automatically from the registry.
 |------|---------|-------------|
 | Deterministic | Button tap, /command | Normalize matches registry key → dynamic Execute Workflow |
 | AI-classified | Free text | Classifier routes to agents OR LLM backends (Groq, Brave, Perplexity) |
+| Subworkflow | Execute Workflow Trigger | Parent passes {text, chatId}; Normalize routes through AI Classifier |
 
 ### Conversation Memory
 
@@ -57,13 +58,14 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 
 ### Workflows
 - `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
-- `workflows/menu-handler.json` - Config-driven hub with AI routing (21 nodes + 1 sticky note)
+- `workflows/menu-handler.json` - Config-driven hub with AI routing (22 nodes + 4 sticky notes)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
 - `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (38 nodes)
 - `workflows/subworkflows/price-checker.json` - Batch price checking engine (13 nodes)
 
 ### Documentation
 - `workflows/mainflow.md` - Node breakdown, credentials, "how to add agent" guide
+- `setup-guide.md` - Post-import configuration checklist
 
 ## Key Configuration
 
