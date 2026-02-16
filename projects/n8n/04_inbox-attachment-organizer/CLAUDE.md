@@ -24,7 +24,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ### Workflows
 - `workflows/inbox-attachment-organizer.json` - Main workflow (34 nodes) orchestrating the full pipeline
 - Calls `03_any-file2json-converter` subworkflow - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`. See `../03_any-file2json-converter/CLAUDE.md` for details.
-- `workflows/subworkflows/google-drive-folder-id-lookup.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
+- `workflows/subworkflows/gdrive-recursion.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
 - `workflows/subworkflows/gmail-processor-datesize.json` - Standalone batch processor for existing inbox emails
 
 ## Non-Obvious Architecture
@@ -44,7 +44,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 Nodes 1-5: Email Trigger & Labeling (Gmail Trigger polls every 1 min, filters promotions, sets metadata incl. label_ID, tags with 'n8n' label, downloads attachments)
 Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object sanitizes body + builds attachment map, email-info-hub aggregates contact/direction data)
 Nodes 11-18: Classification & Routing (subject-classifier-LM classifies, financial doc router, sender_whitelist disabled, notify the category disabled)
-Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, If checks attachments, google-drive-folder-id-lookup call, upload to Drive, Mark as Processed, Remove label from message, log to Billing_Ledger sheet, craft report, Telegram notification)
+Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, If checks attachments, gdrive-recursion call, upload to Drive, Mark as Processed, Remove label from message, log to Billing_Ledger sheet, craft report, Telegram notification)
 ContactManager (disabled): record-search → Prepare Contact Input → smart-table-fill
 Alternative Entry: When Executed by Another Workflow
 

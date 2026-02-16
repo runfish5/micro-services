@@ -383,7 +383,6 @@ Focus on products actually available in {{ region }}.
 | `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `sheetName` | `Requirements` | Sheet/tab name for requirements |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name for price tracking |
-| `priceCheckerWorkflowId` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` | ID of price-checker.json subworkflow |
 | `chatId` | `YOUR_CHAT_ID_1` | Telegram chat for responses |
 | `region` | `Switzerland` | Country/region for shopping |
 | `retailers` | `Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot` | Comma-separated retailer list |
@@ -468,5 +467,5 @@ Example `priceSection`:
 
 ### Post-Import Setup
 
-1. Note the workflow ID after importing — update deal-finder Config's `priceCheckerWorkflowId` and daily-briefing's Check Prices node
+1. After importing, re-select `price-checker` in deal-finder's "Call Price Checker" node and daily-briefing's "Check Prices" node
 2. Ensure the "Tracked Prices" tab exists in the Google Sheet with column headers

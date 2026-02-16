@@ -52,7 +52,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | Workflow ID | Name | File Path | Called By |
 |-------------|------|-----------|-----------|
 | `GtcLjBMusAUB0h30` | any-file2json-converter | `03_any-file2json-converter/workflows/any-file2json-converter.json` | inbox-attachment-organizer, folder-processor |
-| `vFnk7s9sqVnrt4hC` | google-drive-folder-id-lookup | `04_inbox-attachment-organizer/workflows/subworkflows/google-drive-folder-id-lookup.json` | inbox-attachment-organizer, self (recursive) |
+| `vFnk7s9sqVnrt4hC` | gdrive-recursion | `shared/gdrive-recursion.json` | inbox-attachment-organizer, self (recursive) |
 | - | gmail-processor-datesize | `04_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual batch runs |
 | `ZPJYCwXcmisoSkuz` | record-search | `02_smart-table-fill/workflows/subworkflows/record-search.json` | inbox-attachment-organizer |
 | `AP7QbVnt424dz8dD` | contact-memory-update | `02_smart-table-fill/workflows/subworkflows/contact-memory-update.json` | smart-table-fill |

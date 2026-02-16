@@ -148,7 +148,9 @@
         "workflowId": {
           "__rl": true,
           "value": "YOUR_PRICE_CHECKER_WORKFLOW_ID",
-          "mode": "id"
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_PRICE_CHECKER_WORKFLOW_ID",
+          "cachedResultName": "price-checker"
         }
       },
       "type": "n8n-nodes-base.executeWorkflow",

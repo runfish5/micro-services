@@ -8,7 +8,7 @@ Reads email attachment content, extracts key data to determine filing location (
    - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents
 3. For financial documents, verifies sender whitelist and extracts structured data
 4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)
-   - *google-drive-folder-id-lookup*: Locates or creates correct folder structure
+   - *gdrive-recursion*: Locates or creates correct folder structure
 5. Logs invoice details to Google Sheets
 6. Sends notifications via Telegram
 

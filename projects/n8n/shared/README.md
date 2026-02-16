@@ -2,7 +2,7 @@
 
 Reusable workflows called by multiple projects.
 
-## google-drive-folder-id-lookup.json
+## gdrive-recursion.json
 
 Resolves folder paths to Google Drive IDs. n8n requires IDs, not paths.
 

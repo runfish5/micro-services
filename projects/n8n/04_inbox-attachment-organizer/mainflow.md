@@ -190,7 +190,7 @@ Both AI nodes use an LLM with structured output support.
   - `data.class_confidence`: `0.0-1.0` | `UNK`
 - **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`. Unsupported MIME types return `status: "unresolved"` with resolver_hint.
 
-### 2. google-drive-folder-id-lookup
+### 2. gdrive-recursion
 - **Called by**: Call 'gdrive-recursion'
 - **Purpose**: Finds or creates Google Drive folder structure
 - **Requirements**: PathToIDLookup Google Sheet (columns: `path | folder_id | child_ids | last_update`)

@@ -13,7 +13,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'Steward_Deals',\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  priceCheckerWorkflowId: 'YOUR_PRICE_CHECKER_WORKFLOW_ID',\n  chatId: 'YOUR_CHAT_ID_1',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
+        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'Steward_Deals',\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  chatId: 'YOUR_CHAT_ID_1',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -703,8 +703,10 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "={{ $('Config').first().json.priceCheckerWorkflowId }}",
-          "mode": "id"
+          "value": "YOUR_PRICE_CHECKER_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_PRICE_CHECKER_WORKFLOW_ID",
+          "cachedResultName": "price-checker"
         }
       },
       "type": "n8n-nodes-base.executeWorkflow",
