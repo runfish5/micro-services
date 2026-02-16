@@ -310,7 +310,7 @@
           "__rl": true,
           "value": "YOUR_BILLING_LEDGER_SHEET_ID",
           "mode": "list",
-          "cachedResultName": "2505_Invoices",
+          "cachedResultName": "Billing_Ledger",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_BILLING_LEDGER_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
@@ -580,7 +580,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (financial, actionable, informational, Other)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *gdrive-recursion*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"2505_Invoices\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (financial, actionable, informational, Other)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *gdrive-recursion*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Google Sheet named \"Billing_Ledger\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
         "height": 896,
         "width": 544
       },
@@ -1426,6 +1426,22 @@
           "name": "gmail-26-inboxOrg"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "⚙️ gdrive-recursion params\n---\ntarget_path: ={{ $json['folder-path'] }}\nroot_folder_id: 1tiI-FHH-yeiWjku8jU5dClDRFERIe4gS\nroot_path: /Accounting",
+        "height": 160,
+        "width": 260,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4080,
+        1448
+      ],
+      "id": "a1b2c3d4-param-backup-gdrive-recursion",
+      "name": "Sticky Note26"
     }
   ],
   "connections": {

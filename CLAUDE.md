@@ -70,6 +70,7 @@ n8n workflows are JSON-based node configurations. Key practices:
 - **Use execution logs and debug mode** to trace data transformations between nodes.
 - **Replace triggers with Manual Trigger** when testing to avoid waiting for polling intervals.
 - **Republish subworkflows** after changes - parent workflows call the published version, not your draft.
+- **Sticky note behind Execute Workflow nodes**: n8n's UI can silently clear `workflowInputs` when re-selecting a subworkflow. Always place a small sticky note (color 5, purple) directly behind each Execute Workflow node documenting the parameter values being passed (name: value, one per line). This serves as a quick-restore reference. When editing workflow JSON, verify these notes exist and are up to date.
 
 **`.st.json` files**: JSON Schema examples for LLM structured output (project 01).
 
