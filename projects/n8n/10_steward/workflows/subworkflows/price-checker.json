@@ -10,7 +10,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'YOUR_DEAL_FINDER_SHEET_ID',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  currency: input.currency || 'CHF',\n  chatId: input.chatId || 'YOUR_CHAT_ID_1'\n} }];"
+        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'Steward_Deals',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  currency: input.currency || 'CHF',\n  chatId: input.chatId || 'YOUR_CHAT_ID_1'\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

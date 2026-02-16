@@ -59,7 +59,7 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 - `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
 - `workflows/menu-handler.json` - Config-driven hub with AI routing (21 nodes + 1 sticky note)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
-- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (50 nodes)
+- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (38 nodes)
 - `workflows/subworkflows/price-checker.json` - Batch price checking engine (13 nodes)
 
 ### Documentation

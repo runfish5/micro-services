@@ -23,12 +23,13 @@ Tapping a button triggers the corresponding subworkflow.
 
 ## Workflows
 
-| File | Purpose | Activation |
-|------|---------|------------|
-| `daily-briefing.json` | Calendar + buttons message | Schedule (7 AM) |
-| `menu-handler.json` | Button tap router | Always on (webhook) |
-| `subworkflows/learning-notes.json` | Notion AI summary | Called by menu-handler |
-| `subworkflows/deal-finder.json` | Stub | Called by menu-handler |
+| File | Purpose | Activation | |
+|------|---------|------------|-|
+| `daily-briefing.json` | Calendar + buttons message | Schedule (7 AM) | 📅 |
+| `menu-handler.json` | Config-driven hub with AI routing | Always on (webhook) | |
+| `subworkflows/learning-notes.json` | Notion AI summary | Called by menu-handler | |
+| `subworkflows/deal-finder.json` | Shopping advisor + price tracker | Called by menu-handler | [📊 headers](workflows/mainflow.md#google-sheet-schemas) |
+| `subworkflows/price-checker.json` | Batch price checking engine | Called by daily-briefing + deal-finder | [📊 headers](workflows/mainflow.md#google-sheet-schemas) |
 
 ## Button Actions
 
@@ -36,11 +37,11 @@ Tapping a button triggers the corresponding subworkflow.
 |--------|--------|------------|
 | Expenses | Active | Calls expense-trend-report (project 04) - sends chart + insights |
 | Learning Notes | Active | Searches Notion, AI-summarizes notes, sends to Telegram |
-| Deal Finder | Stub | Responds "not yet set up" |
+| Deal Finder | Active | Researches deals via Perplexity, tracks product prices from URLs |
 
 ## Setup
 
-1. Import all 4 workflows into n8n
+1. Import all 5 workflows into n8n
 2. In `menu-handler.json`, update the 3 Execute Workflow node IDs to match actual workflow IDs
 3. Activate `menu-handler.json` (must be always-on for button taps)
 4. `daily-briefing.json` runs on schedule or test via Manual Trigger

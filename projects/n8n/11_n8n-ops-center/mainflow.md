@@ -173,6 +173,7 @@ Telegram Trigger
 |----------|-------------|-------|
 | FailedItems | `YOUR_FAILEDITEMS_SHEET_ID` | gid=0 |
 | Billing_Ledger | `YOUR_BILLING_LEDGER_SHEET_ID` | gid=0 |
+| Steward_Deals | — | Requirements, Tracked Prices |
 | n8n API | `https://YOUR_N8N_INSTANCE.up.railway.app` | - |
 
 ## Commands Reference

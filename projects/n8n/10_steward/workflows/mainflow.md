@@ -243,7 +243,9 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor with price tracking and Perplexity research. Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking and Perplexity research (36 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+
+Remove, pause, and resume share a single "Modify Requirement" branch. All branches converge to one shared Send Reply Telegram node.
 
 ### Commands
 
@@ -271,41 +273,44 @@ Personal shopping advisor with price tracking and Perplexity research. Tracks sp
 ### Flow Diagram
 
 ```
-Execute Workflow Trigger
-  ↓
-Config (sheet ID, tracking sheet, price checker workflow ID)
-  ↓
-Parse Command → Route Operation (9 outputs)
-                    |
-                    |-- digest       → Load Requirements → Filter Active → Check Empty
-                    |                                                         |-- empty → Send Empty Message
-                    |                                                         |-- has items → Loop → Perplexity → Format → Collect → Build Digest → Send
-                    |
-                    |-- add          → Append Requirement → Confirm Add
-                    |
-                    |-- remove       → Load for Remove → Find Row → Check Found
-                    |                                                    |-- found → Delete Row → Confirm Remove
-                    |                                                    |-- not found → Not Found message
-                    |
-                    |-- pause        → Load → Find → Check Found → Update to Paused → Confirm
-                    |
-                    |-- resume       → Load → Find → Check Found → Update to Active → Confirm
-                    |
-                    |-- track        → Fetch Product Page (HTTP) → Parse Product Page (JSON-LD/OG/regex)
-                    |                   → Append Tracked Item (Sheets) → Confirm Track (Telegram)
-                    |
-                    |-- untrack      → Load Tracked for Untrack → Find Tracked Row → Check Tracked Found
-                    |                                                                    |-- found → Delete → Confirm
-                    |                                                                    |-- not found → Not Found
-                    |
-                    |-- tracked      → Load All Tracked → Format Tracked List → Send Tracked List
-                    |
-                    └-- check_prices → Execute Price Checker (calls price-checker.json)
+Execute Workflow Trigger → Config → Parse Command → Route Operation (9 outputs)
+  |
+  |-- [0 digest] → Load Requirements → Filter Active → Check Empty
+  |                                       (empty) → Send Reply
+  |                                       (items) → Loop → Perplexity → Format → Loop
+  |                                                   (done) → Collect → Build Digest → Send Reply
+  |
+  |-- [1 add] → Append Requirement → Build Add Response → Send Reply
+  |
+  |-- [2 remove] ─┐
+  |-- [3 pause]  ──┼→ Load for Modify → Find & Route → Check Found
+  |-- [4 resume] ─┘     (true) → Action Switch
+  |                                 ├─ [remove] → Delete Requirement → Build Modify Response → Send Reply
+  |                                 └─ [pause/resume] → Update Status → Build Modify Response → Send Reply
+  |                      (false) → Build Not Found → Send Reply
+  |
+  |-- [5 track] → Fetch Page → Parse Page → Append Tracked → Build Track Response → Send Reply
+  |
+  |-- [6 untrack] → Load Tracked → Find Tracked → Check Tracked Found
+  |                    (true) → Delete Tracked → Build Untrack Response → Send Reply
+  |                    (false) → Build Untrack Not Found → Send Reply
+  |
+  |-- [7 tracked] → Load All Tracked → Format Tracked List → Send Reply
+  |
+  └── [8 check] → Execute Price Checker (calls price-checker.json)
 ```
 
 ### Google Sheet Schemas
 
-**Requirements tab** — for category-based Perplexity research:
+**`Steward_Deals`** — two tabs:
+
+#### Requirements tab — category-based Perplexity research
+
+Copy-paste this header row into your sheet:
+
+```
+category	constraints	max_price	priority	status
+```
 
 | Column | Type | Example |
 |--------|------|---------|
@@ -315,7 +320,13 @@ Parse Command → Route Operation (9 outputs)
 | priority | string | high / medium / low |
 | status | string | active / paused |
 
-**Tracked Prices tab** — for URL-based price tracking:
+#### Tracked Prices tab — URL-based price tracking
+
+Copy-paste this header row into your sheet:
+
+```
+url	product_name	domain	current_price	currency	previous_price	lowest_price	highest_price	first_tracked	last_checked	status	notify_mode	price_threshold
+```
 
 | Column | Type | Example |
 |--------|------|---------|
@@ -369,7 +380,7 @@ Focus on products actually available in {{ region }}.
 
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
-| `sheetId` | `YOUR_DEAL_FINDER_SHEET_ID` | Google Sheet document ID |
+| `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `sheetName` | `Requirements` | Sheet/tab name for requirements |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name for price tracking |
 | `priceCheckerWorkflowId` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` | ID of price-checker.json subworkflow |
@@ -444,7 +455,7 @@ Example `priceSection`:
 
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
-| `sheetId` | `YOUR_DEAL_FINDER_SHEET_ID` | Google Sheet document ID |
+| `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name |
 | `currency` | `CHF` | Currency code |
 | `chatId` | `YOUR_CHAT_ID_1` | Telegram chat (for future alerts) |
