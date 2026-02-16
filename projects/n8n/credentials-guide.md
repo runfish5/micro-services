@@ -45,6 +45,16 @@ For bot notifications (optional).
 - Create bot via [@BotFather](https://t.me/botfather), get token
 - n8n: Credentials → Add → Telegram
 
+### Brave Search
+
+For factual web lookups (used by steward's menu-handler).
+
+- 2'000 free requests/month
+- n8n: Credentials → Add → **Header Auth**
+- Name: `X-Subscription-Token`, Value: your API key
+- Get API key at [brave.com/search/api](https://brave.com/search/api/)
+
+
 ### n8n + Google Apps Script Authentication
 
 When n8n writes to Google Sheets via API, the `onEdit` trigger does NOT fire (Google limitation). To call Apps Script from n8n, use the Execution API.

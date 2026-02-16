@@ -527,6 +527,21 @@
     },
     {
       "parameters": {
+        "content": "If stopped here →\n[credentials-guide.md](https://github.com/uniqued4ve/micro-services/blob/main/projects/n8n/credentials-guide.md#brave-search)",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10200,
+        4040
+      ],
+      "id": "b7e2c1a0-3f44-4e8d-9a12-5d6e8f0b1c2d",
+      "name": "Sticky Note - Brave Setup"
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,

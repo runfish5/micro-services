@@ -453,14 +453,14 @@
     },
     {
       "parameters": {
-        "content": "### Convert File to Text - Workflow Inputs\nExecute Workflow inputs get cleared on re-import. Only **extraction** required here.\nCopy-paste this:\n```\n{{ $json._extraction || $('Build Output Schema & Filter').first().json._extraction || {} }}\n```",
+        "content": "### If stops here\n\nExecute Workflow inputs get cleared on re-import. Re-add the **extraction** input:\n```\n{{ $json._extraction || $('Build Output Schema & Filter').first().json._extraction || {} }}\n```",
         "height": 80,
         "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        112,
+        -332,
         -880
       ],
       "id": "fp-sticky-inputs",
