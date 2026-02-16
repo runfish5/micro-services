@@ -74,7 +74,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'HE11BD1klK-9ru2moDB70',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: '',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: false\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder for electronics, furniture, and retail items from Swiss retailers',\n    ready: false\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'HE11BD1klK-9ru2moDB70',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: '',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: false\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

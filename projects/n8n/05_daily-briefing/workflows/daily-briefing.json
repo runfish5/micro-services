@@ -56,12 +56,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const events = $input.all();\nconst lines = [];\n\nfor (const item of events) {\n  const ev = item.json;\n  // Skip empty items (alwaysOutputData sends one empty item when no events)\n  if (!ev.summary && !ev.start) continue;\n\n  const start = ev.start?.dateTime || ev.start?.date || '';\n  const end = ev.end?.dateTime || ev.end?.date || '';\n\n  // Format times (HH:MM)\n  let timeRange = '';\n  if (start.includes('T')) {\n    const s = new Date(start);\n    const e = new Date(end);\n    const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });\n    timeRange = `${fmt(s)}-${fmt(e)}`;\n  } else {\n    timeRange = 'All day';\n  }\n\n  lines.push(`${timeRange}  ${ev.summary || '(no title)'}`);\n}\n\nconst calendarBlock = lines.length > 0\n  ? lines.join('\\n')\n  : 'No events today';\n\nconst message = `\\u2600\\uFE0F Good morning! Your day:\\n${calendarBlock}`;\n\nreturn [{ json: { message } }];"
+        "jsCode": "// Calendar events from upstream\nconst events = $('Get Today\\'s Events').all();\nconst lines = [];\n\nfor (const item of events) {\n  const ev = item.json;\n  // Skip empty items (alwaysOutputData sends one empty item when no events)\n  if (!ev.summary && !ev.start) continue;\n\n  const start = ev.start?.dateTime || ev.start?.date || '';\n  const end = ev.end?.dateTime || ev.end?.date || '';\n\n  // Format times (HH:MM)\n  let timeRange = '';\n  if (start.includes('T')) {\n    const s = new Date(start);\n    const e = new Date(end);\n    const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });\n    timeRange = `${fmt(s)}-${fmt(e)}`;\n  } else {\n    timeRange = 'All day';\n  }\n\n  lines.push(`${timeRange}  ${ev.summary || '(no title)'}`);\n}\n\nconst calendarBlock = lines.length > 0\n  ? lines.join('\\n')\n  : 'No events today';\n\n// Price section from price-checker\nconst priceSection = $input.first().json.priceSection || '';\n\nconst message = `\\u2600\\uFE0F Good morning! Your day:\\n${calendarBlock}${priceSection}`;\n\nreturn [{ json: { message } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        752,
+        1184,
         144
       ],
       "id": "7dd737b0-7c4c-4c14-955f-01356f83d2b9",
@@ -78,7 +78,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        960,
+        1392,
         144
       ],
       "id": "7cb8f9c2-7b6b-4f4d-b45b-1c6d6ce204c2",
@@ -87,9 +87,9 @@
     },
     {
       "parameters": {
-        "content": "## Daily Briefing\n\nSends calendar summary every morning at 7 AM.\n\nManual Trigger wired for testing.",
-        "height": 160,
-        "width": 280
+        "content": "## Daily Briefing\n\nSends calendar summary + price tracker report every morning at 7 AM.\n\n**Flow:** Schedule/Manual → Calendar → Price Check → Format → Telegram\n\nManual Trigger wired for testing.",
+        "height": 180,
+        "width": 320
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -117,7 +117,7 @@
     },
     {
       "parameters": {
-        "content": "## Mode A: Single Message\nActive by default. Standalone briefing - no buttons, no dependencies.",
+        "content": "## Mode A: Single Message\nActive by default. Calendar + price tracker, no inline buttons.",
         "height": 100,
         "width": 320
       },
@@ -129,7 +129,38 @@
       ],
       "id": "087f3373-9453-4ecd-bdff-059d16cad7e9",
       "name": "Sticky - Mode A"
-    }  ],
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass calendar events forward and prepare price check input\nconst events = $input.all();\nreturn events;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -40
+      ],
+      "id": "db100001-0001-0001-0001-000000000001",
+      "name": "Prepare Price Check"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_PRICE_CHECKER_WORKFLOW_ID",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        -40
+      ],
+      "id": "db100001-0001-0001-0001-000000000002",
+      "name": "Check Prices"
+    }
+  ],
   "connections": {
     "Schedule Trigger": {
       "main": [
@@ -154,6 +185,28 @@
       ]
     },
     "Get Today's Events": {
+      "main": [
+        [
+          {
+            "node": "Prepare Price Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Price Check": {
+      "main": [
+        [
+          {
+            "node": "Check Prices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Prices": {
       "main": [
         [
           {

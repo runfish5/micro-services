@@ -1,6 +1,6 @@
 # Steward
 
-> Morning calendar + config-driven personal assistant via Telegram. Two workflows + three subworkflows.
+> Morning calendar + price tracker + config-driven personal assistant via Telegram. Two workflows + four subworkflows.
 
 ## Architecture
 
@@ -12,7 +12,8 @@ menu-handler.json            Always-on hub with config-driven routing + conversa
   -> AI Classifier path      Free text → LLM routes to agents OR LLM backends
      -> expense-trend-report (project 04, via registry)
      -> learning-notes       Notion AI summary (via registry)
-     -> deal-finder          Shopping advisor (via registry)
+     -> deal-finder          Shopping advisor + price tracker (via registry)
+  -> price-checker          Batch price checking engine (called by daily-briefing + deal-finder)
      -> Groq Reasoning       Coding, analysis, creative tasks
      -> Brave Search         Factual lookups
      -> Perplexity           Research and comparisons
@@ -21,7 +22,7 @@ menu-handler.json            Always-on hub with config-driven routing + conversa
 ## daily-briefing.json
 
 ```
-Schedule Trigger (7 AM) --> Get Today's Events --> Format Message --> Send to Telegram
+Schedule Trigger (7 AM) --> Get Today's Events --> Prepare Price Check --> Check Prices (Execute Workflow) --> Format Message --> Send to Telegram
 Manual Trigger ---------/
 ```
 
@@ -32,8 +33,10 @@ Manual Trigger ---------/
 | Schedule Trigger | scheduleTrigger | Fires daily at 7 AM | -- |
 | Manual Trigger | manualTrigger | Testing entry point | -- |
 | Get Today's Events | googleCalendar | Fetches today's events, `alwaysOutputData: true` | Calendar: `uniqued4ve@gmail.com` |
-| Format Message | code | Builds `HH:MM-HH:MM Title` lines, falls back to "No events today" | -- |
-| Send to Telegram | telegram | Sends message + 3 inline keyboard buttons | Chat ID: `YOUR_CHAT_ID_1` |
+| Prepare Price Check | code | Passes calendar events forward for price-checker | -- |
+| Check Prices | executeWorkflow | Calls price-checker.json, returns `{ priceReport, priceSection }` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` |
+| Format Message | code | Builds calendar lines + appends price tracker section from Check Prices | References `$('Get Today\'s Events')` for calendar |
+| Send to Telegram | telegram | Sends combined message | Chat ID: `YOUR_CHAT_ID_1` |
 
 ### Inline Keyboard Buttons
 
@@ -85,7 +88,7 @@ The Config code node defines all available agents as a JSON registry. To add a n
 const agents = {
   expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
   learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: false },
-  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Shopping and deal research',  ready: false }
+  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true  }
 };
 ```
 
@@ -240,9 +243,11 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor that stores product requirements in Google Sheets and uses Perplexity to research the best current options. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking and Perplexity research. Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
 
 ### Commands
+
+**Requirement commands (category-based research):**
 
 | Command | Example | Action |
 |---------|---------|--------|
@@ -253,33 +258,54 @@ Personal shopping advisor that stores product requirements in Google Sheets and 
 | `/deals pause <category>` | `/deals pause phone` | Pause category (won't appear in digests) |
 | `/deals resume <category>` | `/deals resume phone` | Resume paused category |
 
+**Tracking commands (URL-based price tracking):**
+
+| Command | Example | Action |
+|---------|---------|--------|
+| `/deals track <url>` | `/deals track https://digitec.ch/...` | Track a product's price |
+| `<url>` (auto-detect) | `https://digitec.ch/... track this` | Auto-detected URL → track |
+| `/deals tracked` | `/deals tracked` | List all tracked items |
+| `/deals untrack <name>` | `/deals untrack raspberry` | Stop tracking (partial name match) |
+| `check_prices` | (internal) | Run price checker (delegates to price-checker.json) |
+
 ### Flow Diagram
 
 ```
 Execute Workflow Trigger
   ↓
-Config (sheet ID, chat ID)
+Config (sheet ID, tracking sheet, price checker workflow ID)
   ↓
-Parse Command → Route Operation
+Parse Command → Route Operation (9 outputs)
                     |
-                    |-- digest  → Load Requirements → Filter Active → Check Empty
-                    |                                                     |-- empty → Send Empty Message
-                    |                                                     |-- has items → Loop → Perplexity → Format → Collect → Build Digest → Send
+                    |-- digest       → Load Requirements → Filter Active → Check Empty
+                    |                                                         |-- empty → Send Empty Message
+                    |                                                         |-- has items → Loop → Perplexity → Format → Collect → Build Digest → Send
                     |
-                    |-- add     → Append Requirement → Confirm Add
+                    |-- add          → Append Requirement → Confirm Add
                     |
-                    |-- remove  → Load for Remove → Find Row → Check Found
-                    |                                              |-- found → Delete Row → Confirm Remove
-                    |                                              |-- not found → Not Found message
+                    |-- remove       → Load for Remove → Find Row → Check Found
+                    |                                                    |-- found → Delete Row → Confirm Remove
+                    |                                                    |-- not found → Not Found message
                     |
-                    |-- pause   → Load → Find → Check Found → Update to Paused → Confirm
+                    |-- pause        → Load → Find → Check Found → Update to Paused → Confirm
                     |
-                    └-- resume  → Load → Find → Check Found → Update to Active → Confirm
+                    |-- resume       → Load → Find → Check Found → Update to Active → Confirm
+                    |
+                    |-- track        → Fetch Product Page (HTTP) → Parse Product Page (JSON-LD/OG/regex)
+                    |                   → Append Tracked Item (Sheets) → Confirm Track (Telegram)
+                    |
+                    |-- untrack      → Load Tracked for Untrack → Find Tracked Row → Check Tracked Found
+                    |                                                                    |-- found → Delete → Confirm
+                    |                                                                    |-- not found → Not Found
+                    |
+                    |-- tracked      → Load All Tracked → Format Tracked List → Send Tracked List
+                    |
+                    └-- check_prices → Execute Price Checker (calls price-checker.json)
 ```
 
-### Google Sheet Schema
+### Google Sheet Schemas
 
-Create a Google Sheet named "Deal Finder Requirements" with these columns:
+**Requirements tab** — for category-based Perplexity research:
 
 | Column | Type | Example |
 |--------|------|---------|
@@ -288,6 +314,35 @@ Create a Google Sheet named "Deal Finder Requirements" with these columns:
 | max_price | string | 800 CHF |
 | priority | string | high / medium / low |
 | status | string | active / paused |
+
+**Tracked Prices tab** — for URL-based price tracking:
+
+| Column | Type | Example |
+|--------|------|---------|
+| url | string | `https://digitec.ch/...` |
+| product_name | string | Raspberry Pi 5 8GB |
+| domain | string | digitec.ch |
+| current_price | number | 89.90 |
+| currency | string | CHF |
+| previous_price | number | 95.00 |
+| lowest_price | number | 85.00 |
+| highest_price | number | 99.00 |
+| first_tracked | string | 2026-02-08 |
+| last_checked | string | 2026-02-10 |
+| status | string | active / paused |
+| notify_mode | string | always / on_change / threshold |
+| price_threshold | number | 80.00 |
+
+### Price Extraction Strategy
+
+When tracking a URL, the Parse Product Page node extracts product name and price using a 4-strategy cascade:
+
+1. **JSON-LD** (`<script type="application/ld+json">` with `@type: Product`) — most reliable, used by most e-commerce sites for SEO
+2. **Open Graph meta** (`product:price:amount`) — common on many retailers
+3. **HTML `<title>` tag** — fallback for product name
+4. **Regex** — Swiss price patterns (`89.90 CHF`, `CHF 89.90`, `89.–`)
+
+If all strategies fail, the item is still tracked with price as `null` ("checking...") and retried on next price check.
 
 ### Perplexity Prompt Template
 
@@ -315,7 +370,9 @@ Focus on products actually available in {{ region }}.
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
 | `sheetId` | `YOUR_DEAL_FINDER_SHEET_ID` | Google Sheet document ID |
-| `sheetName` | `Requirements` | Sheet/tab name |
+| `sheetName` | `Requirements` | Sheet/tab name for requirements |
+| `trackingSheetName` | `Tracked Prices` | Sheet/tab name for price tracking |
+| `priceCheckerWorkflowId` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` | ID of price-checker.json subworkflow |
 | `chatId` | `YOUR_CHAT_ID_1` | Telegram chat for responses |
 | `region` | `Switzerland` | Country/region for shopping |
 | `retailers` | `Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot` | Comma-separated retailer list |
@@ -326,36 +383,79 @@ Callers can override any of these by passing values in the Execute Workflow inpu
 { "region": "Germany", "currency": "EUR", "retailers": "Amazon.de, Saturn, MediaMarkt" }
 ```
 
-### Node Details
-
-| Node | Type | Purpose |
-|------|------|---------|
-| Config | code | Merges defaults with input overrides |
-| Parse Command | code | Parses `/deals` command variants, extracts operation/category/constraints |
-| Route Operation | switch | 5 outputs: digest, add, remove, pause, resume |
-| Load Requirements | googleSheets | Reads all rows from requirements sheet |
-| Filter Active | code | Filters to status=active, optional category filter |
-| Check Empty | if | Routes empty results to message vs. Perplexity loop |
-| Loop Requirements | splitInBatches | Processes one requirement at a time |
-| Perplexity Research | perplexity | Swiss shopping research via Perplexity API |
-| Format Result | code | Adds emoji header, formats Perplexity response |
-| Collect Results | aggregate | Aggregates all formatted results |
-| Build Digest | code | Combines results into final Telegram message |
-| Send Digest | telegram | Sends digest with Markdown formatting |
-| Append Requirement | googleSheets (append) | Adds new row to sheet |
-| Delete Row | googleSheets (delete) | Removes row by index |
-| Update to Paused/Active | googleSheets (update) | Changes status field |
-
 ### Credentials
 
 | Service | n8n Credential Type | Purpose |
 |---------|-------------------|---------|
-| Google Sheets | Google Sheets OAuth2 (`CREDENTIAL_ID_GOOGLE_DRIVE`) | Read/write requirements |
+| Google Sheets | Google Sheets OAuth2 (`CREDENTIAL_ID_GOOGLE_DRIVE`) | Read/write requirements + tracked prices |
 | Perplexity | Built-in Perplexity API (`CREDENTIAL_ID_PERPLEXITY`) | Shopping research |
 | Telegram | Built-in Telegram API (`CREDENTIAL_ID_TELEGRAM`) | Send results |
 
 ### Post-Import Setup
 
-1. Create Google Sheet with the schema above
-2. Update Config node with your sheet ID
+1. Create Google Sheet with both tabs (Requirements + Tracked Prices) using the schemas above
+2. Update Config node with your sheet ID and price-checker workflow ID
 3. Verify Perplexity and Telegram credential IDs match your n8n instance
+
+## price-checker.json (Subworkflow)
+
+Batch price-checking engine. Called by daily-briefing (on schedule) or by deal-finder's `check_prices` operation (on demand). Reads all active tracked items, fetches each product page, extracts current price, compares with stored price, updates the sheet, and returns a formatted report.
+
+### Flow Diagram
+
+```
+Execute Workflow Trigger → Config → Load Tracked (Sheets) → Filter Active → Empty?
+                                                                              |-- empty → Return Empty report
+                                                                              |-- has items → Loop (batch=1)
+                                                                                               ↓
+                                                                                          Fetch Page (HTTP)
+                                                                                               ↓
+                                                                                          Extract & Compare (Code)
+                                                                                               ↓
+                                                                                          Update Row (Sheets)
+                                                                                               ↓
+                                                                                          Loop (back)
+                                                                                               ↓ (done)
+                                                                                          Collect Results → Build Report → Return
+```
+
+### Notify Modes
+
+| Mode | Behavior |
+|------|----------|
+| `always` | Item appears in every price report |
+| `on_change` | Only appears when price changed since last check |
+| `threshold` | Only appears when price drops below `price_threshold` (Phase 3) |
+
+### Output Format
+
+Returns `{ priceReport, priceSection }` where:
+- `priceReport`: Array of item objects with price change details
+- `priceSection`: Pre-formatted Markdown string for embedding in briefing messages
+
+Example `priceSection`:
+```
+📍 *Price Tracker* (2 items)
+  Raspberry Pi 5 8GB: 89.90 CHF ➡️
+  Samsung Galaxy S25: 799 → 749 CHF 📉 (-6.3%)
+```
+
+### Config Parameters
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `sheetId` | `YOUR_DEAL_FINDER_SHEET_ID` | Google Sheet document ID |
+| `trackingSheetName` | `Tracked Prices` | Sheet/tab name |
+| `currency` | `CHF` | Currency code |
+| `chatId` | `YOUR_CHAT_ID_1` | Telegram chat (for future alerts) |
+
+### Credentials
+
+| Service | n8n Credential Type | Purpose |
+|---------|-------------------|---------|
+| Google Sheets | Google Sheets OAuth2 (`CREDENTIAL_ID_GOOGLE_DRIVE`) | Read/update tracked prices |
+
+### Post-Import Setup
+
+1. Note the workflow ID after importing — update deal-finder Config's `priceCheckerWorkflowId` and daily-briefing's Check Prices node
+2. Ensure the "Tracked Prices" tab exists in the Google Sheet with column headers

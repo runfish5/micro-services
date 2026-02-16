@@ -1,0 +1,351 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-600, 300],
+      "id": "pc100001-0001-0001-0001-000000000001",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'YOUR_DEAL_FINDER_SHEET_ID',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  currency: input.currency || 'CHF',\n  chatId: input.chatId || 'YOUR_CHAT_ID_1'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 300],
+      "id": "pc100001-0001-0001-0001-000000000002",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-180, 300],
+      "id": "pc100001-0001-0001-0001-000000000003",
+      "name": "Load Tracked",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst active = items.filter(i => i.json.url && (i.json.status || '').toLowerCase() === 'active');\n\nif (active.length === 0) {\n  return [{ json: { empty: true } }];\n}\n\nreturn active;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 300],
+      "id": "pc100001-0001-0001-0001-000000000004",
+      "name": "Filter Active"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [260, 300],
+      "id": "pc100001-0001-0001-0001-000000000005",
+      "name": "Empty?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { priceReport: [], priceSection: '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 220],
+      "id": "pc100001-0001-0001-0001-000000000006",
+      "name": "Return Empty"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [500, 380],
+      "id": "pc100001-0001-0001-0001-000000000007",
+      "name": "Loop Items"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 460],
+      "id": "pc100001-0001-0001-0001-000000000008",
+      "name": "Fetch Page",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.body || $input.first().json.data || '';\nconst tracked = $('Loop Items').first().json;\nconst currency = $('Config').first().json.currency;\nconst url = tracked.url;\n\nlet newPrice = null;\n\n// Strategy 1: JSON-LD structured data\nconst jsonLdBlocks = html.match(/<script[^>]*type=[\"']application\\/ld\\+json[\"'][^>]*>[\\s\\S]*?<\\/script>/gi) || [];\nfor (const block of jsonLdBlocks) {\n  try {\n    const jsonStr = block.replace(/<script[^>]*>/, '').replace(/<\\/script>/, '');\n    const ld = JSON.parse(jsonStr);\n    const items = Array.isArray(ld) ? ld : [ld];\n    for (const item of items) {\n      if (item['@type'] === 'Product' || (item['@type']?.includes?.('Product'))) {\n        const offers = item.offers;\n        if (offers) {\n          const offer = Array.isArray(offers) ? offers[0] : offers;\n          if (offer.price) newPrice = parseFloat(offer.price);\n          else if (offer.lowPrice) newPrice = parseFloat(offer.lowPrice);\n        }\n      }\n    }\n  } catch (e) { /* skip */ }\n}\n\n// Strategy 2: Open Graph meta\nif (newPrice === null) {\n  const ogPrice = html.match(/<meta[^>]*property=[\"']product:price:amount[\"'][^>]*content=[\"']([^\"']+)[\"']/i);\n  if (ogPrice) newPrice = parseFloat(ogPrice[1]);\n}\n\n// Strategy 3: Regex for Swiss price patterns\nif (newPrice === null) {\n  const priceMatch = html.match(/(\\d+[.,]\\d{2})\\s*(?:CHF|\\.\\u2013)|CHF\\s*(\\d+[.,]\\d{2})|(?:CHF|Fr\\.)\\s*(\\d+)\\.\\u2013/);\n  if (priceMatch) {\n    const priceStr = priceMatch[1] || priceMatch[2] || priceMatch[3];\n    newPrice = parseFloat(priceStr.replace(',', '.'));\n  }\n}\n\nconst oldPrice = tracked.current_price != null && tracked.current_price !== '' ? Number(tracked.current_price) : null;\nconst today = new Date().toISOString().split('T')[0];\n\n// Determine change\nlet priceChanged = false;\nlet direction = 'unchanged';\nif (newPrice !== null && oldPrice !== null && newPrice !== oldPrice) {\n  priceChanged = true;\n  direction = newPrice < oldPrice ? 'down' : 'up';\n}\n\n// Update extremes\nlet lowestPrice = tracked.lowest_price != null && tracked.lowest_price !== '' ? Number(tracked.lowest_price) : null;\nlet highestPrice = tracked.highest_price != null && tracked.highest_price !== '' ? Number(tracked.highest_price) : null;\nif (newPrice !== null) {\n  if (lowestPrice === null || newPrice < lowestPrice) lowestPrice = newPrice;\n  if (highestPrice === null || newPrice > highestPrice) highestPrice = newPrice;\n}\n\n// Determine notification\nconst notifyMode = tracked.notify_mode || 'always';\nlet shouldNotify = false;\nif (newPrice !== null) {\n  if (notifyMode === 'always') shouldNotify = true;\n  else if (notifyMode === 'on_change') shouldNotify = priceChanged;\n  else if (notifyMode === 'threshold') {\n    const threshold = tracked.price_threshold != null && tracked.price_threshold !== '' ? Number(tracked.price_threshold) : null;\n    shouldNotify = threshold !== null && newPrice <= threshold;\n  }\n}\n\nreturn [{\n  json: {\n    url,\n    product_name: tracked.product_name,\n    domain: tracked.domain,\n    old_price: oldPrice,\n    new_price: newPrice,\n    currency,\n    previous_price: oldPrice,\n    current_price: newPrice !== null ? newPrice : oldPrice,\n    lowest_price: lowestPrice,\n    highest_price: highestPrice,\n    last_checked: today,\n    priceChanged,\n    direction,\n    shouldNotify,\n    notify_mode: notifyMode\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 460],
+      "id": "pc100001-0001-0001-0001-000000000009",
+      "name": "Extract & Compare"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_price": "={{ $json.current_price }}",
+            "previous_price": "={{ $json.previous_price }}",
+            "lowest_price": "={{ $json.lowest_price }}",
+            "highest_price": "={{ $json.highest_price }}",
+            "last_checked": "={{ $json.last_checked }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "handlingExtraData": "ignoreIt"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "url",
+              "lookupValue": "={{ $json.url }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1160, 460],
+      "id": "pc100001-0001-0001-0001-000000000010",
+      "name": "Update Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1600, 300],
+      "id": "pc100001-0001-0001-0001-000000000011",
+      "name": "Collect Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json.data || [];\nconst toNotify = results.filter(r => r.shouldNotify);\n\nif (toNotify.length === 0) {\n  return [{ json: { priceReport: [], priceSection: '' } }];\n}\n\nconst lines = toNotify.map(r => {\n  if (!r.priceChanged) {\n    return `  ${r.product_name}: ${r.new_price} ${r.currency} \\u27a1\\ufe0f`;\n  }\n  const pct = (((r.new_price - r.old_price) / r.old_price) * 100).toFixed(1);\n  const arrow = r.direction === 'down' ? '\\ud83d\\udcc9' : '\\ud83d\\udcc8';\n  return `  ${r.product_name}: ${r.old_price} \\u2192 ${r.new_price} ${r.currency} ${arrow} (${pct > 0 ? '+' : ''}${pct}%)`;\n});\n\nconst priceSection = `\\n\\n\\ud83d\\udccd *Price Tracker* (${toNotify.length} item${toNotify.length === 1 ? '' : 's'})\\n${lines.join('\\n')}`;\n\nreturn [{ json: { priceReport: toNotify, priceSection } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, 300],
+      "id": "pc100001-0001-0001-0001-000000000012",
+      "name": "Build Report"
+    },
+    {
+      "parameters": {
+        "content": "## Price Checker\n\nBatch price-checking engine. Called by daily-briefing (schedule) or deal-finder (on-demand).\n\n**Flow:**\n1. Load all tracked items from Google Sheet\n2. Filter to active items only\n3. For each: HTTP GET product page, extract price (JSON-LD / OG meta / regex)\n4. Compare with stored price, update sheet (current, previous, low, high)\n5. Build report with items that should be notified\n6. Return `{ priceReport, priceSection }` to caller\n\n**Notify modes:**\n- `always` - include in every report\n- `on_change` - only when price changed\n- `threshold` - only when price drops below threshold (Phase 3)\n\n**Price extraction strategies:**\n1. JSON-LD `@type: Product` (most reliable)\n2. Open Graph `product:price:amount`\n3. Regex for Swiss price patterns (CHF)\n4. Graceful degradation if all fail",
+        "height": 460,
+        "width": 340
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-600, -160],
+      "id": "pc100001-0001-0001-0001-000000000013",
+      "name": "Sticky Note - Overview"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Load Tracked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Tracked": {
+      "main": [
+        [
+          {
+            "node": "Filter Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          {
+            "node": "Empty?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empty?": {
+      "main": [
+        [
+          {
+            "node": "Return Empty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "Extract & Compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Compare": {
+      "main": [
+        [
+          {
+            "node": "Update Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [
+          {
+            "node": "Build Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

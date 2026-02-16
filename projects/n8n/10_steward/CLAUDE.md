@@ -9,7 +9,8 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 ## How It Works
 
 1. `daily-briefing.json` fires at 7 AM (or manual trigger), fetches Google Calendar events for today
-2. Formats a message with time ranges and event titles, appends 3 inline keyboard buttons
+2. Calls `price-checker.json` to get current prices for tracked products
+3. Formats a combined message with calendar + price tracker section, appends 3 inline keyboard buttons
 3. Sends to Telegram; user taps a button whenever they want
 4. `menu-handler.json` (always-on) receives the callback query, validates the chat ID
 5. **Config node** provides the agent registry (name → workflowId + description)
@@ -26,7 +27,7 @@ The menu-handler uses a **Config code node** as the single source of truth for a
 const agents = {
   expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
   learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: false },
-  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Shopping and deal research',  ready: false }
+  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true  }
 };
 ```
 
@@ -58,7 +59,8 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 - `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
 - `workflows/menu-handler.json` - Config-driven hub with AI routing (21 nodes + 1 sticky note)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
-- `workflows/subworkflows/deal-finder.json` - Shopping advisor with Sheets CRUD + Perplexity
+- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (50 nodes)
+- `workflows/subworkflows/price-checker.json` - Batch price checking engine (13 nodes)
 
 ### Documentation
 - `workflows/mainflow.md` - Node breakdown, credentials, "how to add agent" guide

@@ -13,7 +13,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'YOUR_DEAL_FINDER_SHEET_ID',\n  sheetName: 'Requirements',\n  chatId: 'YOUR_CHAT_ID_1',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
+        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'YOUR_DEAL_FINDER_SHEET_ID',\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  priceCheckerWorkflowId: 'YOUR_PRICE_CHECKER_WORKFLOW_ID',\n  chatId: 'YOUR_CHAT_ID_1',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse incoming command from menu-handler\n// Input: { action: 'deals', chatId: '...', text: '...' }\n// text examples:\n//   \"\" or \"phone\" → digest flow\n//   \"add phone 800CHF flagship camera\" → add flow\n//   \"remove phone\" → remove flow\n\nconst input = $input.first().json;\nconst text = (input.text || '').trim();\nconst chatId = input.chatId || $('Config').first().json.chatId;\n\nlet operation = 'digest';\nlet category = '';\nlet constraints = '';\nlet maxPrice = '';\n\nif (text.toLowerCase().startsWith('add ')) {\n  operation = 'add';\n  // Parse: add <category> <price> <constraints...>\n  // Example: add phone 800CHF flagship good camera\n  const parts = text.substring(4).trim().split(/\\s+/);\n  category = parts[0] || '';\n  \n  // Find price (contains CHF, EUR, or just digits)\n  const priceIdx = parts.findIndex((p, i) => i > 0 && /^\\d+/.test(p));\n  if (priceIdx > 0) {\n    maxPrice = parts[priceIdx];\n    constraints = parts.slice(priceIdx + 1).join(' ');\n  } else {\n    constraints = parts.slice(1).join(' ');\n  }\n  \n} else if (text.toLowerCase().startsWith('remove ')) {\n  operation = 'remove';\n  category = text.substring(7).trim();\n  \n} else if (text.toLowerCase().startsWith('pause ')) {\n  operation = 'pause';\n  category = text.substring(6).trim();\n  \n} else if (text.toLowerCase().startsWith('resume ')) {\n  operation = 'resume';\n  category = text.substring(7).trim();\n  \n} else if (text) {\n  // Single word = category filter for digest\n  operation = 'digest';\n  category = text.toLowerCase();\n}\n\nreturn [{\n  json: {\n    operation,\n    category: category.toLowerCase(),\n    constraints,\n    maxPrice,\n    chatId\n  }\n}];"
+        "jsCode": "// Parse incoming command from menu-handler\nconst input = $input.first().json;\nconst text = (input.text || '').trim();\nconst chatId = input.chatId || $('Config').first().json.chatId;\n\n// Internal operations (called by other workflows)\nif (text.toLowerCase() === 'check_prices') {\n  return [{ json: { operation: 'check_prices', chatId } }];\n}\n\n// Explicit track command\nif (text.toLowerCase().startsWith('track ')) {\n  const remainder = text.substring(6).trim();\n  const urlMatch = remainder.match(/https?:\\/\\/\\S+/);\n  const url = urlMatch ? urlMatch[0] : '';\n  const notifyMode = remainder.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Untrack / stop tracking\nif (text.toLowerCase().match(/^(untrack|stop tracking|stop)\\s/)) {\n  const identifier = text.replace(/^(untrack|stop tracking|stop)\\s+/i, '').trim();\n  return [{ json: { operation: 'untrack', identifier, chatId } }];\n}\n\n// List tracked items\nif (text.toLowerCase().match(/^(tracked|list|tracking|what am i tracking)/)) {\n  return [{ json: { operation: 'tracked', chatId } }];\n}\n\n// URL detection — message contains a URL, treat as track\nconst urlInText = text.match(/https?:\\/\\/\\S+/);\nif (urlInText && !['add','remove','pause','resume','digest'].some(op => text.toLowerCase().startsWith(op))) {\n  const url = urlInText[0];\n  const notifyMode = text.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Original operations (unchanged)\nlet operation = 'digest';\nlet category = '';\nlet constraints = '';\nlet maxPrice = '';\n\nif (text.toLowerCase().startsWith('add ')) {\n  operation = 'add';\n  const parts = text.substring(4).trim().split(/\\s+/);\n  category = parts[0] || '';\n  const priceIdx = parts.findIndex((p, i) => i > 0 && /^\\d+/.test(p));\n  if (priceIdx > 0) {\n    maxPrice = parts[priceIdx];\n    constraints = parts.slice(priceIdx + 1).join(' ');\n  } else {\n    constraints = parts.slice(1).join(' ');\n  }\n} else if (text.toLowerCase().startsWith('remove ')) {\n  operation = 'remove';\n  category = text.substring(7).trim();\n} else if (text.toLowerCase().startsWith('pause ')) {\n  operation = 'pause';\n  category = text.substring(6).trim();\n} else if (text.toLowerCase().startsWith('resume ')) {\n  operation = 'resume';\n  category = text.substring(7).trim();\n} else if (text) {\n  operation = 'digest';\n  category = text.toLowerCase();\n}\n\nreturn [{\n  json: {\n    operation,\n    category: category.toLowerCase(),\n    constraints,\n    maxPrice,\n    chatId\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -160,6 +160,102 @@
               },
               "renameOutput": true,
               "outputKey": "resume"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-track",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "track",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "track"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-untrack",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "untrack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "untrack"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-tracked",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "tracked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "tracked"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-check-prices",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "check_prices",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "check_prices"
             }
           ]
         },
@@ -932,8 +1028,308 @@
     },
     {
       "parameters": {
-        "content": "## Deal Finder\n\nPersonal shopping advisor using Perplexity to research products.\nRegion, retailers, and currency are configurable in the Config node.\n\n**Commands:**\n- `/deals` - Get recommendations for all active categories\n- `/deals phone` - Get recommendations for specific category\n- `/deals add phone 800CHF flagship camera` - Add requirement\n- `/deals remove phone` - Remove requirement\n- `/deals pause phone` - Pause (won't appear in digests)\n- `/deals resume phone` - Resume paused requirement\n\n**Config (with defaults):**\n- `region`: Switzerland\n- `retailers`: Digitec, Galaxus, Toppreise, etc.\n- `currency`: CHF\n\nCallers can override via Execute Workflow input.",
-        "height": 380,
+        "url": "={{ $('Parse Command').first().json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 1200],
+      "id": "df100001-0001-0001-0001-000000000040",
+      "name": "Fetch Product Page"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.body || $input.first().json.data || '';\nconst url = $('Parse Command').first().json.url;\nconst currency = $('Config').first().json.currency;\n\nlet productName = 'Unknown Product';\nlet currentPrice = null;\n\n// Strategy 1: JSON-LD structured data\nconst jsonLdBlocks = html.match(/<script[^>]*type=[\"']application\\/ld\\+json[\"'][^>]*>[\\s\\S]*?<\\/script>/gi) || [];\nfor (const block of jsonLdBlocks) {\n  try {\n    const jsonStr = block.replace(/<script[^>]*>/, '').replace(/<\\/script>/, '');\n    const ld = JSON.parse(jsonStr);\n    const items = Array.isArray(ld) ? ld : [ld];\n    for (const item of items) {\n      if (item['@type'] === 'Product' || (item['@type']?.includes?.('Product'))) {\n        productName = item.name || productName;\n        const offers = item.offers;\n        if (offers) {\n          const offer = Array.isArray(offers) ? offers[0] : offers;\n          if (offer.price) currentPrice = parseFloat(offer.price);\n          else if (offer.lowPrice) currentPrice = parseFloat(offer.lowPrice);\n        }\n      }\n    }\n  } catch (e) { /* skip malformed JSON-LD */ }\n}\n\n// Strategy 2: Open Graph meta tags\nif (productName === 'Unknown Product') {\n  const ogTitle = html.match(/<meta[^>]*property=[\"']og:title[\"'][^>]*content=[\"']([^\"']+)[\"']/i);\n  if (ogTitle) productName = ogTitle[1].replace(/\\s*[|\\-\\u2013].*$/, '').trim();\n}\nif (currentPrice === null) {\n  const ogPrice = html.match(/<meta[^>]*property=[\"']product:price:amount[\"'][^>]*content=[\"']([^\"']+)[\"']/i);\n  if (ogPrice) currentPrice = parseFloat(ogPrice[1]);\n}\n\n// Strategy 3: HTML title fallback\nif (productName === 'Unknown Product') {\n  const titleTag = html.match(/<title[^>]*>([^<]+)<\\/title>/i);\n  if (titleTag) productName = titleTag[1].replace(/\\s*[|\\-\\u2013].*$/, '').trim();\n}\n\n// Strategy 4: Regex fallback for Swiss price patterns\nif (currentPrice === null) {\n  const priceMatch = html.match(/(\\d+[.,]\\d{2})\\s*(?:CHF|\\.\\u2013)|CHF\\s*(\\d+[.,]\\d{2})|(?:CHF|Fr\\.)\\s*(\\d+)\\.\\u2013/);\n  if (priceMatch) {\n    const priceStr = priceMatch[1] || priceMatch[2] || priceMatch[3];\n    currentPrice = parseFloat(priceStr.replace(',', '.'));\n  }\n}\n\n// Extract domain from URL\nconst domain = url.match(/https?:\\/\\/(?:www\\.)?([^/]+)/)?.[1] || '';\nconst today = new Date().toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    url,\n    product_name: productName,\n    domain,\n    current_price: currentPrice,\n    currency,\n    previous_price: null,\n    lowest_price: currentPrice,\n    highest_price: currentPrice,\n    first_tracked: today,\n    last_checked: today,\n    status: 'active',\n    notify_mode: $('Parse Command').first().json.notifyMode || 'always',\n    price_threshold: null,\n    chatId: $('Parse Command').first().json.chatId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 1200],
+      "id": "df100001-0001-0001-0001-000000000041",
+      "name": "Parse Product Page"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $json.url }}",
+            "product_name": "={{ $json.product_name }}",
+            "domain": "={{ $json.domain }}",
+            "current_price": "={{ $json.current_price }}",
+            "currency": "={{ $json.currency }}",
+            "previous_price": "",
+            "lowest_price": "={{ $json.lowest_price }}",
+            "highest_price": "={{ $json.highest_price }}",
+            "first_tracked": "={{ $json.first_tracked }}",
+            "last_checked": "={{ $json.last_checked }}",
+            "status": "={{ $json.status }}",
+            "notify_mode": "={{ $json.notify_mode }}",
+            "price_threshold": ""
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [720, 1200],
+      "id": "df100001-0001-0001-0001-000000000042",
+      "name": "Append Tracked Item",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Product Page').first().json.chatId }}",
+        "text": "=\ud83d\udccd Now tracking: *{{ $('Parse Product Page').first().json.product_name }}*\n\ud83d\udcb0 Current price: {{ $('Parse Product Page').first().json.current_price !== null ? $('Parse Product Page').first().json.current_price + ' ' + $('Parse Product Page').first().json.currency : 'checking...' }} ({{ $('Parse Product Page').first().json.domain }})\n\ud83d\udcca Updates: {{ $('Parse Product Page').first().json.notify_mode === 'on_change' ? 'only when price changes' : 'every day in briefing' }}\n\nUse /deals tracked to see all items.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 1200],
+      "id": "df100001-0001-0001-0001-000000000043",
+      "name": "Confirm Track",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [280, 1400],
+      "id": "df100001-0001-0001-0001-000000000044",
+      "name": "Load Tracked for Untrack",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find tracked item by name or URL substring\nconst identifier = ($('Parse Command').first().json.identifier || '').toLowerCase();\nconst items = $input.all();\n\nlet rowIndex = -1;\nlet matchedName = '';\nfor (let i = 0; i < items.length; i++) {\n  const row = items[i].json;\n  const name = (row.product_name || '').toLowerCase();\n  const url = (row.url || '').toLowerCase();\n  if (name.includes(identifier) || url.includes(identifier)) {\n    rowIndex = i + 2; // +2 for header row and 1-based index\n    matchedName = row.product_name || row.url;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    identifier,\n    rowIndex,\n    found: rowIndex > 0,\n    matchedName\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 1400],
+      "id": "df100001-0001-0001-0001-000000000045",
+      "name": "Find Tracked Row"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-tracked-found",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [720, 1400],
+      "id": "df100001-0001-0001-0001-000000000046",
+      "name": "Check Tracked Found"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "deleteType": "specificRows",
+        "rowsToDelete": "={{ $json.rowIndex }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [940, 1340],
+      "id": "df100001-0001-0001-0001-000000000047",
+      "name": "Delete Tracked Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=\u2705 Stopped tracking \"{{ $('Find Tracked Row').first().json.matchedName }}\"",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1160, 1340],
+      "id": "df100001-0001-0001-0001-000000000048",
+      "name": "Confirm Untrack",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=\u274c Item \"{{ $('Parse Command').first().json.identifier }}\" not found in tracked items",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 1480],
+      "id": "df100001-0001-0001-0001-000000000049",
+      "name": "Tracked Not Found",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.trackingSheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [280, 1640],
+      "id": "df100001-0001-0001-0001-000000000050",
+      "name": "Load All Tracked",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = $('Parse Command').first().json.chatId;\nconst activeItems = items.filter(i => i.json.url);\n\nif (activeItems.length === 0) {\n  return [{ json: { chatId, message: '\\ud83d\\udccb No tracked items.\\n\\nUse /deals track <url> to start tracking a product.' } }];\n}\n\nconst lines = activeItems.map((item, idx) => {\n  const r = item.json;\n  const statusIcon = r.status === 'paused' ? '\\u23f8\\ufe0f ' : '';\n  const priceInfo = r.current_price != null && r.current_price !== '' ? `${r.current_price} ${r.currency}` : 'checking...';\n\n  let changeInfo = '';\n  if (r.previous_price != null && r.previous_price !== '' && r.current_price != null && r.current_price !== '' && Number(r.previous_price) !== Number(r.current_price)) {\n    const prev = Number(r.previous_price);\n    const curr = Number(r.current_price);\n    const pct = (((curr - prev) / prev) * 100).toFixed(1);\n    const arrow = curr < prev ? '\\ud83d\\udcc9' : '\\ud83d\\udcc8';\n    changeInfo = ` (was ${prev}, ${pct > 0 ? '+' : ''}${pct}%) ${arrow}`;\n  }\n\n  const notifyLabel = r.notify_mode === 'on_change' ? '\\ud83d\\udd15 On change' : r.notify_mode === 'threshold' ? `\\ud83d\\udcb0 < ${r.price_threshold}` : '\\ud83d\\udd14 Daily';\n\n  return `${idx + 1}. ${statusIcon}*${r.product_name}*\\n   \\ud83d\\udcb0 ${priceInfo}${changeInfo}\\n   \\ud83d\\udd17 ${r.domain} | ${notifyLabel}`;\n});\n\nconst message = `\\ud83d\\udccb *Tracked Items* (${activeItems.length})\\n\\n${lines.join('\\n\\n')}`;\nreturn [{ json: { chatId, message } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 1640],
+      "id": "df100001-0001-0001-0001-000000000051",
+      "name": "Format Tracked List"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [720, 1640],
+      "id": "df100001-0001-0001-0001-000000000052",
+      "name": "Send Tracked List",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.priceCheckerWorkflowId }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [280, 1840],
+      "id": "df100001-0001-0001-0001-000000000053",
+      "name": "Execute Price Checker"
+    },
+    {
+      "parameters": {
+        "content": "## Deal Finder\n\nPersonal shopping advisor with price tracking and Perplexity research.\nRegion, retailers, and currency are configurable in the Config node.\n\n**Requirement Commands:**\n- `/deals` - Get recommendations for all active categories\n- `/deals phone` - Get recommendations for specific category\n- `/deals add phone 800CHF flagship camera` - Add requirement\n- `/deals remove phone` - Remove requirement\n- `/deals pause phone` - Pause requirement\n- `/deals resume phone` - Resume requirement\n\n**Tracking Commands:**\n- `/deals track <url>` - Track a product's price\n- `/deals tracked` - List all tracked items\n- `/deals untrack <name>` - Stop tracking an item\n- `check_prices` - Internal: run price checker\n\n**Config (with defaults):**\n- `region`: Switzerland\n- `retailers`: Digitec, Galaxus, Toppreise, etc.\n- `currency`: CHF\n\nCallers can override via Execute Workflow input.",
+        "height": 480,
         "width": 340
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -947,9 +1343,9 @@
     },
     {
       "parameters": {
-        "content": "### Google Sheet Schema\n\n| Column | Example |\n|--------|--------|\n| category | Phone |\n| constraints | flagship, good camera |\n| max_price | 800 CHF |\n| priority | high / medium / low |\n| status | active / paused |",
-        "height": 200,
-        "width": 280
+        "content": "### Google Sheet Schemas\n\n**Requirements tab:**\n| Column | Example |\n|--------|--------|\n| category | Phone |\n| constraints | flagship, good camera |\n| max_price | 800 CHF |\n| priority | high / medium / low |\n| status | active / paused |\n\n**Tracked Prices tab:**\n| Column | Example |\n|--------|--------|\n| url | https://digitec.ch/... |\n| product_name | Raspberry Pi 5 8GB |\n| domain | digitec.ch |\n| current_price | 89.90 |\n| currency | CHF |\n| previous_price | 95.00 |\n| lowest_price | 85.00 |\n| highest_price | 99.00 |\n| first_tracked | 2026-02-08 |\n| last_checked | 2026-02-10 |\n| status | active / paused |\n| notify_mode | always / on_change / threshold |\n| price_threshold | 80.00 |",
+        "height": 520,
+        "width": 340
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1028,6 +1424,34 @@
         [
           {
             "node": "Load for Resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Product Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Tracked for Untrack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load All Tracked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Price Checker",
             "type": "main",
             "index": 0
           }
@@ -1294,6 +1718,112 @@
         [
           {
             "node": "Confirm Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Product Page": {
+      "main": [
+        [
+          {
+            "node": "Parse Product Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Product Page": {
+      "main": [
+        [
+          {
+            "node": "Append Tracked Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Tracked Item": {
+      "main": [
+        [
+          {
+            "node": "Confirm Track",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Tracked for Untrack": {
+      "main": [
+        [
+          {
+            "node": "Find Tracked Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Tracked Row": {
+      "main": [
+        [
+          {
+            "node": "Check Tracked Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Tracked Found": {
+      "main": [
+        [
+          {
+            "node": "Delete Tracked Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tracked Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Tracked Row": {
+      "main": [
+        [
+          {
+            "node": "Confirm Untrack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load All Tracked": {
+      "main": [
+        [
+          {
+            "node": "Format Tracked List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Tracked List": {
+      "main": [
+        [
+          {
+            "node": "Send Tracked List",
             "type": "main",
             "index": 0
           }
