@@ -71,8 +71,44 @@
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
         "text": "={{ $json.message }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📊 Expenses",
+                    "additionalFields": {
+                      "callback_data": "briefing:expenses"
+                    }
+                  },
+                  {
+                    "text": "📚 Learning Notes",
+                    "additionalFields": {
+                      "callback_data": "briefing:learning"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🛍️ Deal Finder",
+                    "additionalFields": {
+                      "callback_data": "briefing:deals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -102,7 +138,7 @@
     },
     {
       "parameters": {
-        "content": "## Mode B: Multi-turn\nFor action buttons + menu routing, see [10_steward](https://github.com/runfish5/micro-services/tree/main/projects/n8n/10_steward) which adds inline keyboard buttons and menu-handler.json",
+        "content": "## Button Callbacks\n📊 briefing:expenses · 📚 briefing:learning · 🛍️ briefing:deals\nRouted by menu-handler.json in [10_steward](https://github.com/runfish5/micro-services/tree/main/projects/n8n/10_steward)",
         "height": 140,
         "width": 400
       },
@@ -117,7 +153,7 @@
     },
     {
       "parameters": {
-        "content": "## Mode A: Single Message\nActive by default. Calendar + price tracker, no inline buttons.",
+        "content": "## Standalone Briefing\nCalendar + price tracker with inline action buttons.\nCallbacks handled by menu-handler.json in project 10.",
         "height": 100,
         "width": 320
       },
