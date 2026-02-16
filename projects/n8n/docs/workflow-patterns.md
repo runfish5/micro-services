@@ -9,6 +9,7 @@ Apply when redesigning or debugging workflows. Stop reading if not relevant.
 | [Row Index](#pattern-1-row-index) | Batch table ops, wrong row deleted, data lost after API |
 | [Wait Optimization](#pattern-2-wait-optimization) | `Code→If→Wait→end` bloat, rate limits |
 | [Schema Minimalism](#pattern-3-schema-minimalism) | LLM extraction schemas, Billing_Ledger design |
+| [Memory Window](#pattern-4-memory-window) | Chat memory nodes, unbounded Postgres growth |
 
 ---
 
@@ -124,6 +125,20 @@ return results;
 
 ---
 
+## Pattern 4: Memory Window
+
+**Problem:** `memoryPostgresChat` with no limit loads full chat history every run — unbounded DB reads and token growth.
+
+**Solution:** Add `contextWindowLength` to cap messages loaded per turn.
+
+```json
+"contextWindowLength": 10
+```
+
+Rule of thumb: 8–12 for routers/classifiers, 3–5 for task agents.
+
+---
+
 ## Quick Decision Guide
 
 | Symptom | Pattern | Fix |
@@ -133,3 +148,4 @@ return results;
 | `Code→If→Wait→end` bloat | Wait Optimization | Move delay into Code node |
 | Rate limit errors | Both | Code node with delay loop + preserve indices |
 | Schema too large, LLM errors | Schema Minimalism | Remove derivable/CRM fields |
+| Chat memory growing, DB bloat | Memory Window | Add `contextWindowLength` to memoryPostgresChat |

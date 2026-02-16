@@ -54,7 +54,8 @@ projects/n8n/
 ├── 07_error-handler/                - Global error handler, classification, alerts
 ├── 08_8-hours-incident-resolver/    - Works thorugh a google sheet
 ├── 10_steward/                      - Personal assistant: briefing, dispatch, subworkflows
-└── 11_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
+├── 11_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
+└── 12_db-janitor/                   - Scheduled DB cleanup reporter (stub)
 ```
 
 Projects 02, 03, and 04 have their own `CLAUDE.md` files with detailed architecture documentation.
@@ -99,3 +100,4 @@ n8n workflows are JSON-based node configurations. Key practices:
 - `.claude/skills/n8n-executions/skill.md` - When to use MCP vs REST API
 - `projects/n8n/docs/row-index-pattern.md` - Batch table operations pattern
 - `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
+- `projects/n8n/docs/infra-ops.md` - Infrastructure, binary data mode, volume management

@@ -1,0 +1,289 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * 0"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ],
+      "id": "dj100001-0001-0001-0001-000000000001",
+      "name": "Weekly Schedule",
+      "webhookId": "db-janitor-schedule"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "id": "dj100001-0001-0001-0001-000000000002",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DB Janitor — Configuration\nconst config = {\n  maxAgeDays: 14,\n  maxSizeThresholdKB: 100,\n  targetWorkflows: {\n    'inbox-attachment-organizer': 'YOUR_WORKFLOW_ID_04',\n    'any-file2json-converter': 'YOUR_WORKFLOW_ID_03'\n  },\n  batchSize: 100\n};\n\nreturn [{ json: config }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        400
+      ],
+      "id": "dj100001-0001-0001-0001-000000000003",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://YOUR_N8N_INSTANCE_URL/api/v1/executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "={{ $json.batchSize }}"
+            },
+            {
+              "name": "status",
+              "value": "success"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        400
+      ],
+      "id": "dj100001-0001-0001-0001-000000000004",
+      "name": "Fetch Executions",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_N8N_API",
+          "name": "n8n API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Analyze executions for cleanup candidates\nconst config = $('Config').first().json;\nconst cutoffDate = new Date();\ncutoffDate.setDate(cutoffDate.getDate() - config.maxAgeDays);\n\nconst executions = $input.first().json.data || [];\nconst targetIds = Object.values(config.targetWorkflows);\n\nlet totalOld = 0;\nlet byWorkflow = {};\n\n// Initialize counters for target workflows\nfor (const [name, id] of Object.entries(config.targetWorkflows)) {\n  byWorkflow[name] = { id, count: 0 };\n}\nbyWorkflow['other'] = { id: null, count: 0 };\n\nfor (const exec of executions) {\n  const execDate = new Date(exec.startedAt);\n  if (execDate < cutoffDate) {\n    totalOld++;\n    \n    const matchedName = Object.entries(config.targetWorkflows)\n      .find(([_, id]) => String(exec.workflowId) === String(id));\n    \n    if (matchedName) {\n      byWorkflow[matchedName[0]].count++;\n    } else {\n      byWorkflow['other'].count++;\n    }\n  }\n}\n\n// Estimate reclaimable space\n// inbox-organizer ~237KB/exec, file-converter ~150KB, others ~50KB\nconst estimates = {\n  'inbox-attachment-organizer': 237,\n  'any-file2json-converter': 150,\n  'other': 50\n};\n\nlet estimatedKB = 0;\nfor (const [name, data] of Object.entries(byWorkflow)) {\n  estimatedKB += data.count * (estimates[name] || 50);\n}\nconst estimatedMB = (estimatedKB / 1024).toFixed(1);\n\nreturn [{\n  json: {\n    totalExecutions: executions.length,\n    totalOld,\n    byWorkflow,\n    estimatedMB,\n    maxAgeDays: config.maxAgeDays,\n    hasCandidates: totalOld > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        400
+      ],
+      "id": "dj100001-0001-0001-0001-000000000005",
+      "name": "Analyze Executions"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-candidates",
+              "leftValue": "={{ $json.hasCandidates }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        400
+      ],
+      "id": "dj100001-0001-0001-0001-000000000006",
+      "name": "Has Candidates?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the janitor report message\nconst d = $json;\n\nconst lines = [\n  '🧹 *DB Janitor Report*',\n  '',\n  `Scanned: ${d.totalExecutions} recent executions`,\n  `Older than ${d.maxAgeDays} days: *${d.totalOld}*`,\n  ''\n];\n\nfor (const [name, data] of Object.entries(d.byWorkflow)) {\n  if (data.count > 0) {\n    lines.push(`• ${name}: ${data.count}`);\n  }\n}\n\nlines.push('');\nlines.push(`Estimated reclaimable: *~${d.estimatedMB} MB*`);\nlines.push('');\nlines.push('_(Stub mode — no deletions performed)_');\n\nreturn [{ json: { message: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        340
+      ],
+      "id": "dj100001-0001-0001-0001-000000000007",
+      "name": "Format Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: '✅ *DB Janitor*: No cleanup candidates found.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        540
+      ],
+      "id": "dj100001-0001-0001-0001-000000000008",
+      "name": "No Candidates Message"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1720,
+        400
+      ],
+      "id": "dj100001-0001-0001-0001-000000000009",
+      "name": "Send to Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Executions": {
+      "main": [
+        [
+          {
+            "node": "Analyze Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Executions": {
+      "main": [
+        [
+          {
+            "node": "Has Candidates?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Candidates?": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Candidates Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Candidates Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+  }
+}

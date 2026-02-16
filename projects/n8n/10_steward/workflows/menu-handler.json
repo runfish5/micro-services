@@ -236,7 +236,8 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Normalize').first().json.chatId }}"
+        "sessionKey": "={{ $('Normalize').first().json.chatId }}",
+        "contextWindowLength": 10
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
