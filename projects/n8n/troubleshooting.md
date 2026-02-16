@@ -90,3 +90,13 @@ colliding node names (`AI Classifier` → `AI Classifier1`) but expressions like
 2. Find nodes with `1` suffix (e.g., `AI Classifier1`, `Brave Search1`)
 3. Either rename them back (remove the `1`) or update all `$node['...']` expressions to match
 4. Save and republish
+
+---
+
+## Google OAuth "Client Authentication Failed"
+
+<img src="assets/trouble-shooting-oauth-client-auth-failed.png" width="500">
+
+OAuth callback fails with **"Client authentication failed"** when connecting a Google service in n8n.
+
+The downloaded credential JSON filename contains the Client ID (e.g., `client_secret_000-000.apps.googleusercontent.com.json`). **Fix**: Check that the Client Secret in n8n matches the one for this Client ID in Cloud Console.
