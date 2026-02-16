@@ -25,39 +25,40 @@ Only one authentication needed: **Google OAuth**
 Follow: [credentials-guide.md](config/credentials-guide.md)
 
 ### 3. Create Billing Ledger Google Sheet
-Create a Google Sheet named **"Billing_Ledger"** with these exact column headers:
+Create a Google Sheet named **"Billing_Ledger"** (16 columns).
 
 > **What is a Billing Ledger?** A unified record of invoices (both payable and receivable) with payment tracking. Also known as Invoice Register or combined AP/AR ledger. Tracks expenses (supplier invoices you pay) and revenue (customer invoices you send).
 
 **Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet. The tabs will automatically create separate columns.
 
 ```
-invoice_date	currency_code	subtotal_amount	payment_method	date_paid	payment_reference	accounting_category	counterparty_name	invoice_number	tax_amount	discount_amount	due_date_or_payment_terms	purchase_order_number	email_id	attachment_count
+accounting_category	invoice_status	invoice_number	attachment_count	email_id	counterparty_name	invoice_date	subtotal_amount	currency_code	payment_method	due_date_or_payment_terms	payment_reference	date_paid	tax_amount	discount_amount	purchase_order_number
 ```
 
-**Field definitions (15 columns):**
+**Field definitions (16 columns):**
 
 | Field | Source | Description |
 |-------|--------|-------------|
+| `accounting_category` | LLM | "Revenue" or "Expense" (auto-classified) |
+| `invoice_status` | Manual | User-managed status (e.g., paid, pending, overdue) |
+| `invoice_number` | LLM | Invoice/receipt reference number |
+| `attachment_count` | Node | Number of attachments in source email (from email-info-hub) |
+| `email_id` | Node | Contact email address (from email-info-hub) |
 | `counterparty_name` | LLM | The other party: supplier (for Expense) or customer (for Revenue) |
 | `invoice_date` | LLM | Document date (YYYY-MM-DD) |
-| `currency_code` | LLM | CHF, EUR, USD, etc. |
-| `invoice_number` | LLM | Invoice/receipt reference number |
 | `subtotal_amount` | LLM | Amount (falls back to total if subtotal unavailable) |
-| `tax_amount` | LLM | VAT/tax amount |
-| `discount_amount` | LLM | Discount applied, if any |
-| `due_date_or_payment_terms` | LLM | Payment deadline or terms (e.g., "net 30", "upon receipt") |
+| `currency_code` | LLM | CHF, EUR, USD, etc. |
 | `payment_method` | LLM | TWINT, bank transfer, credit card, etc. |
+| `due_date_or_payment_terms` | LLM | Payment deadline or terms (e.g., "net 30", "upon receipt") |
 | `payment_reference` | LLM | Transaction/payment ID |
 | `date_paid` | LLM | When payment was made (YYYY-MM-DD) |
+| `tax_amount` | LLM | VAT/tax amount |
+| `discount_amount` | LLM | Discount applied, if any |
 | `purchase_order_number` | LLM | PO number if referenced |
-| `accounting_category` | LLM | "Revenue" or "Expense" (auto-classified) |
-| `email_id` | Node | Contact email address (from email-info-hub) |
-| `attachment_count` | Node | Number of attachments in source email (from email-info-hub) |
 
-*All fields are required.*
+*15 of 16 fields are auto-populated. `invoice_status` is manual.*
 
-*The sheet stores standardized invoice data with 15 columns following accounting best practices. Fields like company address and VAT numbers are intentionally omitted—derivable from counterparty name or public registries. LLM fields are extracted by Accountant-concierge-LM; Node fields come from email-info-hub.*
+*The sheet stores standardized invoice data following accounting best practices. Fields like company address and VAT numbers are intentionally omitted—derivable from counterparty name or public registries. LLM fields are extracted by Accountant-concierge-LM; Node fields come from email-info-hub.*
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/Billing_Ledger`)
 

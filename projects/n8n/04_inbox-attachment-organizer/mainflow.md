@@ -1,4 +1,4 @@
-# Main Flow (34 Nodes)
+# Main Flow (35 Nodes)
 
 > **Version 2.0.0** | Last verified: 2026-01-31
 
@@ -77,8 +77,8 @@ Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classi
     ↓
   If (has attachments?)
     ├─ Yes → input folder lookup → Call 'gdrive-recursion' → Get binary data2 → save doc to folder
-    │        → Mark as Processed1 → Remove label from message → insert doc record → craft report note → Telegram & done
-    └─ No  → Mark as Processed1 → Remove label from message → insert doc record → craft report note → Telegram & done
+    │        → Mark as Processed1 → Remove label from message → Prepare Ledger Row → insert doc record → craft report note → Telegram & done
+    └─ No  → Mark as Processed1 → Remove label from message → Prepare Ledger Row → insert doc record → craft report note → Telegram & done
 ```
 
 ### Contact-Centric Data Model
@@ -128,14 +128,16 @@ START: Gmail Trigger
                        │           └→ save doc to folder
                        │              └→ Mark as Processed1
                        │                 └→ Remove label from message
-                       │                    └→ insert doc record
+                       │                    └→ Prepare Ledger Row
+                       │                       └→ insert doc record
                        │                       └→ craft report note
                        │                          └→ Telegram & done
                        │
                        └─ NO (log only):
                           └→ Mark as Processed1
                              └→ Remove label from message
-                                └→ insert doc record
+                                └→ Prepare Ledger Row
+                                   └→ insert doc record
                                    └→ craft report note
                                       └→ Telegram & done
 
@@ -166,12 +168,14 @@ Both AI nodes use an LLM with structured output support.
   - Field extraction: dates, amounts, parties, line items
   - Filing path computation: year + month for folder structure
 
-**Billing_Ledger Schema** (15 fields, all required):
+**Billing_Ledger Schema** (16 columns, 15 auto-populated + `invoice_status` manual):
 
 | Source | Fields |
 |--------|--------|
 | **LLM** (Accountant-concierge-LM) | `counterparty_name`, `invoice_date`, `total_amount_due`, `currency_code`, `invoice_number`, `subtotal_amount`, `tax_amount`, `discount_amount`, `due_date_or_payment_terms`, `payment_method`, `payment_reference`, `date_paid`, `purchase_order_number`, `accounting_category` |
 | **Node** (email-info-hub) | `email_id`, `attachment_count` |
+
+> **Prepare Ledger Row** (Code node) flattens the LLM output + email-info-hub fields into a single flat JSON object, enabling "insert doc record" to use Auto-Map mode (resilient to Google Sheets re-selection in the n8n UI).
 
 > **counterparty_name** = the OTHER party on the invoice (supplier for Expense, customer for Revenue). Replaces legacy `supplier_name`/`recipient_business_name` fields.
 
