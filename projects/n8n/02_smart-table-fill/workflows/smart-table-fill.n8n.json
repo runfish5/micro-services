@@ -622,6 +622,22 @@
     },
     {
       "parameters": {
+        "content": "## Credential Recovery\nScript deployed, n8n credentials lost?\n\n1. Enable Apps Script API in GCP Console\n2. APIs & Services → Credentials → copy Client ID + Secret\n3. n8n: Add → Google OAuth2 API (NOT Gmail/Drive/Sheets OAuth2)\n   Scopes: spreadsheets drive script.scriptapp\n4. Save → Connect → grant permissions\n5. Open this node → select new credential",
+        "height": 220,
+        "width": 340,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        790
+      ],
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Sticky - Credential Recovery"
+    },
+    {
+      "parameters": {
         "content": "## Mode A: Smart Table Fill\nActive by default. Writes extracted data directly to Google Sheets.\n\nToggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
         "height": 176,
         "width": 424
@@ -678,9 +694,9 @@
     },
     {
       "parameters": {
-        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.",
-        "height": 80,
-        "width": 150
+        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.\n\n---\n**CRM mode:** Point `spreadsheet_id` to your **ContactManager** spreadsheet, set `data_sheet_name` to **Entries**, and `batch_size` to **7**. Copy the spreadsheet ID from the URL: `docs.google.com/spreadsheets/d/`**THIS_PART**`/edit`",
+        "height": 220,
+        "width": 230
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -690,6 +706,22 @@
       ],
       "id": "89bfad2f-83d6-43b7-b01f-22eccaddd1db",
       "name": "Sticky Note - Troubleshoot1"
+    },
+    {
+      "parameters": {
+        "content": "### String Input config\nSet these fields here:\n- `spreadsheet_id`: from URL `.../d/`**THIS_PART**`/edit`\n- `data_sheet_name`: **Entries** (not Sheet1)\n- `batch_size`: **7**",
+        "height": 140,
+        "width": 220,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        96
+      ],
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "name": "Sticky - Spreadsheet ID"
     },
     {
       "parameters": {

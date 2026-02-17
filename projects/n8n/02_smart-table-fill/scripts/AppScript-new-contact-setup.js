@@ -10,7 +10,7 @@ const CONFIG = {
   sheetName: 'Entries',
   observedColumn: 'email',  // Column header name (finds column dynamically)
   folderPath: ['PrivateD', 'ContactManager', 'names_folders'],
-  spreadsheetId: '1si4ZYujqQBnKOTJPi-C7oBuWyS0xri_sZSVQ5hbIjRQ',
+  spreadsheetId: 'YOUR_CONTACTMANAGER_SPREADSHEET_ID',  // Google Sheet named "ContactManager" with an "Entries" tab
   logSheetName: 'AppScript_Logs'
 };
 
