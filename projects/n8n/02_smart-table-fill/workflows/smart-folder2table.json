@@ -512,6 +512,21 @@
       "id": "c73c8a27-0976-4471-a25f-a23add508009",
       "name": "Convert File to Text",
       "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
+        "height": 60,
+        "width": 220
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -324,
+        -876
+      ],
+      "id": "b2c3d4e5-source-link-convert-file",
+      "name": "Sticky Note - Subworkflow Source"
     }
   ],
   "connections": {

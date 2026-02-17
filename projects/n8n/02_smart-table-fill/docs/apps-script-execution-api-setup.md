@@ -136,27 +136,14 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 
 ## Step 6: Create n8n OAuth Credential
 
-> **Why another credential?** Your existing Gmail/Drive credentials have fixed scopes you can't change. Scopes are security - only grant what's needed; Google has no "access everything" option. Here we need multiple (Sheets + Drive), so we use the generic "Google OAuth2 API" which lets you combine them. For Execution API, n8n must request the *exact same scopes* as `appsscript.json`.
+> **Why another credential?** Your existing Gmail/Drive credentials have fixed scopes you can't change. Scopes are security - only grant what's needed; Google has no "access everything" option. Here we need multiple (Sheets + Drive + script), so we use the generic "Google OAuth2 API" which lets you combine them. For Execution API, n8n must request the *exact same scopes* as `appsscript.json`.
 
-1. In n8n: **Settings** > **Credentials** > **Add Credential**
-2. Search for: **Google OAuth2 API**
-3. Configure:
-   - **Name:** `Inbox-AppsScript` (or similar)
-   - **Client ID:** from the GCP project in Step 1 (where you enabled Apps Script API)
-   - **Client Secret:** from the same GCP project
-   - **Scope(s):** paste all 3 scopes (space-separated):
-     ```
-     https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.scriptapp
-     ```
+Create a **Google OAuth2 API** credential in n8n with the 3 required scopes — see [Credentials Guide: Apps Script](../../credentials-guide.md#google-apps-script-execution-api) for the field values.
 
-     > **Note:** The third scope (`script.scriptapp`) is required for trigger setup and testing from the Apps Script editor, not just for n8n API calls.
-4. Click **Save**
-5. Click **Connect** to complete OAuth flow
-6. Grant all requested permissions (safe - it's your own script)
-7. In the **Write via Apps Script** HTTP node (if you haven't already):
-   - Paste the URL from Step 4
-   - Under Credential, select the credential you just created
-8. Click **Publish** to save
+Then in the **[CRM] Write via Apps Script** HTTP node:
+1. Paste the deployment URL from Step 4 (starts with `https://script.googleapis.com/v1/scripts/AKfycb...`)
+2. Under Credential, select the credential you just created
+3. Click **Save** and **Publish**
 
 **Done with Apps Script setup!** You now have:
 - Apps Script deployed and authorized

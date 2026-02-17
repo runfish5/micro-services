@@ -1277,6 +1277,21 @@
       ],
       "id": "e5f6a7b8-param-backup-insert-doc-record",
       "name": "Sticky Note27"
+    },
+    {
+      "parameters": {
+        "content": "🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
+        "height": 60,
+        "width": 220
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4164,
+        1236
+      ],
+      "id": "a1b2c3d4-source-link-create-attachment",
+      "name": "Sticky Note28"
     }
   ],
   "connections": {

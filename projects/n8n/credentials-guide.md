@@ -55,8 +55,20 @@ For factual web lookups (used by steward's menu-handler).
 - Get API key at [brave.com/search/api](https://brave.com/search/api/)
 
 
-### n8n + Google Apps Script Authentication
+### Google Apps Script (Execution API)
 
-When n8n writes to Google Sheets via API, the `onEdit` trigger does NOT fire (Google limitation). To call Apps Script from n8n, use the Execution API.
+For calling Apps Script functions from n8n (n8n API writes don't trigger `onEdit`).
 
-**Setup Guide:** [02_smart-table-fill/docs/apps-script-execution-api-setup.md](02_smart-table-fill/docs/apps-script-execution-api-setup.md)
+- n8n: Credentials → Add → **Google OAuth2 API**
+- Fields:
+  | Field | Value |
+  |-------|-------|
+  | Client ID | From the GCP project your Apps Script is linked to |
+  | Client Secret | From the same GCP project |
+  | Scope(s) | `https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.scriptapp` (space-separated) |
+  | Allowed HTTP Request Domains | `https://script.googleapis.com` (only if your instance restricts outbound requests) |
+- Click **Save** → **Connect** → grant permissions
+
+In the HTTP node (e.g., `[CRM] Write via Apps Script`), select this credential and paste the Apps Script deployment URL.
+
+**Full setup** (GCP project, script creation, deployment, troubleshooting): [Apps Script Execution API Setup](02_smart-table-fill/docs/apps-script-execution-api-setup.md)
