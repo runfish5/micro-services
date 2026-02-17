@@ -17,7 +17,8 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 6. **Normalize** parses input using the registry to identify known actions
 7. **Route** dispatches: known actions go to a dynamic Execute Workflow; free text goes to the AI Classifier
 8. **AI Classifier** (with Postgres conversation memory) routes free text to either subworkflows or LLM backends
-9. Each subworkflow handles its own Telegram reply; LLM backend responses are formatted and sent by the hub
+9. `/help` is a built-in command — Route sends directly to Build Help node which generates a dynamic command list from the Config registry
+10. Each subworkflow handles its own Telegram reply; LLM backend responses are formatted and sent by the hub
 
 ## Architecture: Config-Driven Routing
 
@@ -26,7 +27,7 @@ The menu-handler uses a **Config code node** as the single source of truth for a
 ```javascript
 const agents = {
   expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
-  learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: false },
+  learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: true  },
   deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true  }
 };
 ```
@@ -48,6 +49,7 @@ Everything else adapts automatically from the registry.
 |------|---------|-------------|
 | Deterministic | Button tap, /command | Normalize matches registry key → dynamic Execute Workflow |
 | AI-classified | Free text | Classifier routes to agents OR LLM backends (Groq, Brave, Perplexity) |
+| Built-in | /help | Route matches directly → Build Help → Send Reply |
 | Subworkflow | Execute Workflow Trigger | Parent passes {text, chatId}; Normalize routes through AI Classifier |
 
 ### Conversation Memory
@@ -58,9 +60,9 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 
 ### Workflows
 - `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
-- `workflows/menu-handler.json` - Config-driven hub with AI routing (22 nodes + 4 sticky notes)
+- `workflows/menu-handler.json` - Config-driven hub with AI routing (24 nodes + 4 sticky notes)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
-- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (38 nodes)
+- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (37 nodes) (+ Build Price Response for check_prices output)
 - `workflows/subworkflows/price-checker.json` - Batch price checking engine (13 nodes)
 
 ### Documentation
@@ -84,6 +86,14 @@ After importing `menu-handler.json`:
 1. Update Config node `workflowId` values to match your n8n instance
 2. Set credential IDs for Groq, Telegram, Postgres, and Brave Search
 3. Verify Postgres is accessible (shared with learning-notes for chat memory)
+
+## Response Forwarding
+
+Both `Run Skill` and `Run Skill (AI)` connect to `Format Skill Response` → `Send Reply`. The guard node checks if the subworkflow returned a `response` field:
+- If present: forwards to Telegram via Send Reply
+- If empty/missing: does nothing (subworkflow already sent its own reply)
+
+This means subworkflows can either handle their own replies (deal-finder, learning-notes) OR return `{chatId, response}` for the hub to forward.
 
 ## Dependencies
 

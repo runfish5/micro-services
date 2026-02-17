@@ -292,6 +292,7 @@
       ],
       "id": "df100001-0001-0001-0001-000000000005",
       "name": "Load Requirements",
+      "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -301,7 +302,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Filter requirements: active only, optional category filter\nconst command = $('Parse Command').first().json;\nconst categoryFilter = command.category;\nconst chatId = command.chatId;\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const row = item.json;\n  if ((row.status || '').toLowerCase() !== 'active') return false;\n  if (categoryFilter && (row.category || '').toLowerCase() !== categoryFilter) return false;\n  return true;\n});\n\nif (filtered.length === 0) {\n  return [{\n    json: {\n      empty: true,\n      chatId,\n      response: categoryFilter\n        ? `No active requirements found for \"${categoryFilter}\"`\n        : 'No active requirements found. Use /deals add <category> <price> <constraints> to add one.'\n    }\n  }];\n}\n\nreturn filtered;"
+        "jsCode": "// Filter requirements: active only, optional category filter\nconst command = $('Parse Command').first().json;\nconst categoryFilter = command.category;\nconst chatId = command.chatId;\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const row = item.json;\n  if ((row.status || '').toLowerCase() !== 'active') return false;\n  if (categoryFilter && (row.category || '').toLowerCase() !== categoryFilter) return false;\n  return true;\n});\n\nif (filtered.length === 0) {\n  return [{\n    json: {\n      empty: true,\n      chatId,\n      response: categoryFilter\n        ? `No active requirements found for \\\"${categoryFilter}\\\".\\n\\nTry: /deals add ${categoryFilter} 500CHF your constraints here`\n        : 'No active requirements yet.\\n\\nTry adding one:\\n/deals add phone 800CHF flagship camera\\n/deals track https://digitec.ch/...'\n    }\n  }];\n}\n\nreturn filtered;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -572,6 +573,7 @@
       ],
       "id": "df100001-0001-0001-0001-000000000044",
       "name": "Load Tracked for Untrack",
+      "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -688,7 +690,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst chatId = $('Parse Command').first().json.chatId;\nconst activeItems = items.filter(i => i.json.url);\n\nif (activeItems.length === 0) {\n  return [{ json: { chatId, response: '📋 No tracked items.\\n\\nUse /deals track <url> to start tracking a product.' } }];\n}\n\nconst lines = activeItems.map((item, idx) => {\n  const r = item.json;\n  const statusIcon = r.status === 'paused' ? '⏸️ ' : '';\n  const priceInfo = r.current_price != null && r.current_price !== '' ? `${r.current_price} ${r.currency}` : 'checking...';\n\n  let changeInfo = '';\n  if (r.previous_price != null && r.previous_price !== '' && r.current_price != null && r.current_price !== '' && Number(r.previous_price) !== Number(r.current_price)) {\n    const prev = Number(r.previous_price);\n    const curr = Number(r.current_price);\n    const pct = (((curr - prev) / prev) * 100).toFixed(1);\n    const arrow = curr < prev ? '📉' : '📈';\n    changeInfo = ` (was ${prev}, ${pct > 0 ? '+' : ''}${pct}%) ${arrow}`;\n  }\n\n  const notifyLabel = r.notify_mode === 'on_change' ? '🔕 On change' : r.notify_mode === 'threshold' ? `💰 < ${r.price_threshold}` : '🔔 Daily';\n\n  return `${idx + 1}. ${statusIcon}*${r.product_name}*\\n   💰 ${priceInfo}${changeInfo}\\n   🔗 ${r.domain} | ${notifyLabel}`;\n});\n\nconst response = `📋 *Tracked Items* (${activeItems.length})\\n\\n${lines.join('\\n\\n')}`;\nreturn [{ json: { chatId, response } }];"
+        "jsCode": "const items = $input.all();\nconst chatId = $('Parse Command').first().json.chatId;\nconst activeItems = items.filter(i => i.json.url);\n\nif (activeItems.length === 0) {\n  return [{ json: { chatId, response: '📋 No tracked items yet.\\n\\nTrack a product:\\n/deals track https://digitec.ch/...\\n\\nOr add a requirement:\\n/deals add phone 800CHF flagship camera' } }];\n}\n\nconst lines = activeItems.map((item, idx) => {\n  const r = item.json;\n  const statusIcon = r.status === 'paused' ? '⏸️ ' : '';\n  const priceInfo = r.current_price != null && r.current_price !== '' ? `${r.current_price} ${r.currency}` : 'checking...';\n\n  let changeInfo = '';\n  if (r.previous_price != null && r.previous_price !== '' && r.current_price != null && r.current_price !== '' && Number(r.previous_price) !== Number(r.current_price)) {\n    const prev = Number(r.previous_price);\n    const curr = Number(r.current_price);\n    const pct = (((curr - prev) / prev) * 100).toFixed(1);\n    const arrow = curr < prev ? '📉' : '📈';\n    changeInfo = ` (was ${prev}, ${pct > 0 ? '+' : ''}${pct}%) ${arrow}`;\n  }\n\n  const notifyLabel = r.notify_mode === 'on_change' ? '🔕 On change' : r.notify_mode === 'threshold' ? `💰 < ${r.price_threshold}` : '🔔 Daily';\n\n  return `${idx + 1}. ${statusIcon}*${r.product_name}*\\n   💰 ${priceInfo}${changeInfo}\\n   🔗 ${r.domain} | ${notifyLabel}`;\n});\n\nconst response = `📋 *Tracked Items* (${activeItems.length})\\n\\n${lines.join('\\n\\n')}`;\nreturn [{ json: { chatId, response } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -717,6 +719,19 @@
       ],
       "id": "df100001-0001-0001-0001-000000000053",
       "name": "Execute Price Checker"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format price-checker output for Telegram reply\nconst chatId = $('Parse Command').first().json.chatId;\nconst data = $input.first().json || {};\n\nconst priceSection = data.priceSection || '';\nconst priceReport = data.priceReport || [];\n\nif (!priceSection && priceReport.length === 0) {\n  return [{ json: { chatId, response: '📍 No tracked items to check.\\n\\nUse /deals track <url> to start tracking a product.' } }];\n}\n\nreturn [{ json: { chatId, response: priceSection || '📍 Price check complete — no updates.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        1480
+      ],
+      "id": "df100001-0001-0001-0001-000000000054",
+      "name": "Build Price Response"
     },
     {
       "parameters": {
@@ -770,6 +785,7 @@
       ],
       "id": "df100001-0001-0001-0001-000000000060",
       "name": "Load for Modify",
+      "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -1481,6 +1497,28 @@
       ]
     },
     "Build Untrack Not Found": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Price Checker": {
+      "main": [
+        [
+          {
+            "node": "Build Price Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Price Response": {
       "main": [
         [
           {

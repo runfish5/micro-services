@@ -12,7 +12,7 @@ The Config node in `menu-handler.json` registers subworkflows by their n8n workf
 |---|---|---|
 | `expenses.workflowId` | expense-trend-report (project 04) | The deployed workflow's ID |
 | `deals.workflowId` | deal-finder (subworkflows/) | The deployed workflow's ID |
-| `learning.workflowId` | learning-notes (subworkflows/) | Leave empty until ready |
+| `learning.workflowId` | learning-notes (subworkflows/) | The deployed workflow's ID (see section 6) |
 
 **How to find a workflow ID**: Open the workflow in n8n UI. The ID is in the URL: `https://your-instance.up.railway.app/workflow/<THIS_IS_THE_ID>`.
 
@@ -50,7 +50,7 @@ Draft workflows cannot receive Execute Workflow calls. After importing, each sub
 - [ ] deal-finder.json
 - [ ] price-checker.json
 - [ ] expense-trend-report.json (project 04)
-- [ ] learning-notes.json (when ready)
+- [ ] learning-notes.json
 
 If publish fails with "1 node has issues", go to Executions > pick a successful run > Copy to Editor > Publish.
 
@@ -72,3 +72,24 @@ All committed JSON files use `CREDENTIAL_ID_*` placeholders. After importing, n8
 For Brave Search specifically: create a **Header Auth** credential with Name: `X-Subscription-Token`, Value: your API key.
 
 See [credentials-guide.md](../../credentials-guide.md) for detailed setup instructions.
+
+## 6. Set learning-notes Workflow ID
+
+learning-notes is now enabled (`ready: true`) in the Config registry. Update the placeholder:
+
+**Where**: menu-handler.json > Config node > `learning.workflowId`
+
+Replace `YOUR_LEARNING_NOTES_WORKFLOW_ID` with the deployed learning-notes.json workflow ID.
+
+**Prerequisites**: Verify Notion, Gemini, Postgres, and Telegram credentials are linked in the learning-notes workflow.
+
+## 7. Verify alwaysOutputData on Google Sheets Nodes
+
+deal-finder.json has `alwaysOutputData: true` on these Google Sheets nodes to prevent silent failures on empty sheets:
+
+- `Load Requirements` -- empty Requirements tab on digest
+- `Load for Modify` -- empty Requirements tab on remove/pause/resume
+- `Load Tracked for Untrack` -- empty Tracked Prices tab on untrack
+- `Load All Tracked` -- already had it
+
+If you re-import deal-finder, verify these flags survive the import. n8n's UI doesn't expose `alwaysOutputData` directly -- check the JSON.

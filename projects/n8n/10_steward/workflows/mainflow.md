@@ -48,7 +48,7 @@ Manual Trigger ---------/
 
 ## menu-handler.json
 
-Config-driven hub-and-spoke with conversation-aware AI routing (22 nodes + 4 sticky notes). Three architectural layers:
+Config-driven hub-and-spoke with conversation-aware AI routing (24 nodes + 4 sticky notes). Three architectural layers:
 
 1. **Agent Registry** (Config node) — single source of truth for available agents and their workflow IDs
 2. **Deterministic routing** — buttons and /commands match registry keys, dispatch via dynamic Execute Workflow
@@ -57,27 +57,34 @@ Config-driven hub-and-spoke with conversation-aware AI routing (22 nodes + 4 sti
 ```
 Telegram Trigger (callback_query + message)
   --> Whitelist
-    --> Config (agent registry) --> Normalize --> Route (2-way switch)
-Chat Trigger -----/                                  |            |
-Execute Workflow --/                            [agent]      [chat]
-Trigger                                              |            |
-  (subworkflow calls,                                v            v
-   bypass Whitelist)                           Run Skill    AI Classifier (+ Router Memory)
-                                               (dynamic)          |
-                                                            LLM Route (4-way)
-                                                           /    |     |     \
-                                                      agent  groq  brave  perplexity
-                                                        |     |     |      |
-                                                        v     +-----+------+
-                                               Resolve Agent        |
-                                                    |          Format Response
-                                               Agent Available?     |
-                                               (IF node)       Send Reply
-                                                /       \
-                                           [true]      [false]
-                                              |            |
-                                         Run Skill (AI)    |
-                                         (dynamic)    Format Response
+    --> Config (agent registry) --> Normalize --> Route (3-way switch)
+Chat Trigger -----/                              |          |            |
+Execute Workflow --/                          [help]    [agent]      [chat]
+Trigger                                          |          |            |
+  (subworkflow calls,                            v          v            v
+   bypass Whitelist)                        Build Help  Run Skill    AI Classifier (+ Router Memory)
+                                                |       (dynamic)        |
+                                                |          |        LLM Route (4-way)
+                                                |          |       /    |     |     \
+                                                |          |  agent  groq  brave  perplexity
+                                                |          |    |     |     |      |
+                                                |          |    v     +-----+------+
+                                                |          | Resolve Agent        |
+                                                |          |    |          Format Response
+                                                |          | Agent Available?     |
+                                                |          | (IF node)            |
+                                                |          |  /       \           |
+                                                |          |[true]   [false]      |
+                                                |          |  |          |        |
+                                                |          | Run Skill (AI)  Format Response
+                                                |          | (dynamic)
+                                                |          |  |
+                                                |          +--+
+                                                |          |
+                                                |    Format Skill Response
+                                                |          |
+                                                v          v
+                                              Send Reply
 ```
 
 ### Config Node — Agent Registry
@@ -87,7 +94,7 @@ The Config code node defines all available agents as a JSON registry. To add a n
 ```javascript
 const agents = {
   expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
-  learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: false },
+  learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: true  },
   deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true  }
 };
 ```
@@ -100,7 +107,7 @@ The registry key (e.g., `expenses`) is used as:
 
 ### Normalize Hub
 
-The Normalize code node reads `knownActions` from the Config registry (only `ready: true` agents). Outputs a unified object:
+The Normalize code node reads `knownActions` from the Config registry (only `ready: true` agents) and recognizes built-in actions (`help`) that route to dedicated nodes instead of subworkflows. Outputs a unified object:
 
 | Input | action | chatId | text | workflowId |
 |-------|--------|--------|------|------------|
@@ -114,12 +121,13 @@ The Normalize code node reads `knownActions` from the Config registry (only `rea
 
 ### Route Switch
 
-2 outputs (simplified from 4):
+3 outputs:
 
 | Output | Condition | Destination |
 |--------|-----------|-------------|
-| 0 "agent" | `action` != "chat" | Run Skill (dynamic Execute Workflow) |
-| 1 "chat" | `action` == "chat" | AI Classifier |
+| 0 "help" | `action` == "help" | Build Help |
+| 1 "agent" | `action` != "chat" and != "help" | Run Skill (dynamic Execute Workflow) |
+| 2 "chat" | `action` == "chat" | AI Classifier |
 | fallback | safety net | Extra output (unconnected) |
 
 ### AI Classifier — Conversation-Aware Unified Router
@@ -167,8 +175,10 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | Whitelist | if (disabled) | Checks sender ID against allowed chat IDs |
 | Config | code | Agent registry: maps action names to workflow IDs and descriptions |
 | Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
-| Route | switch | 2 outputs: agent (known action) or chat (AI classifier) |
+| Route | switch | 3 outputs: help (built-in), agent (known action), or chat (AI classifier) |
 | Run Skill | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output |
+| Build Help | code | Generates dynamic help message from the agents registry |
+| Format Skill Response | code | Guards subworkflow returns — forwards response to Send Reply only if present |
 | AI Classifier | chainLlm | Conversation-aware LLM router with memory, output parser |
 | Groq Classifier LLM | lmChatGroq | LLM powering the classifier |
 | Classifier Output Parser | outputParserStructured | Enforces `{route_type, query, reasoning}` |
@@ -190,7 +200,7 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 2. **Classifier Output Parser**: Add the agent key to the `route_type` enum array
 3. **daily-briefing** (optional): Add an inline button with callback data `briefing:<key>`
 
-Everything else adapts automatically.
+Everything else adapts automatically -- the `/help` command auto-updates from the registry, listing all agents with their descriptions.
 
 ### Allowed Chat IDs
 
@@ -245,7 +255,7 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor with price tracking and Perplexity research (36 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking and Perplexity research (37 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
 
 Remove, pause, and resume share a single "Modify Requirement" branch. All branches converge to one shared Send Reply Telegram node.
 
@@ -299,7 +309,7 @@ Execute Workflow Trigger → Config → Parse Command → Route Operation (9 out
   |
   |-- [7 tracked] → Load All Tracked → Format Tracked List → Send Reply
   |
-  └── [8 check] → Execute Price Checker (calls price-checker.json)
+  └── [8 check] → Execute Price Checker → Build Price Response → Send Reply
 ```
 
 ### Google Sheet Schemas
