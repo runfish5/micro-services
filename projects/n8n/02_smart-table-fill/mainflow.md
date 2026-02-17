@@ -59,7 +59,7 @@ START: Manual Trigger / When Executed by Another Workflow
   │
   └→ String Input (config: spreadsheet_id, data_sheet_name, schema_sheet_name,
   │                body_core, contact_name, contact_email, subject,
-  │                match_column, match_value, batch_size)
+  │                match_column, match_value, batch_size, word_threshold, deep_extract)
        │
        └→ Fetch Data Sheet Headers (row 1 of data sheet)
             │
@@ -126,7 +126,7 @@ START: Manual Trigger / When Executed by Another Workflow
 | 8 | Schema LLM | lmChatGroq | Language model for schema |
 | 9 | Schema Output Parser | outputParser | Parse schema JSON |
 | 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 11 | Build Output Schema | code | Build JSON schema; row_id from match_column → match_value → email |
+| 11 | Build Output Schema | code | Build JSON schema with three-tier gating (if Tier column exists) or legacy batching; row_id from match_column → match_value → email |
 | 12 | Call llm-extract-rate-limited | executeWorkflow | Subworkflow for rate-limited LLM extraction |
 | 13 | Merge Outputs | code | Merge batch outputs + confidence data |
 | 14 | Write Extracted Row | googleSheets | Standalone mode write (disabled by default) |
@@ -166,6 +166,20 @@ When called as a subworkflow, callers can override these fields (defaults apply 
 | `match_column` | `email` | Which column to match on |
 | `match_value` | `$json[$json.match_column]` | Value to match; auto-resolved from `match_column` field name |
 | `match_same_row` | `true` | `false` = append-only mode |
+| `word_threshold` | `50` | Minimum word count in body_core to activate Tier 2 columns |
+| `deep_extract` | `false` | When `true`, activates Tier 3 (profile) columns |
+
+### Three-Tier Extraction (Build Output Schema)
+
+When the schema sheet has a `Tier` column, Build Output Schema uses three independent gates instead of random batching:
+
+| Tier | Gate | Columns | LLM Calls |
+|------|------|---------|-----------|
+| 1 (Identity) | Always fires | name, email, status | 1 |
+| 2 (Interaction) | `wordCount >= word_threshold` | last_topic, last_contacted, association | 1 |
+| 3 (Profile) | `deep_extract === true` | interests, birthday, address, phone | N (batched by `batch_size`) |
+
+Gates are independent — Tier 3 can fire without Tier 2 and vice versa. If the schema sheet has **no Tier column**, the old behavior applies (all columns split into batches of `batch_size`).
 
 ---
 

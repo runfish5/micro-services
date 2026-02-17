@@ -41,6 +41,8 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 | `body_core` | LLM-distilled core message (semantic extraction from email) |
 | `match_column` / `match_value` | Which row to update |
 | `batch_size` | Fields per LLM batch |
+| `word_threshold` | Min words in body_core to activate Tier 2 (default 50) |
+| `deep_extract` | Boolean flag from upstream classifier to activate Tier 3 |
 
 ## Schema Sheet Structure
 
@@ -49,6 +51,7 @@ The `Description_hig7f6` sheet is auto-generated with columns:
 - `Type` - One of: `str`, `int`, `date`, `list`, `class`
 - `Description` - Brief field description
 - `Classes` - Comma-separated enum values (only for `class` type)
+- `Tier` - Extraction tier: `1` (identity, always extracted), `2` (interaction, needs sufficient text), `3` (profile, needs deep_extract flag). Optional — if absent, all columns are batched by `batch_size` (backward compat).
 
 LLM infers initial values; users can refine them.
 
