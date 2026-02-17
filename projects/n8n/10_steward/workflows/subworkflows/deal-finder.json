@@ -1,7 +1,9 @@
 {
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "inputSource": "passthrough"
+      },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -64,6 +66,30 @@
               },
               "renameOutput": true,
               "outputKey": "digest"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-check-prices",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "check_prices",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "check_prices"
             },
             {
               "conditions": {
@@ -232,30 +258,6 @@
               },
               "renameOutput": true,
               "outputKey": "tracked"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "route-check-prices",
-                    "leftValue": "={{ $json.operation }}",
-                    "rightValue": "check_prices",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "check_prices"
             }
           ]
         },
@@ -302,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Filter requirements: active only, optional category filter\nconst command = $('Parse Command').first().json;\nconst categoryFilter = command.category;\nconst chatId = command.chatId;\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const row = item.json;\n  if ((row.status || '').toLowerCase() !== 'active') return false;\n  if (categoryFilter && (row.category || '').toLowerCase() !== categoryFilter) return false;\n  return true;\n});\n\nif (filtered.length === 0) {\n  return [{\n    json: {\n      empty: true,\n      chatId,\n      response: categoryFilter\n        ? `No active requirements found for \\\"${categoryFilter}\\\".\\n\\nTry: /deals add ${categoryFilter} 500CHF your constraints here`\n        : 'No active requirements yet.\\n\\nTry adding one:\\n/deals add phone 800CHF flagship camera\\n/deals track https://digitec.ch/...'\n    }\n  }];\n}\n\nreturn filtered;"
+        "jsCode": "// Filter requirements: active only, optional category filter\nconst command = $('Parse Command').first().json;\nconst categoryFilter = command.category;\nconst chatId = command.chatId;\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const row = item.json;\n  if ((row.status || '').toLowerCase() !== 'active') return false;\n  if (categoryFilter && (row.category || '').toLowerCase() !== categoryFilter) return false;\n  return true;\n});\n\nif (filtered.length === 0) {\n  // If user asked for a specific category, still show \"not found\"\n  if (categoryFilter) {\n    return [{\n      json: {\n        empty: true,\n        chatId,\n        response: `No active requirements found for \\\"${categoryFilter}\\\".\\n\\nTry: /deals add ${categoryFilter} 500CHF your constraints here`\n      }\n    }];\n  }\n\n  // No requirements at all — use a demo product so it works out of the box\n  return [{\n    json: {\n      category: 'Batteries',\n      constraints: 'rechargeable, AA, 4-pack, NiMH, long-lasting',\n      max_price: '30 CHF',\n      priority: 'low',\n      status: 'active'\n    }\n  }];\n}\n\nreturn filtered;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -715,7 +717,7 @@
       "typeVersion": 1.2,
       "position": [
         280,
-        1480
+        -160
       ],
       "id": "df100001-0001-0001-0001-000000000053",
       "name": "Execute Price Checker"
@@ -728,7 +730,7 @@
       "typeVersion": 2,
       "position": [
         500,
-        1480
+        -160
       ],
       "id": "df100001-0001-0001-0001-000000000054",
       "name": "Build Price Response"
@@ -762,6 +764,38 @@
       ],
       "id": "df100001-0001-0001-0001-000000000036",
       "name": "Sticky Note - Schema"
+    },
+    {
+      "parameters": {
+        "content": "workflowId: YOUR_PRICE_CHECKER_WORKFLOW_ID\n(no inputs — reads Config via shared sheet)",
+        "height": 80,
+        "width": 240,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        260,
+        -200
+      ],
+      "id": "df100001-0001-0001-0001-000000000060",
+      "name": "Sticky Note - Price Checker"
+    },
+    {
+      "parameters": {
+        "content": "**Setup required**\nInsert the Google Sheet ID from \"Steward_Deals\" into sheetId, and your Telegram chat ID used for Steward interaction into chatId.",
+        "height": 80,
+        "width": 280,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        260
+      ],
+      "id": "df100001-0001-0001-0001-000000000061",
+      "name": "Sticky Note - Config Setup"
     },
     {
       "parameters": {
@@ -1108,6 +1142,13 @@
         ],
         [
           {
+            "node": "Execute Price Checker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Append Requirement",
             "type": "main",
             "index": 0
@@ -1151,13 +1192,6 @@
         [
           {
             "node": "Load All Tracked",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Execute Price Checker",
             "type": "main",
             "index": 0
           }
