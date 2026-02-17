@@ -80,6 +80,7 @@ In the HTTP node (e.g., `[CRM] Write via Apps Script`), select this credential a
 | 403 "The caller does not have permission" | Reusing a built-in credential (Gmail/Drive/Sheets OAuth2) — token lacks script scopes | Create a new **Google OAuth2 API** credential with all 3 scopes |
 | 403 after adding scopes to existing credential | Old token cached without new scopes | **Disconnect** the credential in n8n, then **Reconnect** to get a fresh token |
 | 403 despite correct scopes | Script linked to different GCP project than the credential | In Apps Script → Project Settings → verify GCP Project Number matches |
+| 403 after switching to a new GCP project | Apps Script still linked to old project | Re-link: Apps Script → Project Settings → **Change project** → new Project Number. Then re-run `testWriteContactData()` from editor to re-authorize. Also enable Apps Script API in the new GCP Console |
 | 403 despite everything matching | Script not authorized locally yet | Run the test function once from Apps Script editor (triggers consent screen) |
 
 **Full setup** (GCP project, script creation, deployment, troubleshooting): [Apps Script Execution API Setup](02_smart-table-fill/docs/apps-script-execution-api-setup.md)

@@ -38,16 +38,16 @@ Error: "Model output doesn't fit required format" or empty error `{}` in error h
 - **Most common:** You're using Script ID instead of Deployment ID
 - **Fix:** Get the Deployment ID from Deploy > Manage deployments (starts with `AKfycb...`)
 
-### Permission Errors
+### 403 Permission Errors (incl. GCP Project Migration)
 
-- Re-run `testWriteContactData` in Apps Script editor
-- Complete the authorization flow again
-- Verify all 3 scopes in `appsscript.json`
+Switched to a new GCP project but kept the same Apps Script? This is the most common cause:
 
-### GCP Project Mismatch
+1. **Re-link Apps Script** — script.google.com → Project Settings → Change project → enter new **Project Number** (not ID)
+2. **Re-authorize locally** — run `testWriteContactData()` from the Apps Script editor → accept OAuth consent for the new project
+3. **Re-enable API** — GCP Console → APIs & Services → enable **Apps Script API** in the new project
+4. **Reconnect n8n credential** — Disconnect → Reconnect the Google OAuth2 API credential (clears cached token)
 
-- Apps Script must be linked to the **same** GCP project as your OAuth credentials
-- Verify Project Number (not ID) matches in both places
+Still 403? Verify all 3 scopes in `appsscript.json` match the n8n credential. See [credentials-guide.md](credentials-guide.md#403-troubleshooting) for the full table.
 
 ### Dataset Size Limitation
 

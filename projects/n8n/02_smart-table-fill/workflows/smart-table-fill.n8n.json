@@ -616,7 +616,7 @@
     },
     {
       "parameters": {
-        "content": "## Mode B: Email-CRM Setup\nsee [inbox-organizer](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer) and [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) for details",
+        "content": "## Mode B: Email-CRM Setup\n[apps-script-setup](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/apps-script-execution-api-setup.md) · [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) · [troubleshooting](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#apps-script-execution-api)",
         "height": 220,
         "width": 668
       },
@@ -631,16 +631,15 @@
     },
     {
       "parameters": {
-        "content": "## Credential Recovery\nScript deployed, n8n credentials lost?\n\n1. Enable Apps Script API in GCP Console\n2. APIs & Services → Credentials → copy Client ID + Secret\n3. n8n: Add → Google OAuth2 API (NOT Gmail/Drive/Sheets OAuth2)\n   Scopes: spreadsheets drive script.scriptapp\n4. Save → Connect → grant permissions\n5. Open this node → select new credential",
-        "height": 220,
-        "width": 340,
-        "color": 5
+        "content": "### If stops here\n\n403 after GCP project change?\nSee [troubleshooting](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#403-permission-errors-incl-gcp-project-migration)",
+        "height": 80,
+        "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1056,
-        790
+        1080,
+        608
       ],
       "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
       "name": "Sticky - Credential Recovery"
@@ -703,9 +702,9 @@
     },
     {
       "parameters": {
-        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.\n\n---\n**CRM mode:** Point `spreadsheet_id` to your **ContactManager** spreadsheet, set `data_sheet_name` to **Entries**, and `batch_size` to **7**. Copy the spreadsheet ID from the URL: `docs.google.com/spreadsheets/d/`**THIS_PART**`/edit`",
-        "height": 220,
-        "width": 230
+        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.",
+        "height": 80,
+        "width": 150
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
