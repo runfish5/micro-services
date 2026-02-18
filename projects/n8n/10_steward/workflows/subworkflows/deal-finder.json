@@ -405,7 +405,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format Perplexity response with category header\nconst requirement = $('Loop Requirements').first().json;\nconst perplexityResponse = $input.first().json;\n\nconst content = perplexityResponse.choices?.[0]?.message?.content || 'No recommendations found.';\n\nconst emoji = {\n  'phone': '📱',\n  'desk': '🪑',\n  'laptop': '💻',\n  'kitchen': '🍳',\n  'audio': '🎧',\n  'camera': '📷',\n  'tv': '📺',\n  'appliance': '🏠'\n};\n\nconst icon = emoji[requirement.category.toLowerCase()] || '🛒';\n\nreturn [{\n  json: {\n    category: requirement.category,\n    formatted: `${icon} *${requirement.category.toUpperCase()}* (Budget: ${requirement.max_price})\\n\\n${content}`,\n    raw: content\n  }\n}];"
+        "jsCode": "// Format Perplexity response with category header\nconst requirement = $('Loop Requirements').first().json;\nconst perplexityResponse = $input.first().json;\n\nconst content = perplexityResponse.choices?.[0]?.message?.content || 'No recommendations found.';\n\nconst emoji = {\n  'phone': '📱',\n  'desk': '🪑',\n  'laptop': '💻',\n  'kitchen': '🍳',\n  'audio': '🎧',\n  'camera': '📷',\n  'tv': '📺',\n  'appliance': '🏠'\n};\n\nconst icon = emoji[requirement.category.toLowerCase()] || '🛒';\n\nreturn [{\n  json: {\n    category: requirement.category,\n    formatted: `${icon} *${requirement.category.toUpperCase()}* (Budget: ${requirement.max_price})\\n\\n${content}`,\n    recommendations: content,\n    last_researched: new Date().toISOString().split('T')[0]\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1263,12 +1263,18 @@
           "mode": "name"
         },
         "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "recommendations": "={{ $json.raw }}",
-            "last_researched": "={{ new Date().toISOString().split('T')[0] }}"
-          },
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["category"],
           "schema": [
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
             {
               "id": "recommendations",
               "displayName": "recommendations",
@@ -1289,16 +1295,9 @@
             }
           ]
         },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "category",
-              "lookupValue": "={{ $json.category }}"
-            }
-          ]
-        },
         "options": {
-          "cellFormat": "USER_ENTERED"
+          "cellFormat": "USER_ENTERED",
+          "handlingExtraData": "ignoreIt"
         }
       },
       "type": "n8n-nodes-base.googleSheets",
