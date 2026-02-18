@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'jJmiXA2vJbkk3WKX', // YOUR_EXPENSE_REPORT_WORKFLOW_ID\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'IKA8U9z7bVwCYuhU', // YOUR_LEARNING_NOTES_WORKFLOW_ID\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21', // YOUR_DEAL_FINDER_WORKFLOW_ID\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'jJmiXA2vJbkk3WKX', // YOUR_EXPENSE_REPORT_WORKFLOW_ID\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'IKA8U9z7bVwCYuhU', // YOUR_LEARNING_NOTES_WORKFLOW_ID\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21', // YOUR_DEAL_FINDER_WORKFLOW_ID\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true,\n    subCommands: [\n      'add <category> <price> <constraints>',\n      'track <url>',\n      'tracked',\n      'untrack <name>',\n      'check_prices',\n      'history <name>',\n      'plot'\n    ]\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -572,7 +572,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generate dynamic help message from agents registry\nconst agents = $json.agents;\nconst chatId = $json.chatId;\n\nconst lines = Object.entries(agents)\n  .filter(([k, v]) => v.ready)\n  .map(([k, v]) => `  /${k} — ${v.desc}`);\n\nconst response = `*Available commands:*\\n\\n${lines.join('\\n')}\\n\\n  /deals add <category> <price> <constraints>\\n  /deals track <url>\\n  /help — This message\\n\\nOr just send me a question in plain text.`;\n\nreturn [{ json: { chatId, response } }];"
+        "jsCode": "// Generate dynamic help message from agents registry\nconst agents = $json.agents;\nconst chatId = $json.chatId;\n\nconst sections = [];\nfor (const [key, agent] of Object.entries(agents)) {\n  if (!agent.ready) continue;\n  sections.push(`  /${key} — ${agent.desc}`);\n  if (agent.subCommands) {\n    for (const sub of agent.subCommands) {\n      sections.push(`    /${key} ${sub}`);\n    }\n  }\n}\n\nconst response = `*Available commands:*\\n\\n${sections.join('\\n')}\\n\\n  /help — This message\\n\\nOr just send me a question in plain text.`;\nreturn [{ json: { chatId, response } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

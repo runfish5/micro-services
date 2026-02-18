@@ -10,7 +10,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'Steward_Deals',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  historySheetName: input.historySheetName || 'Price History',\n  currency: input.currency || 'CHF'\n} }];"
+        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || '1cD3xVEhfP5Iy-PwumXymLctXgI1X_mbEUlhjHDZPhto', // YOUR_GOOGLE_SHEET_ID — Steward_Deals\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  historySheetName: input.historySheetName || 'Price History',\n  currency: input.currency || 'CHF'\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -267,6 +267,19 @@
       "position": [-600, -160],
       "id": "pc100001-0001-0001-0001-000000000013",
       "name": "Sticky Note - Overview"
+    },
+    {
+      "parameters": {
+        "content": "**Setup required**\nThe sheetId default points to the developer's Google Sheet.\nReplace it with your own sheet ID in the Config node.\nCallers can also pass sheetId as input to override.\nSee setup-guide.md for full post-import checklist.",
+        "height": 140,
+        "width": 340,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-420, 200],
+      "id": "pc100001-0001-0001-0001-000000000016",
+      "name": "Sticky Note - Config Setup"
     }
   ],
   "connections": {

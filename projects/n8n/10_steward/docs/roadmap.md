@@ -1,14 +1,14 @@
 # Steward Roadmap
 
 > Written after Phase 0 reconsolidation (2 weeks post-creation, 19 commits).
-> Updated after completing bug fixes (B1-B3), cleanup (C1-C2), and Price History (Phases 1-4).
+> Updated after completing bug fixes (B1-B3), cleanup (C1-C2), Price History (Phases 1-4), and Dynamic Help (F2).
 
 ## Current State
 
 | Workflow | Nodes | Stickies | Health |
 |----------|-------|----------|--------|
 | daily-briefing.json | 6 | 3 | Clean (removed passthrough node) |
-| menu-handler.json | 20 (+4 sub-nodes) | 4 | Good — one hardcoded node (Build Help) |
+| menu-handler.json | 20 (+4 sub-nodes) | 4 | Good — fully config-driven |
 | deal-finder.json | 52 | 4 | Large — config-driven, well-structured branches incl. price history charts |
 | learning-notes.json | 8 (+2 sub-nodes) | 1 | Functional as subworkflow (fixed caller input, removed unused memory) |
 | price-checker.json | 13 | 2 | Clean — now appends price history on each check cycle |
@@ -70,7 +70,7 @@ Patterns that emerged organically. Codify these so future work follows them:
 ### 1. Config-driven registry
 The Config code node is the single source of truth. All routing, help text, and dispatch derive from it. **Never hardcode** agent names, workflow IDs, or descriptions outside Config.
 
-**Violation**: Build Help hardcodes `/deals add` and `/deals track` sub-commands. Fix by adding a `subCommands` array to each Config registry entry.
+~~**Violation**: Build Help hardcodes `/deals add` and `/deals track` sub-commands.~~ Fixed in F2 — Config now has `subCommands` arrays, Build Help reads them dynamically.
 
 ### 2. Subworkflows own their replies
 Subworkflows (deal-finder, learning-notes) send their own Telegram messages. The hub's Format Skill Response node detects this (empty response) and does nothing. This is correct — subworkflows know their own output format best.
@@ -100,29 +100,9 @@ All phases implemented. See `docs/price-history-spec.md` (status: Implemented).
 - Phase 3: `/deals plot` — multi-product overlay chart with color-coded lines
 - Phase 4: Documentation updated (mainflow.md, CLAUDE.md, setup-guide.md, spec)
 
-### F2. Make Build Help fully dynamic
+### ~~F2. Make Build Help fully dynamic + morning briefing hint~~ DONE
 
-Currently hardcodes `/deals add` and `/deals track`. Add a `subCommands` field to the Config registry:
-
-```js
-deals: {
-  workflowId: '...',
-  label: 'Deal Finder',
-  desc: '...',
-  ready: true,
-  subCommands: [
-    'add <category> <price> <constraints>',
-    'track <url>',
-    'tracked',
-    'untrack <name>',
-    'check_prices',
-    'history <name>',
-    'plot'
-  ]
-}
-```
-
-Build Help reads `subCommands` and formats them dynamically. New commands auto-appear in help. This is especially important now that Phase 2-3 added `history` and `plot` — users won't know these exist unless `/help` shows them.
+Added `subCommands` array to deals entry in Config registry. Build Help now iterates `subCommands` dynamically — new commands auto-appear in `/help`. Also added a `❓ Help` button to the daily briefing's second button row (`briefing:help`), which routes through Normalize's existing `builtinActions` handling.
 
 ### F3. `/start` command
 
@@ -164,11 +144,10 @@ deal-finder and price-checker both define `sheetId` defaults independently. If t
 
 ## Suggested Next Steps
 
-Completed: B1-B3, C1-C2, F1 (Price History Phases 1-4).
+Completed: B1-B3, C1-C2, F1 (Price History Phases 1-4), F2 (Dynamic Help + briefing hint).
 
 Remaining work, in priority order:
 1. **C3 + C4 decisions** — Whitelist and Perplexity: decide keep-or-remove
-2. **F2: Dynamic Build Help** — make `/help` output fully config-driven (adds `subCommands` to registry)
-3. **F3: `/start` command** — small, quick win for Telegram UX
-4. **F4: Threshold price alerts** — leverage existing `notify_mode`/`price_threshold` schema
-5. **F5: Weekly digest** — scheduled summary of the week's activity
+2. **F3: `/start` command** — small, quick win for Telegram UX
+3. **F4: Threshold price alerts** — leverage existing `notify_mode`/`price_threshold` schema
+4. **F5: Weekly digest** — scheduled summary of the week's activity

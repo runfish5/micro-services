@@ -843,9 +843,9 @@
     },
     {
       "parameters": {
-        "content": "**Setup required**\nReplace YOUR_GOOGLE_SHEET_ID with your actual sheet ID.\nchatId is passed by the caller (menu-handler).",
-        "height": 80,
-        "width": 280,
+        "content": "**Setup required**\nThe sheetId default points to the developer's Google Sheet.\nReplace it with your own sheet ID in the Config node.\nchatId is passed by the caller (menu-handler).\nSee setup-guide.md for full post-import checklist.",
+        "height": 140,
+        "width": 340,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",

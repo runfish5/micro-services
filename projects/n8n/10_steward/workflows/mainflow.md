@@ -22,7 +22,7 @@ menu-handler.json            Always-on hub with config-driven routing + conversa
 ## daily-briefing.json
 
 ```
-Schedule Trigger (7 AM) --> Get Today's Events --> Prepare Price Check --> Check Prices (Execute Workflow) --> Format Message --> Send to Telegram
+Schedule Trigger (7 AM) --> Get Today's Events --> Check Prices (Execute Workflow) --> Format Message --> Send to Telegram
 Manual Trigger ---------/
 ```
 
@@ -33,7 +33,6 @@ Manual Trigger ---------/
 | Schedule Trigger | scheduleTrigger | Fires daily at 7 AM | -- |
 | Manual Trigger | manualTrigger | Testing entry point | -- |
 | Get Today's Events | googleCalendar | Fetches today's events, `alwaysOutputData: true` | Calendar: `YOUR_GOOGLE_CALENDAR_EMAIL` |
-| Prepare Price Check | code | Passes calendar events forward for price-checker | -- |
 | Check Prices | executeWorkflow | Calls price-checker.json, returns `{ priceReport, priceSection }` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` |
 | Format Message | code | Builds calendar lines + appends price tracker section from Check Prices | References `$('Get Today\'s Events')` for calendar |
 | Send to Telegram | telegram | Sends combined message | Chat ID: `YOUR_CHAT_ID_1` |
@@ -45,6 +44,7 @@ Manual Trigger ---------/
 | Expenses | `briefing:expenses` |
 | Learning Notes | `briefing:learning` |
 | Deal Finder | `briefing:deals` |
+| Help | `briefing:help` |
 
 ## menu-handler.json
 
@@ -95,9 +95,12 @@ The Config code node defines all available agents as a JSON registry. To add a n
 const agents = {
   expenses: { workflowId: '...', label: 'Expense Report',  desc: 'Monthly expense trends...', ready: true  },
   learning: { workflowId: '...', label: 'Learning Notes',  desc: 'AI-summarized notes...',     ready: true  },
-  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true  }
+  deals:    { workflowId: '...', label: 'Deal Finder',     desc: 'Price tracker + deal research', ready: true,
+              subCommands: ['add <category> <price> <constraints>', 'track <url>', 'tracked', 'untrack <name>', 'check_prices', 'history <name>', 'plot'] }
 };
 ```
+
+Agents with `subCommands` arrays have their sub-commands listed under the main entry in `/help` output.
 
 The registry key (e.g., `expenses`) is used as:
 - The button callback data suffix (`briefing:expenses`)
@@ -177,7 +180,7 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
 | Route | switch | 3 outputs: help (built-in), agent (known action), or chat (AI classifier) |
 | Run Skill | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output. `onError: continueOnFail` — errors flow to Format Skill Response instead of crashing |
-| Build Help | code | Generates dynamic help message from the agents registry |
+| Build Help | code | Generates dynamic help message from the agents registry, including `subCommands` per agent |
 | Format Skill Response | code | Guards subworkflow returns — forwards response to Send Reply only if present. Detects `continueOnFail` error payloads and replies with "temporarily unavailable" |
 | AI Classifier | chainLlm | Conversation-aware LLM router with memory, output parser |
 | Groq Classifier LLM | lmChatGroq | LLM powering the classifier |
