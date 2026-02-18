@@ -176,9 +176,9 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | Config | code | Agent registry: maps action names to workflow IDs and descriptions |
 | Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
 | Route | switch | 3 outputs: help (built-in), agent (known action), or chat (AI classifier) |
-| Run Skill | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output |
+| Run Skill | executeWorkflow | Dynamic dispatch — reads workflowId from Normalize output. `onError: continueOnFail` — errors flow to Format Skill Response instead of crashing |
 | Build Help | code | Generates dynamic help message from the agents registry |
-| Format Skill Response | code | Guards subworkflow returns — forwards response to Send Reply only if present |
+| Format Skill Response | code | Guards subworkflow returns — forwards response to Send Reply only if present. Detects `continueOnFail` error payloads and replies with "temporarily unavailable" |
 | AI Classifier | chainLlm | Conversation-aware LLM router with memory, output parser |
 | Groq Classifier LLM | lmChatGroq | LLM powering the classifier |
 | Classifier Output Parser | outputParserStructured | Enforces `{route_type, query, reasoning}` |
@@ -186,7 +186,7 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | LLM Route | switch | 4-way: groq, brave, perplexity, or agent (fallback) |
 | Resolve Agent | code | Looks up workflowId from Config registry; returns graceful "not available" message when agent is not ready |
 | Agent Available? | if | Routes to Run Skill (AI) when workflowId is present; routes to Format Response when not |
-| Run Skill (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent |
+| Run Skill (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent. `onError: continueOnFail` — errors flow to Format Skill Response instead of crashing |
 | Groq Reasoning | chainLlm | Reasoning, coding, creative tasks |
 | Groq Reasoning LLM | lmChatGroq | Llama 4 Maverick for reasoning |
 | Brave Search | httpRequest | Brave Search API (via HTTP Request) |
@@ -289,7 +289,8 @@ Execute Workflow Trigger → Config → Parse Command → Route Operation (9 out
   |
   |-- [0 digest] → Load Requirements → Filter Active → Check Empty
   |                                       (empty) → Send Reply
-  |                                       (items) → Is Seed?
+  |                                       (items) → Build Indicator → Send Reply  (fires immediately)
+  |                                              → Is Seed?
   |                                                   (seed) → Seed Demo (append to sheet) → Loop
   |                                                   (not seed) → Loop
   |                                                   Loop → Perplexity → Format → Save Results → Loop

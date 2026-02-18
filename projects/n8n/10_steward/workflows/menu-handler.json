@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'HE11BD1klK-9ru2moDB70',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'YOUR_LEARNING_NOTES_WORKFLOW_ID',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'VC2ovszzzrFvafZ4',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'YOUR_LEARNING_NOTES_WORKFLOW_ID',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -211,6 +211,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
+      "onError": "continueOnFail",
       "position": [
         9760,
         3600
@@ -401,6 +402,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
+      "onError": "continueOnFail",
       "position": [
         10464,
         3640
@@ -548,7 +550,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Guard: only forward if subworkflow returned a response.\n// Subworkflows that send their own Telegram replies return no 'response' field.\nconst data = $input.first().json || {};\nconst chatId = data.chatId || $('Normalize').first().json.chatId;\nconst response = data.response || '';\n\nif (!response) {\n  // Subworkflow handled its own reply — nothing to forward\n  return [];\n}\n\nreturn [{ json: { chatId, response } }];"
+        "jsCode": "// Guard: only forward if subworkflow returned a response.\n// Subworkflows that send their own Telegram replies return no 'response' field.\nconst data = $input.first().json || {};\nconst chatId = data.chatId || $('Normalize').first().json.chatId;\n\n// continueOnFail error payload — reply with friendly message, don't cascade\nif (data.error) {\n  return [{ json: { chatId, response: 'Sorry, this feature is temporarily unavailable. Please try again later.' } }];\n}\n\nconst response = data.response || '';\n\nif (!response) {\n  // Subworkflow handled its own reply — nothing to forward\n  return [];\n}\n\nreturn [{ json: { chatId, response } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -604,8 +606,8 @@
     },
     {
       "parameters": {
-        "content": "chatId: $json.chatId\ntext: $json.text\naction: $json.action\nworkflowId: $json.workflowId",
-        "height": 120,
+        "content": "chatId: $json.chatId\ntext: $json.text\naction: $json.action\nworkflowId: $json.workflowId\nonError: continueOnFail\n→ errors → Format Skill Response",
+        "height": 150,
         "width": 200,
         "color": 5
       },
@@ -613,7 +615,7 @@
       "typeVersion": 1,
       "position": [
         9720,
-        3560
+        3540
       ],
       "id": "stn00001-0001-0001-0001-000000000001",
       "name": "Sticky Note - Run Skill Params"

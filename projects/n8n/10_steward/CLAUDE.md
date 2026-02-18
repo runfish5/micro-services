@@ -89,8 +89,9 @@ After importing `menu-handler.json`:
 
 ## Response Forwarding
 
-Both `Run Skill` and `Run Skill (AI)` connect to `Format Skill Response` → `Send Reply`. The guard node checks if the subworkflow returned a `response` field:
-- If present: forwards to Telegram via Send Reply
+Both `Run Skill` and `Run Skill (AI)` have `onError: continueOnFail` and connect to `Format Skill Response` → `Send Reply`. The guard node checks:
+- If `data.error`: subworkflow dispatch failed — replies with "temporarily unavailable" (prevents error handler cascade)
+- If `response` present: forwards to Telegram via Send Reply
 - If empty/missing: does nothing (subworkflow already sent its own reply)
 
 This means subworkflows can either handle their own replies (deal-finder, learning-notes) OR return `{chatId, response}` for the hub to forward.

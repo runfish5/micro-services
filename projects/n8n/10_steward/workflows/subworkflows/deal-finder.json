@@ -350,6 +350,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = $('Parse Command').first().json.chatId;\nconst categories = items.map(i => i.json.category).filter(Boolean);\nconst count = categories.length;\nconst list = categories.join(', ');\nreturn [{ json: { chatId, response: `🔍 Researching ${count} categor${count === 1 ? 'y' : 'ies'}: ${list}...` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7088,
+        5440
+      ],
+      "id": "df100001-0001-0001-0001-000000000083",
+      "name": "Build Indicator"
+    },
+    {
+      "parameters": {
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
@@ -1148,7 +1161,9 @@
             "constraints": "={{ $json.constraints }}",
             "max_price": "={{ $json.max_price }}",
             "priority": "={{ $json.priority }}",
-            "status": "={{ $json.status }}"
+            "status": "={{ $json.status }}",
+            "recommendations": "",
+            "last_researched": ""
           },
           "matchingColumns": [],
           "schema": [
@@ -1196,6 +1211,24 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "recommendations",
+              "displayName": "recommendations",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_researched",
+              "displayName": "last_researched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
             }
           ]
         },
@@ -1232,23 +1265,10 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "category": "={{ $json.category }}",
             "recommendations": "={{ $json.raw }}",
             "last_researched": "={{ new Date().toISOString().split('T')[0] }}"
           },
-          "matchingColumns": [
-            "category"
-          ],
           "schema": [
-            {
-              "id": "category",
-              "displayName": "category",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
             {
               "id": "recommendations",
               "displayName": "recommendations",
@@ -1266,6 +1286,14 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "category",
+              "lookupValue": "={{ $json.category }}"
             }
           ]
         },
@@ -1424,7 +1452,23 @@
         ],
         [
           {
+            "node": "Build Indicator",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Is Seed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Indicator": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
             "type": "main",
             "index": 0
           }
