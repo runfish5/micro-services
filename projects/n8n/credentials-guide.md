@@ -84,3 +84,17 @@ In the HTTP node (e.g., `[CRM] Write via Apps Script`), select this credential a
 | 403 despite everything matching | Script not authorized locally yet | Run the test function once from Apps Script editor (triggers consent screen) |
 
 **Full setup** (GCP project, script creation, deployment, troubleshooting): [Apps Script Execution API Setup](02_smart-table-fill/docs/apps-script-execution-api-setup.md)
+
+---
+
+### Notion
+
+For reading and writing Notion pages/databases from n8n.
+
+- **Already have an integration?**
+  Go to [notion.so/profile/integrations](https://www.notion.so/profile/integrations) → find your integration → click **Connections** on the right → click the three dots (`...`) → **Copy internal integration token** → paste into n8n: Credentials → Add → Notion API
+
+- **Don't have one yet?**
+  Follow the [Notion integration setup guide](https://www.notion.so/help/create-integrations-with-the-notion-api) to create one, then copy the token as above.
+
+This is one of the simplest connections — just paste the token and you're done.
