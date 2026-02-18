@@ -255,7 +255,7 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor with price tracking and Perplexity research (37 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking and Perplexity research (40 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
 
 Remove, pause, and resume share a single "Modify Requirement" branch. All branches converge to one shared Send Reply Telegram node.
 
@@ -289,7 +289,10 @@ Execute Workflow Trigger → Config → Parse Command → Route Operation (9 out
   |
   |-- [0 digest] → Load Requirements → Filter Active → Check Empty
   |                                       (empty) → Send Reply
-  |                                       (items) → Loop → Perplexity → Format → Loop
+  |                                       (items) → Is Seed?
+  |                                                   (seed) → Seed Demo (append to sheet) → Loop
+  |                                                   (not seed) → Loop
+  |                                                   Loop → Perplexity → Format → Save Results → Loop
   |                                                   (done) → Collect → Build Digest → Send Reply
   |
   |-- [1 add] → Append Requirement → Build Add Response → Send Reply
@@ -321,7 +324,7 @@ Execute Workflow Trigger → Config → Parse Command → Route Operation (9 out
 Copy-paste this header row into your sheet:
 
 ```
-category	constraints	max_price	priority	status
+category	constraints	max_price	priority	status	recommendations	last_researched
 ```
 
 | Column | Type | Example |
@@ -331,6 +334,8 @@ category	constraints	max_price	priority	status
 | max_price | string | 800 CHF |
 | priority | string | high / medium / low |
 | status | string | active / paused |
+| recommendations | string | (Perplexity output — raw research text) |
+| last_researched | string | 2026-02-17 (ISO date of last research) |
 
 #### Tracked Prices tab — URL-based price tracking
 
