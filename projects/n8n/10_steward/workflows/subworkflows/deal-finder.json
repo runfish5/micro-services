@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: '1cD3xVEhfP5Iy-PwumXymLctXgI1X_mbEUlhjHDZPhto', // Steward_Deals gdrive Sheet\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
+        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'YOUR_GOOGLE_SHEET_ID', // Steward_Deals gdrive Sheet\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -780,7 +780,7 @@
     },
     {
       "parameters": {
-        "content": "workflowId: YOUR_PRICE_CHECKER_WORKFLOW_ID\n(no inputs — reads Config via shared sheet)",
+        "content": "workflowId: YOUR_PRICE_CHECKER_WORKFLOW_ID\n(no required inputs — price-checker Config has defaults)",
         "height": 80,
         "color": 5
       },
@@ -795,7 +795,7 @@
     },
     {
       "parameters": {
-        "content": "**Setup required**\nInsert the Google Sheet ID from \"Steward_Deals\" into sheetId.\nchatId is passed by the caller (menu-handler).",
+        "content": "**Setup required**\nReplace YOUR_GOOGLE_SHEET_ID with your actual sheet ID.\nchatId is passed by the caller (menu-handler).",
         "height": 80,
         "width": 280,
         "color": 3
@@ -1864,7 +1864,7 @@
   },
   "pinData": {},
   "meta": {
-    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026",
+    "instanceId": "YOUR_INSTANCE_ID",
     "templateCredsSetupCompleted": true
   }
 }

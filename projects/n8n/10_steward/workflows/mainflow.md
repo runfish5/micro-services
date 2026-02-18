@@ -32,7 +32,7 @@ Manual Trigger ---------/
 |------|------|---------|------------|
 | Schedule Trigger | scheduleTrigger | Fires daily at 7 AM | -- |
 | Manual Trigger | manualTrigger | Testing entry point | -- |
-| Get Today's Events | googleCalendar | Fetches today's events, `alwaysOutputData: true` | Calendar: `uniqued4ve@gmail.com` |
+| Get Today's Events | googleCalendar | Fetches today's events, `alwaysOutputData: true` | Calendar: `YOUR_GOOGLE_CALENDAR_EMAIL` |
 | Prepare Price Check | code | Passes calendar events forward for price-checker | -- |
 | Check Prices | executeWorkflow | Calls price-checker.json, returns `{ priceReport, priceSection }` | `YOUR_PRICE_CHECKER_WORKFLOW_ID` |
 | Format Message | code | Builds calendar lines + appends price tracker section from Check Prices | References `$('Get Today\'s Events')` for calendar |
@@ -48,7 +48,7 @@ Manual Trigger ---------/
 
 ## menu-handler.json
 
-Config-driven hub-and-spoke with conversation-aware AI routing (24 nodes + 4 sticky notes). Three architectural layers:
+Config-driven hub-and-spoke with conversation-aware AI routing (20 nodes + 4 sticky notes). Three architectural layers:
 
 1. **Agent Registry** (Config node) — single source of truth for available agents and their workflow IDs
 2. **Deterministic routing** — buttons and /commands match registry keys, dispatch via dynamic Execute Workflow
@@ -172,7 +172,7 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | Telegram Trigger | telegramTrigger | Listens for `callback_query` and `message` events |
 | Chat Trigger | chatTrigger | MCP-compatible entry point; bypasses Whitelist |
 | Execute Workflow Trigger | executeWorkflowTrigger | Subworkflow entry point; accepts {text, chatId} from parent workflows; bypasses Whitelist |
-| Whitelist | if (disabled) | Checks sender ID against allowed chat IDs |
+| Whitelist | if (disabled) | Checks sender ID against allowed chat IDs. Currently disabled — no validation occurs |
 | Config | code | Agent registry: maps action names to workflow IDs and descriptions |
 | Normalize | code | Extracts `{ action, chatId, text, workflowId, agents }` using registry |
 | Route | switch | 3 outputs: help (built-in), agent (known action), or chat (AI classifier) |
@@ -188,7 +188,7 @@ The fallback catches agent route_types and passes them through **Resolve Agent**
 | Agent Available? | if | Routes to Run Skill (AI) when workflowId is present; routes to Format Response when not |
 | Run Skill (AI) | executeWorkflow | Dynamic dispatch — reads workflowId from Resolve Agent. `onError: continueOnFail` — errors flow to Format Skill Response instead of crashing |
 | Groq Reasoning | chainLlm | Reasoning, coding, creative tasks |
-| Groq Reasoning LLM | lmChatGroq | Llama 4 Maverick for reasoning |
+| Groq Reasoning LLM | lmChatGroq | Reasoning-capable LLM |
 | Brave Search | httpRequest | Brave Search API (via HTTP Request) |
 | Perplexity Research | perplexity | Research and comparison queries (currently disabled) |
 | Format Response | code | Normalizes all LLM route outputs into `{ response, chatId }` |
@@ -255,7 +255,7 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor with price tracking and Perplexity research (40 nodes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking and Perplexity research (41 nodes + 4 sticky notes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
 
 Remove, pause, and resume share a single "Modify Requirement" branch. All branches converge to one shared Send Reply Telegram node.
 
@@ -401,7 +401,6 @@ Focus on products actually available in {{ region }}.
 | `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `sheetName` | `Requirements` | Sheet/tab name for requirements |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name for price tracking |
-| `chatId` | `YOUR_CHAT_ID_1` | Telegram chat for responses |
 | `region` | `Switzerland` | Country/region for shopping |
 | `retailers` | `Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot` | Comma-separated retailer list |
 | `currency` | `CHF` | Currency code for prices |

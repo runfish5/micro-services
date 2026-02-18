@@ -1,5 +1,7 @@
 # Price History Tracking — Project Spec
 
+> Status: Planned — not yet implemented
+
 ## Problem
 
 The deal-finder tracks product prices via URL scraping (`/deals track <url>`), but only stores 4 price snapshots per product: `current_price`, `previous_price`, `lowest_price`, `highest_price`. There is no per-day historical log. Without time-series data, you can't see trends, seasonality, or whether a current price is actually a good deal relative to the last few weeks/months.
@@ -77,6 +79,27 @@ Tracked Prices (live state, 1 row per product)
 ---
 
 ## Implementation Phases
+
+### Phase 0 — Reconsolidation (completed)
+
+Pre-implementation cleanup to fix security leaks, stale documentation, and catalog known issues.
+
+**Phase 0A — Security Scrub**: Replaced real Telegram user IDs, n8n workflow IDs, Google Sheet IDs, instance IDs, and GitHub usernames with placeholder values across all workflow JSON files.
+
+**Phase 0B — Documentation Accuracy**: Fixed incorrect node counts, stale Config parameter claims, Whitelist disabled-but-documented-as-active, model name references, and missing sheet columns in README, CLAUDE.md, mainflow.md, and setup-guide.md.
+
+**Phase 0C — Known Architectural Issues**: The following issues were identified during the audit. They don't block price history implementation but should be addressed in a future session:
+
+| # | Issue | Impact | Fix complexity |
+|---|-------|--------|----------------|
+| 1 | **learning-notes ignores caller's `text` and `chatId`** — Config always uses hardcoded "NVIDIA" search term and `YOUR_CHAT_ID_1` | Cannot query interactively; `/learning machine learning` still searches NVIDIA | Medium — make Config read from trigger input with fallback to defaults |
+| 2 | **learning-notes has Postgres memory on a one-shot summarizer** — no session key, sessions bleed, memory grows forever | Memory waste, possible context bleed | Easy — remove the memory sub-node |
+| 3 | **Route switch `/help` double-matches** — fires both "help" AND "agent" outputs (Run Skill runs with empty workflowId, fails silently via continueOnFail) | Wasted execution, silent error on every `/help` | Easy — add `AND action != "help"` to agent rule |
+| 4 | **Build Help hard-codes `/deals add` and `/deals track`** sub-commands instead of deriving from registry | Undermines config-driven pattern; will silently go stale | Medium — add sub-command info to Config registry |
+| 5 | **"Prepare Price Check" node in daily-briefing is a pure passthrough** — does nothing | Dead code | Easy — remove node, rewire |
+| 6 | **price-checker `chatId` Config default is never used** by any node | Dead config | Easy — remove from defaults |
+
+---
 
 ### Phase 1 — History Storage
 

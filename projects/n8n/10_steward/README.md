@@ -1,7 +1,5 @@
 # 10 - Steward
 
-> **WIP** - Work in progress note
-
 Personal assistant via Telegram — morning briefing, on-demand dispatch, and subworkflow delegation.
 
 ## What It Does
@@ -41,8 +39,8 @@ Tapping a button triggers the corresponding subworkflow.
 
 ## Setup
 
-1. Import all 5 workflows into n8n
-2. In `menu-handler.json`, update the 3 Execute Workflow node IDs to match actual workflow IDs
+1. Import all 4 workflows into n8n (daily-briefing is in project 05)
+2. In `menu-handler.json`, update workflowId values in menu-handler Config node
 3. Activate `menu-handler.json` (must be always-on for button taps)
 4. `daily-briefing.json` runs on schedule or test via Manual Trigger
 

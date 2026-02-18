@@ -35,9 +35,9 @@
         "operation": "getAll",
         "calendar": {
           "__rl": true,
-          "value": "uniqued4ve@gmail.com",
+          "value": "YOUR_GOOGLE_CALENDAR_EMAIL",
           "mode": "list",
-          "cachedResultName": "uniqued4ve@gmail.com"
+          "cachedResultName": "YOUR_GOOGLE_CALENDAR_EMAIL"
         },
         "options": {
           "timeMin": "={{ $now.beginningOf('day').toISO() }}",
@@ -138,7 +138,7 @@
     },
     {
       "parameters": {
-        "content": "## Button Callbacks\n📊 briefing:expenses · 📚 briefing:learning · 🛍️ briefing:deals\nRouted by menu-handler.json in [10_steward](https://github.com/runfish5/micro-services/tree/main/projects/n8n/10_steward)",
+        "content": "## Button Callbacks\n📊 briefing:expenses · 📚 briefing:learning · 🛍️ briefing:deals\nRouted by menu-handler.json in [10_steward](YOUR_GITHUB_REPO_URL/tree/main/projects/n8n/10_steward)",
         "height": 140,
         "width": 400
       },
@@ -269,6 +269,6 @@
   },
   "pinData": {},
   "meta": {
-    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+    "instanceId": "YOUR_INSTANCE_ID"
   }
 }

@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'VC2ovszzzrFvafZ4',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'YOUR_LEARNING_NOTES_WORKFLOW_ID',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'YOUR_EXPENSE_REPORT_WORKFLOW_ID',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'YOUR_LEARNING_NOTES_WORKFLOW_ID',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: 'YOUR_DEAL_FINDER_WORKFLOW_ID',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -591,7 +591,7 @@
     },
     {
       "parameters": {
-        "content": "If stopped here →\n[credentials-guide.md](https://github.com/uniqued4ve/micro-services/blob/main/projects/n8n/credentials-guide.md#brave-search)",
+        "content": "If stopped here →\n[credentials-guide.md](YOUR_GITHUB_REPO_URL/blob/main/projects/n8n/credentials-guide.md#brave-search)",
         "height": 80,
         "width": 150
       },
@@ -974,16 +974,16 @@
         "message": {
           "message_id": 1094,
           "from": {
-            "id": 7582730035,
+            "id": 1234567890,
             "is_bot": false,
-            "first_name": "David",
-            "last_name": "Stre",
+            "first_name": "Test",
+            "last_name": "User",
             "language_code": "en"
           },
           "chat": {
-            "id": 7582730035,
-            "first_name": "David",
-            "last_name": "Stre",
+            "id": 1234567890,
+            "first_name": "Test",
+            "last_name": "User",
             "type": "private"
           },
           "date": 1770037039,
@@ -994,6 +994,6 @@
   },
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+    "instanceId": "YOUR_INSTANCE_ID"
   }
 }

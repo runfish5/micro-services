@@ -12,7 +12,7 @@ Personal assistant (steward) that serves as the central touchpoint for the user 
 2. Calls `price-checker.json` to get current prices for tracked products
 3. Formats a combined message with calendar + price tracker section, appends 3 inline keyboard buttons
 3. Sends to Telegram; user taps a button whenever they want
-4. `menu-handler.json` (always-on) receives the callback query, validates the chat ID. Also callable as a subworkflow via Execute Workflow Trigger for error handling and orchestration.
+4. `menu-handler.json` (always-on) receives the callback query. Whitelist node exists but is disabled — no chat ID validation occurs. Also callable as a subworkflow via Execute Workflow Trigger for error handling and orchestration.
 5. **Config node** provides the agent registry (name → workflowId + description)
 6. **Normalize** parses input using the registry to identify known actions
 7. **Route** dispatches: known actions go to a dynamic Execute Workflow; free text goes to the AI Classifier
@@ -48,7 +48,7 @@ Everything else adapts automatically from the registry.
 | Path | Trigger | How it works |
 |------|---------|-------------|
 | Deterministic | Button tap, /command | Normalize matches registry key → dynamic Execute Workflow |
-| AI-classified | Free text | Classifier routes to agents OR LLM backends (Groq, Brave, Perplexity) |
+| AI-classified | Free text | Classifier routes to agents OR LLM backends (Groq, Brave, Perplexity (disabled)) |
 | Built-in | /help | Route matches directly → Build Help → Send Reply |
 | Subworkflow | Execute Workflow Trigger | Parent passes {text, chatId}; Normalize routes through AI Classifier |
 
@@ -60,9 +60,9 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 
 ### Workflows
 - `../05_daily-briefing/daily-briefing.json` - Extracted to standalone project (Mode B buttons still reference menu-handler here)
-- `workflows/menu-handler.json` - Config-driven hub with AI routing (24 nodes + 4 sticky notes)
+- `workflows/menu-handler.json` - Config-driven hub with AI routing (20 nodes + 4 sticky notes)
 - `workflows/subworkflows/learning-notes.json` - Notion AI summary (12 nodes)
-- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (40 nodes) (+ Build Price Response for check_prices output)
+- `workflows/subworkflows/deal-finder.json` - Shopping advisor + price tracker with Sheets CRUD + Perplexity (41 nodes + 4 sticky notes) (+ Build Price Response for check_prices output)
 - `workflows/subworkflows/price-checker.json` - Batch price checking engine (13 nodes)
 
 ### Documentation
@@ -74,7 +74,7 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 | Parameter | Location | Value |
 |-----------|----------|-------|
 | Morning schedule | daily-briefing / Schedule Trigger | 7 AM daily |
-| Calendar | daily-briefing / Get Today's Events | `uniqued4ve@gmail.com` |
+| Calendar | daily-briefing / Get Today's Events | `YOUR_GOOGLE_CALENDAR_EMAIL` |
 | Chat ID | daily-briefing / Send to Telegram | `YOUR_CHAT_ID_1` |
 | Allowed users | menu-handler / Whitelist | `YOUR_CHAT_ID_1`, `YOUR_CHAT_ID_2` |
 | Agent registry | menu-handler / Config | expenses, learning, deals |
