@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'YOUR_EXPENSE_REPORT_WORKFLOW_ID',\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'YOUR_LEARNING_NOTES_WORKFLOW_ID',\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: 'YOUR_DEAL_FINDER_WORKFLOW_ID',\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
+        "jsCode": "// Agent registry \u2014 add new agents here, update Classifier Output Parser enum to match\nconst agents = {\n  expenses: {\n    workflowId: 'jJmiXA2vJbkk3WKX', // YOUR_EXPENSE_REPORT_WORKFLOW_ID\n    label: 'Expense Report',\n    desc: 'Monthly expense trends and charts from billing ledger',\n    ready: true\n  },\n  learning: {\n    workflowId: 'IKA8U9z7bVwCYuhU', // YOUR_LEARNING_NOTES_WORKFLOW_ID\n    label: 'Learning Notes',\n    desc: 'AI-summarized notes from Notion knowledge base',\n    ready: true\n  },\n  deals: {\n    workflowId: '2_Jk_DnmQcnpRdceAsh21', // YOUR_DEAL_FINDER_WORKFLOW_ID\n    label: 'Deal Finder',\n    desc: 'Product deal-finder and price tracker. Tracks specific product URLs for daily price updates. Researches deals and alternatives from Swiss retailers.',\n    ready: true\n  }\n};\n\n// Pass through trigger data + inject registry\nreturn [{ json: { ...$json, agents } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -150,6 +150,15 @@
                     "id": "route-agent",
                     "leftValue": "={{ $json.action }}",
                     "rightValue": "chat",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "route-agent-not-help",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "help",
                     "operator": {
                       "type": "string",
                       "operation": "notEquals"

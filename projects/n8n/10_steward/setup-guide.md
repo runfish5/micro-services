@@ -29,9 +29,10 @@ deal-finder and price-checker Config nodes default `sheetId` to `'Steward_Deals'
 https://docs.google.com/spreadsheets/d/<THIS_IS_THE_ID>/edit
 ```
 
-**Sheet setup**: Create a Google Sheet with two tabs:
+**Sheet setup**: Create a Google Sheet with three tabs:
 - `Requirements` -- columns: `category`, `constraints`, `max_price`, `priority`, `status`, `recommendations`, `last_researched`
 - `Tracked Prices` -- columns: `url`, `product_name`, `domain`, `current_price`, `currency`, `previous_price`, `lowest_price`, `highest_price`, `first_tracked`, `last_checked`, `status`, `notify_mode`, `price_threshold`
+- `Price History` -- columns: `date`, `url`, `product_name`, `price`, `currency`
 
 Full column schemas are in [mainflow.md](workflows/mainflow.md#google-sheet-schemas).
 

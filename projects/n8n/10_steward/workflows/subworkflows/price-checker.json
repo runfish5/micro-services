@@ -10,7 +10,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'Steward_Deals',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  currency: input.currency || 'CHF',\n  chatId: input.chatId || 'YOUR_CHAT_ID_1'\n} }];"
+        "jsCode": "const input = $input.first().json || {};\nreturn [{ json: {\n  sheetId: input.sheetId || 'Steward_Deals',\n  trackingSheetName: input.trackingSheetName || 'Tracked Prices',\n  historySheetName: input.historySheetName || 'Price History',\n  currency: input.currency || 'CHF'\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -138,6 +138,57 @@
     },
     {
       "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.historySheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.last_checked }}",
+            "url": "={{ $json.url }}",
+            "product_name": "={{ $json.product_name }}",
+            "price": "={{ $json.new_price }}",
+            "currency": "={{ $json.currency }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1080, 460],
+      "id": "pc100001-0001-0001-0001-000000000014",
+      "name": "Append History",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Appends to Price History tab:\ndate, url, product_name, price, currency\nonError: continueRegularOutput",
+        "height": 80,
+        "width": 240,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1040, 410],
+      "id": "pc100001-0001-0001-0001-000000000015",
+      "name": "Sticky Note - Append History"
+    },
+    {
+      "parameters": {
         "operation": "update",
         "documentId": {
           "__rl": true,
@@ -174,7 +225,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [1160, 460],
+      "position": [1300, 460],
       "id": "pc100001-0001-0001-0001-000000000010",
       "name": "Update Row",
       "credentials": {
@@ -311,6 +362,17 @@
       ]
     },
     "Extract & Compare": {
+      "main": [
+        [
+          {
+            "node": "Append History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append History": {
       "main": [
         [
           {

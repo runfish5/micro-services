@@ -168,19 +168,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Pass calendar events forward and prepare price check input\nconst events = $input.all();\nreturn events;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        752,
-        -40
-      ],
-      "id": "db100001-0001-0001-0001-000000000001",
-      "name": "Prepare Price Check"
-    },
-    {
-      "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "YOUR_PRICE_CHECKER_WORKFLOW_ID",
@@ -223,17 +210,6 @@
       ]
     },
     "Get Today's Events": {
-      "main": [
-        [
-          {
-            "node": "Prepare Price Check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Price Check": {
       "main": [
         [
           {

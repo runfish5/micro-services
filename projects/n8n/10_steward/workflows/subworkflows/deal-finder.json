@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: 'YOUR_GOOGLE_SHEET_ID', // Steward_Deals gdrive Sheet\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
+        "jsCode": "// Merge defaults with any values passed from calling workflow\nconst input = $input.first().json || {};\nconst defaults = {\n  sheetId: '1cD3xVEhfP5Iy-PwumXymLctXgI1X_mbEUlhjHDZPhto', // YOUR_GOOGLE_SHEET_ID — Steward_Deals gdrive Sheet\n  sheetName: 'Requirements',\n  trackingSheetName: 'Tracked Prices',\n  historySheetName: 'Price History',\n  region: 'Switzerland',\n  retailers: 'Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot',\n  currency: 'CHF'\n};\n\n// Input values override defaults\nreturn [{ json: { ...defaults, ...input } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse incoming command from menu-handler\nconst input = $input.first().json;\nconst text = (input.text || '').trim();\nconst chatId = input.chatId;\n\n// Internal operations (called by other workflows)\nif (text.toLowerCase() === 'check_prices') {\n  return [{ json: { operation: 'check_prices', chatId } }];\n}\n\n// Explicit track command\nif (text.toLowerCase().startsWith('track ')) {\n  const remainder = text.substring(6).trim();\n  const urlMatch = remainder.match(/https?:\\/\\/\\S+/);\n  const url = urlMatch ? urlMatch[0] : '';\n  const notifyMode = remainder.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Untrack / stop tracking\nif (text.toLowerCase().match(/^(untrack|stop tracking|stop)\\s/)) {\n  const identifier = text.replace(/^(untrack|stop tracking|stop)\\s+/i, '').trim();\n  return [{ json: { operation: 'untrack', identifier, chatId } }];\n}\n\n// List tracked items\nif (text.toLowerCase().match(/^(tracked|list|tracking|what am i tracking)/)) {\n  return [{ json: { operation: 'tracked', chatId } }];\n}\n\n// URL detection — message contains a URL, treat as track\nconst urlInText = text.match(/https?:\\/\\/\\S+/);\nif (urlInText && !['add','remove','pause','resume','digest'].some(op => text.toLowerCase().startsWith(op))) {\n  const url = urlInText[0];\n  const notifyMode = text.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Original operations (unchanged)\nlet operation = 'digest';\nlet category = '';\nlet constraints = '';\nlet maxPrice = '';\n\nif (text.toLowerCase().startsWith('add ')) {\n  operation = 'add';\n  const parts = text.substring(4).trim().split(/\\s+/);\n  category = parts[0] || '';\n  const priceIdx = parts.findIndex((p, i) => i > 0 && /^\\d+/.test(p));\n  if (priceIdx > 0) {\n    maxPrice = parts[priceIdx];\n    constraints = parts.slice(priceIdx + 1).join(' ');\n  } else {\n    constraints = parts.slice(1).join(' ');\n  }\n} else if (text.toLowerCase().startsWith('remove ')) {\n  operation = 'remove';\n  category = text.substring(7).trim();\n} else if (text.toLowerCase().startsWith('pause ')) {\n  operation = 'pause';\n  category = text.substring(6).trim();\n} else if (text.toLowerCase().startsWith('resume ')) {\n  operation = 'resume';\n  category = text.substring(7).trim();\n} else if (text) {\n  operation = 'digest';\n  category = text.toLowerCase();\n}\n\nreturn [{\n  json: {\n    operation,\n    category: category.toLowerCase(),\n    constraints,\n    maxPrice,\n    chatId\n  }\n}];"
+        "jsCode": "// Parse incoming command from menu-handler\nconst input = $input.first().json;\nconst text = (input.text || '').trim();\nconst chatId = input.chatId;\n\n// Internal operations (called by other workflows)\nif (text.toLowerCase() === 'check_prices') {\n  return [{ json: { operation: 'check_prices', chatId } }];\n}\n\n// Explicit track command\nif (text.toLowerCase().startsWith('track ')) {\n  const remainder = text.substring(6).trim();\n  const urlMatch = remainder.match(/https?:\\/\\/\\S+/);\n  const url = urlMatch ? urlMatch[0] : '';\n  const notifyMode = remainder.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Untrack / stop tracking\nif (text.toLowerCase().match(/^(untrack|stop tracking|stop)\\s/)) {\n  const identifier = text.replace(/^(untrack|stop tracking|stop)\\s+/i, '').trim();\n  return [{ json: { operation: 'untrack', identifier, chatId } }];\n}\n\n// List tracked items\nif (text.toLowerCase().match(/^(tracked|list|tracking|what am i tracking)/)) {\n  return [{ json: { operation: 'tracked', chatId } }];\n}\n\n// History command — single product price chart\nif (text.toLowerCase().startsWith('history ')) {\n  const identifier = text.substring(8).trim();\n  return [{ json: { operation: 'history', identifier, chatId } }];\n}\n\n// Plot command — all products overlay chart\nif (text.toLowerCase().match(/^(plot|chart|graph|trends?)$/)) {\n  return [{ json: { operation: 'plot', chatId } }];\n}\n\n// URL detection — message contains a URL, treat as track\nconst urlInText = text.match(/https?:\\/\\/\\S+/);\nif (urlInText && !['add','remove','pause','resume','digest'].some(op => text.toLowerCase().startsWith(op))) {\n  const url = urlInText[0];\n  const notifyMode = text.toLowerCase().includes('on_change') ? 'on_change' : 'always';\n  return [{ json: { operation: 'track', url, notifyMode, chatId } }];\n}\n\n// Original operations (unchanged)\nlet operation = 'digest';\nlet category = '';\nlet constraints = '';\nlet maxPrice = '';\n\nif (text.toLowerCase().startsWith('add ')) {\n  operation = 'add';\n  const parts = text.substring(4).trim().split(/\\s+/);\n  category = parts[0] || '';\n  const priceIdx = parts.findIndex((p, i) => i > 0 && /^\\d+/.test(p));\n  if (priceIdx > 0) {\n    maxPrice = parts[priceIdx];\n    constraints = parts.slice(priceIdx + 1).join(' ');\n  } else {\n    constraints = parts.slice(1).join(' ');\n  }\n} else if (text.toLowerCase().startsWith('remove ')) {\n  operation = 'remove';\n  category = text.substring(7).trim();\n} else if (text.toLowerCase().startsWith('pause ')) {\n  operation = 'pause';\n  category = text.substring(6).trim();\n} else if (text.toLowerCase().startsWith('resume ')) {\n  operation = 'resume';\n  category = text.substring(7).trim();\n} else if (text) {\n  operation = 'digest';\n  category = text.toLowerCase();\n}\n\nreturn [{\n  json: {\n    operation,\n    category: category.toLowerCase(),\n    constraints,\n    maxPrice,\n    chatId\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -258,6 +258,54 @@
               },
               "renameOutput": true,
               "outputKey": "tracked"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-history",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "history",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "history"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-plot",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "plot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "plot"
             }
           ]
         },
@@ -1021,7 +1069,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { category, chatId } = $json;\nreturn [{\n  json: {\n    chatId,\n    response: `❌ Category \"${category}\" not found in watchlist`\n  }\n}];"
+        "jsCode": "const command = $('Parse Command').first().json;\nconst { operation, chatId } = command;\nlet response;\nif (operation === 'untrack') {\n  response = `❌ Item \"${command.identifier}\" not found in tracked items`;\n} else {\n  response = `❌ Category \"${command.category}\" not found in watchlist`;\n}\nreturn [{ json: { chatId, response } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1070,19 +1118,6 @@
       ],
       "id": "df100001-0001-0001-0001-000000000070",
       "name": "Build Untrack Response"
-    },
-    {
-      "parameters": {
-        "jsCode": "const command = $('Parse Command').first().json;\nreturn [{\n  json: {\n    chatId: command.chatId,\n    response: `❌ Item \"${command.identifier}\" not found in tracked items`\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7332,
-        6712
-      ],
-      "id": "df100001-0001-0001-0001-000000000071",
-      "name": "Build Untrack Not Found"
     },
     {
       "parameters": {
@@ -1315,6 +1350,131 @@
           "name": "Google Sheets OAuth"
         }
       }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.sheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Config').first().json.historySheetName }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        6672,
+        7100
+      ],
+      "id": "df100001-0001-0001-0001-000000000090",
+      "name": "Load History",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nconst operation = $('Parse Command').first().json.operation;\nconst chatId = $('Parse Command').first().json.chatId;\nconst currency = $('Config').first().json.currency;\n\nif (operation === 'history') {\n  const identifier = ($('Parse Command').first().json.identifier || '').toLowerCase();\n  const matched = items.filter(i => {\n    const name = (i.product_name || '').toLowerCase();\n    const url = (i.url || '').toLowerCase();\n    return name.includes(identifier) || url.includes(identifier);\n  });\n\n  if (matched.length === 0) {\n    return [{ json: { hasData: false, chatId, response: `No price history found for \"${identifier}\".\\n\\nUse /deals tracked to see your tracked items.` } }];\n  }\n\n  const dataPoints = matched\n    .filter(i => i.price != null && i.price !== '')\n    .map(i => ({ date: i.date, price: Number(i.price) }))\n    .sort((a, b) => a.date.localeCompare(b.date));\n\n  const productName = matched[0].product_name || identifier;\n\n  if (dataPoints.length < 2) {\n    return [{ json: { hasData: false, chatId, response: `Only ${dataPoints.length} data point${dataPoints.length === 1 ? '' : 's'} for \"${productName}\".\\n\\nWait for more price checks to build a chart.` } }];\n  }\n\n  const prices = dataPoints.map(d => d.price);\n  const current = prices[prices.length - 1];\n  const first = prices[0];\n  const low = Math.min(...prices);\n  const high = Math.max(...prices);\n  const changePct = (((current - first) / first) * 100).toFixed(1);\n  const arrow = current < first ? '\\ud83d\\udcc9' : current > first ? '\\ud83d\\udcc8' : '\\u27a1\\ufe0f';\n\n  const caption = `\\ud83d\\udcca *${productName}*\\n\\n\\ud83d\\udcb0 Current: ${current} ${currency}\\n${arrow} Change: ${changePct > 0 ? '+' : ''}${changePct}% since ${dataPoints[0].date}\\n\\ud83d\\udcc9 Low: ${low} ${currency} | \\ud83d\\udcc8 High: ${high} ${currency}\\n\\ud83d\\udcca ${dataPoints.length} data points (${dataPoints[0].date} \\u2014 ${dataPoints[dataPoints.length - 1].date})`;\n\n  const chartConfig = {\n    type: 'line',\n    data: {\n      labels: dataPoints.map(d => d.date),\n      datasets: [{\n        label: productName,\n        data: dataPoints.map(d => d.price),\n        fill: true,\n        borderColor: 'rgb(54, 162, 235)',\n        backgroundColor: 'rgba(54, 162, 235, 0.1)',\n        tension: 0.3,\n        pointRadius: 3\n      }]\n    },\n    options: {\n      plugins: {\n        title: { display: true, text: `${productName} \\u2014 Price History`, font: { size: 16 } },\n        legend: { display: false }\n      },\n      scales: {\n        y: { title: { display: true, text: `Price (${currency})` }, beginAtZero: false },\n        x: { title: { display: true, text: 'Date' } }\n      }\n    }\n  };\n\n  return [{ json: { hasData: true, chartConfig, chatId, caption } }];\n\n} else {\n  // plot operation\n  const validItems = items.filter(i => i.price != null && i.price !== '' && i.url);\n\n  if (validItems.length === 0) {\n    return [{ json: { hasData: false, chatId, response: 'No price history data yet.\\n\\nTrack products with /deals track <url> and wait for price checks to build up data.' } }];\n  }\n\n  const byProduct = {};\n  for (const item of validItems) {\n    const url = item.url;\n    if (!byProduct[url]) {\n      byProduct[url] = { name: item.product_name || url, points: [] };\n    }\n    byProduct[url].points.push({ date: item.date, price: Number(item.price) });\n  }\n\n  for (const key of Object.keys(byProduct)) {\n    byProduct[key].points.sort((a, b) => a.date.localeCompare(b.date));\n  }\n\n  const allDates = [...new Set(validItems.map(i => i.date))].sort();\n\n  const colors = [\n    'rgb(54, 162, 235)', 'rgb(255, 99, 132)', 'rgb(75, 192, 192)',\n    'rgb(255, 159, 64)', 'rgb(153, 102, 255)', 'rgb(255, 205, 86)',\n    'rgb(201, 203, 207)', 'rgb(0, 128, 0)'\n  ];\n\n  const products = Object.values(byProduct);\n  const datasets = products.map((prod, idx) => {\n    const dateMap = {};\n    for (const p of prod.points) { dateMap[p.date] = p.price; }\n    const data = allDates.map(d => dateMap[d] !== undefined ? dateMap[d] : null);\n\n    return {\n      label: prod.name,\n      data,\n      borderColor: colors[idx % colors.length],\n      fill: false,\n      tension: 0.3,\n      spanGaps: true,\n      pointRadius: 2\n    };\n  });\n\n  const chartConfig = {\n    type: 'line',\n    data: { labels: allDates, datasets },\n    options: {\n      plugins: {\n        title: { display: true, text: 'Price Tracker \\u2014 All Products', font: { size: 16 } },\n        legend: { display: true, position: 'bottom' }\n      },\n      scales: {\n        y: { title: { display: true, text: `Price (${currency})` }, beginAtZero: false },\n        x: { title: { display: true, text: 'Date' } }\n      }\n    }\n  };\n\n  const dateRange = `${allDates[0]} \\u2014 ${allDates[allDates.length - 1]}`;\n  const caption = `\\ud83d\\udcca *Price Tracker* (${products.length} product${products.length === 1 ? '' : 's'})\\n${dateRange}\\n${validItems.length} total data points`;\n\n  return [{ json: { hasData: true, chatId, chartConfig, caption } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6892,
+        7100
+      ],
+      "id": "df100001-0001-0001-0001-000000000110",
+      "name": "Build Chart Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-has-data",
+              "leftValue": "={{ $json.hasData }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7112,
+        7100
+      ],
+      "id": "df100001-0001-0001-0001-000000000111",
+      "name": "Has Data?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://quickchart.io/chart",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chart: $json.chartConfig, width: 700, height: 450, format: 'png', version: '3' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7332,
+        7040
+      ],
+      "id": "df100001-0001-0001-0001-000000000112",
+      "name": "QuickChart API"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Build Chart Data').first().json.chatId }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $('Build Chart Data').first().json.caption }}",
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7552,
+        7040
+      ],
+      "id": "df100001-0001-0001-0001-000000000113",
+      "name": "Send Chart",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      }
     }
   ],
   "connections": {
@@ -1412,6 +1572,20 @@
         [
           {
             "node": "Load All Tracked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load History",
             "type": "main",
             "index": 0
           }
@@ -1777,7 +1951,7 @@
         ],
         [
           {
-            "node": "Build Untrack Not Found",
+            "node": "Build Not Found",
             "type": "main",
             "index": 0
           }
@@ -1796,17 +1970,6 @@
       ]
     },
     "Build Untrack Response": {
-      "main": [
-        [
-          {
-            "node": "Send Reply",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Untrack Not Found": {
       "main": [
         [
           {
@@ -1855,6 +2018,57 @@
         [
           {
             "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load History": {
+      "main": [
+        [
+          {
+            "node": "Build Chart Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chart Data": {
+      "main": [
+        [
+          {
+            "node": "Has Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Data?": {
+      "main": [
+        [
+          {
+            "node": "QuickChart API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QuickChart API": {
+      "main": [
+        [
+          {
+            "node": "Send Chart",
             "type": "main",
             "index": 0
           }

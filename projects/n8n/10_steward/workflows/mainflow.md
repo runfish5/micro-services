@@ -255,7 +255,7 @@ Execute Workflow Trigger --> Config --> Search Notion --> Get Page Blocks --> Ex
 
 ## deal-finder.json (Subworkflow)
 
-Personal shopping advisor with price tracking and Perplexity research (41 nodes + 4 sticky notes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
+Personal shopping advisor with price tracking, Perplexity research, and price history charts (45 nodes + 4 sticky notes). Tracks specific product URLs for daily price updates and researches deals/alternatives from Swiss retailers. Region, retailers, and currency are configurable (defaults to Switzerland).
 
 Remove, pause, and resume share a single "Modify Requirement" branch. All branches converge to one shared Send Reply Telegram node.
 
@@ -280,6 +280,8 @@ Remove, pause, and resume share a single "Modify Requirement" branch. All branch
 | `<url>` (auto-detect) | `https://digitec.ch/... track this` | Auto-detected URL → track |
 | `/deals tracked` | `/deals tracked` | List all tracked items |
 | `/deals untrack <name>` | `/deals untrack raspberry` | Stop tracking (partial name match) |
+| `/deals history <name>` | `/deals history raspberry` | Show price history chart for a product (partial match) |
+| `/deals plot` | `/deals plot` | Overlay chart of all tracked products (aliases: chart, graph, trend) |
 | `check_prices` | (internal) | Run price checker (delegates to price-checker.json) |
 
 ### Flow Diagram
@@ -309,11 +311,16 @@ Execute Workflow Trigger → Config → Parse Command → Route Operation (9 out
   |
   |-- [6 untrack] → Load Tracked → Find Tracked → Check Tracked Found
   |                    (true) → Delete Tracked → Build Untrack Response → Send Reply
-  |                    (false) → Build Untrack Not Found → Send Reply
+  |                    (false) → Build Not Found → Send Reply
   |
   |-- [7 tracked] → Load All Tracked → Format Tracked List → Send Reply
   |
-  └── [8 check] → Execute Price Checker → Build Price Response → Send Reply
+  |-- [8 check] → Execute Price Checker → Build Price Response → Send Reply
+  |
+  |-- [9 history] ─┐
+  |                 ├→ Load History → Build Chart Data → Has Data?
+  └── [10 plot]  ──┘     (true) → QuickChart API → Send Chart (sendPhoto)
+                          (false) → Send Reply (error/empty text)
 ```
 
 ### Google Sheet Schemas
@@ -362,6 +369,24 @@ url	product_name	domain	current_price	currency	previous_price	lowest_price	highe
 | notify_mode | string | always / on_change / threshold |
 | price_threshold | number | 80.00 |
 
+#### Price History tab — append-only price log
+
+Copy-paste this header row into your sheet:
+
+```
+date	url	product_name	price	currency
+```
+
+| Column | Type | Example | Notes |
+|--------|------|---------|-------|
+| date | string (ISO) | 2026-02-18 | Date of the check |
+| url | string | `https://digitec.ch/...` | Foreign key to Tracked Prices tab |
+| product_name | string | Raspberry Pi 5 8GB | Denormalized for readability |
+| price | number | 89.90 | Empty if extraction failed |
+| currency | string | CHF | From Config |
+
+Rows are appended by price-checker on every check cycle (one per tracked product per run). Used by `/deals history` and `/deals plot` for chart generation via QuickChart.io.
+
 ### Price Extraction Strategy
 
 When tracking a URL, the Parse Product Page node extracts product name and price using a 4-strategy cascade:
@@ -401,6 +426,7 @@ Focus on products actually available in {{ region }}.
 | `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `sheetName` | `Requirements` | Sheet/tab name for requirements |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name for price tracking |
+| `historySheetName` | `Price History` | Sheet/tab name for append-only price log |
 | `region` | `Switzerland` | Country/region for shopping |
 | `retailers` | `Digitec, Galaxus, Toppreise, IKEA, Interdiscount, MediaMarkt, Brack, Microspot` | Comma-separated retailer list |
 | `currency` | `CHF` | Currency code for prices |
@@ -426,7 +452,7 @@ Callers can override any of these by passing values in the Execute Workflow inpu
 
 ## price-checker.json (Subworkflow)
 
-Batch price-checking engine. Called by daily-briefing (on schedule) or by deal-finder's `check_prices` operation (on demand). Reads all active tracked items, fetches each product page, extracts current price, compares with stored price, updates the sheet, and returns a formatted report.
+Batch price-checking engine with history logging (14 nodes + 2 sticky notes). Called by daily-briefing (on schedule) or by deal-finder's `check_prices` operation (on demand). Reads all active tracked items, fetches each product page, extracts current price, compares with stored price, appends a history row, updates the sheet, and returns a formatted report.
 
 ### Flow Diagram
 
@@ -438,6 +464,8 @@ Execute Workflow Trigger → Config → Load Tracked (Sheets) → Filter Active 
                                                                                           Fetch Page (HTTP)
                                                                                                ↓
                                                                                           Extract & Compare (Code)
+                                                                                               ↓
+                                                                                          Append History (Sheets, onError: continue)
                                                                                                ↓
                                                                                           Update Row (Sheets)
                                                                                                ↓
@@ -473,8 +501,8 @@ Example `priceSection`:
 |-----------|---------|---------|
 | `sheetId` | `Steward_Deals` | Google Sheet document ID |
 | `trackingSheetName` | `Tracked Prices` | Sheet/tab name |
+| `historySheetName` | `Price History` | Sheet/tab name for append-only price log |
 | `currency` | `CHF` | Currency code |
-| `chatId` | `YOUR_CHAT_ID_1` | Telegram chat (for future alerts) |
 
 ### Credentials
 
