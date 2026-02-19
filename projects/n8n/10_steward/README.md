@@ -1,41 +1,38 @@
 # 10 - Steward
 
-Personal assistant via Telegram — morning briefing, on-demand dispatch, and subworkflow delegation.
+Personal assistant via Telegram — config-driven command hub with AI routing and subworkflow delegation.
 
 ## What It Does
 
-Every morning at 7 AM, sends a Telegram message with:
-- Today's Google Calendar events (time + title)
-- 3 inline buttons for on-demand actions
+Receives Telegram messages (button taps, slash commands, free text) and routes them:
 
-```
-  ☀ Good morning! Your day:
-  09:00-10:00  Team standup
-  14:00-15:30  Client call
+- **Deterministic**: `/deals`, `/learning`, `/expenses`, `/help` — dispatches to the matching subworkflow
+- **AI-classified**: Free text — LLM classifier (with conversation memory) routes to subworkflows or LLM backends (reasoning, web search, research)
 
-  [📊 Expenses]     [📚 Learning Notes]
-  [🛒 Deal Finder]
-```
+The morning briefing (project 05) provides the scheduled entry point; the steward handles everything interactive.
 
-Tapping a button triggers the corresponding subworkflow.
+## Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `/help` | Dynamic command list generated from Config registry |
+| `/deals` | Shopping advisor + price tracker (add, remove, track, history, plot...) |
+| `/learning` | AI-summarized Notion notes |
+| `/expenses` | Monthly expense chart + insights |
+
+Free text is routed by the AI Classifier to the best-fit agent or LLM backend. Conversation memory (Postgres) enables follow-up messages without repeating context.
+
+`/help` is dynamically generated from the Config node's `subCommands` arrays — adding a new sub-command to Config automatically updates the help text. The daily briefing also has a `Help` inline button that triggers the same output.
 
 ## Workflows
 
 | File | Purpose | Activation | |
 |------|---------|------------|-|
-| `daily-briefing.json` | Calendar + buttons message | Schedule (7 AM) | 📅 |
+| `daily-briefing.json` | Calendar + buttons message | Schedule (7 AM) | |
 | `menu-handler.json` | Config-driven hub with AI routing | Always on (webhook) | |
 | `subworkflows/learning-notes.json` | Notion AI summary | Called by menu-handler | |
-| `subworkflows/deal-finder.json` | Shopping advisor + price tracker | Called by menu-handler | [📊 headers](workflows/mainflow.md#google-sheet-schemas) |
-| `subworkflows/price-checker.json` | Batch price checking engine | Called by daily-briefing + deal-finder | [📊 headers](workflows/mainflow.md#google-sheet-schemas) |
-
-## Button Actions
-
-| Button | Status | What It Does |
-|--------|--------|------------|
-| Expenses | Active | Calls expense-trend-report (project 04) - sends chart + insights |
-| Learning Notes | Active | Searches Notion, AI-summarizes notes, sends to Telegram |
-| Deal Finder | Active | Researches deals via Perplexity, tracks product prices from URLs |
+| `subworkflows/deal-finder.json` | Shopping advisor + price tracker | Called by menu-handler | [headers](workflows/mainflow.md#google-sheet-schemas) |
+| `subworkflows/price-checker.json` | Batch price checking engine | Called by daily-briefing + deal-finder | [headers](workflows/mainflow.md#google-sheet-schemas) |
 
 ## Setup
 

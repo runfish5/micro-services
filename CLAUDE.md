@@ -70,7 +70,22 @@ n8n workflows are JSON-based node configurations. Key practices:
 - **Use execution logs and debug mode** to trace data transformations between nodes.
 - **Replace triggers with Manual Trigger** when testing to avoid waiting for polling intervals.
 - **Republish subworkflows** after changes - parent workflows call the published version, not your draft.
-- **Sticky note behind Execute Workflow nodes**: n8n's UI can silently clear `workflowInputs` when re-selecting a subworkflow. Always place a small sticky note (color 5, purple) directly behind each Execute Workflow node documenting the parameter values being passed (name: value, one per line). This serves as a quick-restore reference. When editing workflow JSON, verify these notes exist and are up to date.
+- **Expression-first, node-last**: Prefer n8n expressions and Code node logic over adding new nodes. Each node adds visual complexity and connection overhead. A ternary in an expression is better than an IF node for simple conditions.
+- **Sticky note behind Execute Workflow nodes**: n8n's UI can silently clear `workflowInputs` when re-selecting a subworkflow. Always place a small sticky note (color 5, blue) directly behind each Execute Workflow node documenting the parameter values being passed (name: value, one per line). This serves as a quick-restore reference. When editing workflow JSON, verify these notes exist and are up to date.
+
+### Sticky Note Conventions
+
+| Color | Code | Usage |
+|-------|------|-------|
+| Yellow | (default) | Main documentation stickies (overview, schema reference) |
+| Orange | 2 | — |
+| Red | 3 | Drag-drop setup: shows what needs updating in Config node after importing |
+| Green | 4 | — |
+| Blue | 5 | Behind Execute Workflow nodes: documents parameters being passed |
+| Violet | 6 | — |
+| Black/White | 7 | Subunit labels (e.g., "E-Mail trigger", "attachment processor") |
+
+Blue sticky notes behind Execute Workflow nodes serve as quick-restore reference when n8n UI silently clears `workflowInputs`.
 
 **`.st.json` files**: JSON Schema examples for LLM structured output (project 01).
 
