@@ -52,7 +52,7 @@ Both Execute Workflow nodes have `onError: continueOnFail`. Format Skill Respons
 
 ### ~~F1. Price History~~ DONE
 
-All phases implemented. See `docs/price-history-spec.md`.
+Price History tab, `/deals history` and `/deals plot` commands, QuickChart charting — all implemented.
 
 ### ~~F2. Dynamic Help + morning briefing hint~~ DONE
 
@@ -147,6 +147,11 @@ Completed: B1-B3, C1-C4, F1, F2.
 6. **F9: Reminders** — new agent
 7. **F10: Multi-user support** — architecture expansion
 8. **F3: `/start` command** — cosmetic
+
+**Ideas** (unscoped, no timeline):
+- `/deals compare <product1> <product2>` — side-by-side price chart
+- `/deals export` — CSV download of Price History
+- History pruning — delete rows older than N months
 
 **Accessibility** (parallel track):
 1. **DX1: Code node documentation** — low effort, high readability impact

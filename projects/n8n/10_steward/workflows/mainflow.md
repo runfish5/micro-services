@@ -388,7 +388,7 @@ date	url	product_name	price	currency
 | price | number | 89.90 | Empty if extraction failed |
 | currency | string | CHF | From Config |
 
-Rows are appended by price-checker on every check cycle (one per tracked product per run). Used by `/deals history` and `/deals plot` for chart generation via QuickChart.io.
+Rows are appended by price-checker on every check cycle (one per tracked product per run). Used by `/deals history` and `/deals plot` for chart generation via QuickChart.io. At ~3,650 rows/year (10 products × 365 days), no pruning is needed.
 
 ### Price Extraction Strategy
 
