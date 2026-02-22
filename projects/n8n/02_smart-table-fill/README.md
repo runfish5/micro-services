@@ -52,6 +52,8 @@ Give it any text and any table. The workflow reads your column headers, builds e
 
 ### smart-table-fill
 
+Paste any text, get a structured row in your spreadsheet.
+
 [**Watch on YouTube**](https://www.youtube.com/watch?v=OqA7aKWQ1q8) ![views](https://img.shields.io/youtube/views/OqA7aKWQ1q8?style=flat&label=)
 
 <p align="center">
@@ -62,7 +64,15 @@ Give it any text and any table. The workflow reads your column headers, builds e
 
 ### smart-folder2table
 
-Video coming soon.
+Point at a Google Drive folder, get one row per file.
+
+[**Watch on YouTube**](https://www.youtube.com/watch?v=iwbcNdQrwjU) ![views](https://img.shields.io/youtube/views/iwbcNdQrwjU?style=flat&label=)
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=iwbcNdQrwjU">
+    <img src="https://img.youtube.com/vi/iwbcNdQrwjU/mqdefault.jpg" alt="Watch the tutorial" width="400">
+  </a>
+</p>
 
 ---
 
