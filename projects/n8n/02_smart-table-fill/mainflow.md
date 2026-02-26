@@ -162,7 +162,7 @@ When called as a subworkflow, callers can override these fields (defaults apply 
 | `spreadsheet_id` | *(caller must provide)* | Google Sheets document ID |
 | `data_sheet_name` | `Sheet1` | Sheet tab name |
 | `schema_sheet_name` | `Description_hig7f6` | Schema definition sheet |
-| `batch_size` | `10` | Fields per LLM batch |
+| `batch_size` | `7` | Fields per LLM batch |
 | `match_column` | `email` | Which column to match on |
 | `match_value` | `$json[$json.match_column]` | Value to match; auto-resolved from `match_column` field name |
 | `match_same_row` | `true` | `false` = append-only mode |
@@ -356,7 +356,7 @@ Write Extracted Row (Google Sheets: append row directly)
 | `file_limit` | `null` | `null` = no limit; set to a number (e.g. `5`) to cap files processed |
 | `match_column` | `source_file` | For extraction row grouping |
 | `match_same_row` | `false` | `true` = update existing row, `false` = always append |
-| `batch_size` | `10` | Fields per LLM extraction call |
+| `batch_size` | `7` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
 | `rate_limit_wait_seconds` | `0` | Delay between files (passed by error handler on retry) |
 
