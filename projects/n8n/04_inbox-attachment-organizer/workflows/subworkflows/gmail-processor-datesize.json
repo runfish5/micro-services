@@ -82,7 +82,7 @@
       "webhookId": "2bdeb3c4-fb9d-4c82-8cab-00b60e3f2bb1",
       "credentials": {
         "gmailOAuth2": {
-          "id": "F3cQVIbokuyDLVR2",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "Google_0Auth"
         }
       },
@@ -347,7 +347,8 @@
           "id": "CREDENTIAL_ID_GMAIL",
           "name": "gmail-26-inboxOrg"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
@@ -366,7 +367,7 @@
       "webhookId": "remove-label-webhook-0001",
       "credentials": {
         "gmailOAuth2": {
-          "id": "F3cQVIbokuyDLVR2",
+          "id": "CREDENTIAL_ID_GMAIL",
           "name": "Google_0Auth"
         }
       },
@@ -389,7 +390,7 @@
     },
     {
       "parameters": {
-        "content": "### Label buttons\nThese are UI buttons — use them.\n**Mark as Processed** adds the label,\n**Remove label** removes it (disabled by default).\n\nSee main testing sticky for the full flow.",
+        "content": "### Label nodes (both disabled)\nThe main workflow (inbox-attachment-organizer)\nnow handles all Gmail labeling:\n`inProgress` → `n8n` / `gdr`.\n\nThese nodes are disabled to avoid\nredundant `GdriveFiled` labels.",
         "height": 332,
         "width": 398,
         "color": 4
@@ -588,6 +589,6 @@
   },
   "pinData": {},
   "meta": {
-    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+    "instanceId": "YOUR_INSTANCE_ID"
   }
 }

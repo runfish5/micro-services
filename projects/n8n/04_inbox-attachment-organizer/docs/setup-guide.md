@@ -24,7 +24,21 @@ Only one authentication needed: **Google OAuth**
 
 Follow: [credentials-guide.md](config/credentials-guide.md)
 
-### 3. Create Billing Ledger Google Sheet
+### 3. Create Gmail Labels
+
+The workflow uses three Gmail labels:
+- `inProgress` — temporary processing indicator (auto-removed on success)
+- `n8n` — marks successfully processed emails
+- `gdr` — marks emails with files saved to Google Drive
+
+`n8n` and `gdr` already exist from the original workflow. Create `inProgress`:
+1. In Gmail sidebar, click **"+ Create new label"** → name it `inProgress`
+2. Find its Label ID: click the label → look at the URL → the ID is the `Label_XX` part (e.g., `Label_84`)
+3. Update the workflow's **Set File ID** node: set `label_ID` to your `inProgress` label ID
+
+The `Tag inProgress` and `Remove inProgress` nodes both reference `Set File ID` via expression, so you only update one place.
+
+### 4. Create Billing Ledger Google Sheet
 Create a Google Sheet named **"Billing_Ledger"** (16 columns).
 
 > **What is a Billing Ledger?** A unified record of invoices (both payable and receivable) with payment tracking. Also known as Invoice Register or combined AP/AR ledger. Tracks expenses (supplier invoices you pay) and revenue (customer invoices you send).
@@ -62,7 +76,7 @@ accounting_category	invoice_status	invoice_number	attachment_count	email_id	coun
 
 Place this sheet at the root of your Google Drive accounting folder (e.g., `/Accounting/Billing_Ledger`)
 
-### 4. Create PathToIDLookup Google Sheet
+### 5. Create PathToIDLookup Google Sheet
 Create a Google Sheet named **"PathToIDLookup"** with these exact column headers:
 
 **Easy setup:** Copy the line below and paste it into row 1 of your Google Sheet.
@@ -83,7 +97,7 @@ path	folder_id	child_ids	last_update
 
 *Example: path `/Accounting/2025/05_May/Expense` maps to folder_id `1abc...xyz`*
 
-### 5. Activate
+### 6. Activate
 - Send test email with invoice attachment
 - Check Google Drive for auto-created folders
 - **For existing emails:** Run the `gmail-processor-datesize` workflow to process all emails already in your mailbox (the Gmail trigger only catches new incoming emails)
@@ -98,7 +112,7 @@ path	folder_id	child_ids	last_update
           └─ Expense/
 ```
 
-### 6. Optional: Pre-create Folder Structure
+### 7. Optional: Pre-create Folder Structure
 
 While the workflow auto-creates folders, you can download a ready-made template structure:
 

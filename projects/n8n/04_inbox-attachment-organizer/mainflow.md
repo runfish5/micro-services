@@ -1,6 +1,6 @@
-# Main Flow (35 Nodes)
+# Main Flow (37 Nodes)
 
-> **Version 2.0.0** | Last verified: 2026-01-31
+> **Version 2.1.0** | Last verified: 2026-03-01
 
 ## Overview
 
@@ -27,37 +27,40 @@ Alternative Entry: When Executed by Another Workflow
 ### Data Flow
 
 ```
-Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classification
-                                                                    ↓
-                                                               Is Financial?
-                                                                    ↓
-                                                          [disabled] Whitelist
-                                                                    ↓
-                                                          Prepare Attachments
-                                                                    ↓
-                                                          AI Deep Extraction
-                                                                    ↓
-                                                          Has Attachments?
-                                                      ┌────── Yes ──┴── No ──────┐
-                                                      ↓                          ↓
-                                                Google Drive              Mark Processed
-                                                (Organized)                     ↓
-                                                      ↓                   Remove 'n8n' Label
-                                                Mark Processed                  ↓
-                                                      ↓                   Google Sheets
-                                                Remove 'n8n' Label            (Logged)
-                                                      ↓                        ↓
-                                                Google Sheets           Telegram Notification
-                                                  (Logged)
-                                                      ↓
-                                                Telegram Notification
+Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI Classification
+                                                                          ↓
+                                                                    Switch Router
+                                                           ┌──── financial ──┴── fallback ─────────┐
+                                                           ↓                                       ↓
+                                                  [disabled] Whitelist                         Merge[2]
+                                                           ↓                                       ↑
+                                                  Prepare Attachments                              │
+                                                           ↓                                       │
+                                                  AI Deep Extraction                               │
+                                                           ↓                                       │
+                                                  Has Attachments?                                 │
+                                           ┌──── Yes ──┴── No ────┐                               │
+                                           ↓                      ↓                               │
+                                      Google Drive           Prepare Ledger Row ──→ Sheets ──→ Telegram & done
+                                      (Organized)                ↑                                 │
+                                           ↓                     │                                 │
+                                      Tag 'gdr' ──→ Prepare Ledger Row ──→ Sheets ──→ Telegram & done
+                                                                                                   │
+  [disabled] ContactManager → Merge[0] ────────────────────────────────────────────────────────────┤
+  [disabled] notify the category → Merge[1] ───────────────────────────────────────────────────────┤
+                                                                                                   ↓
+                                                                                            Merge (3 inputs)
+                                                                                                   ↓
+                                                                                             Tag 'n8n'
+                                                                                                   ↓
+                                                                                          Remove 'inProgress'
 ```
 
 
 ### Key Workflow Logic
 ```
   Flow Summary:
-  Gmail Trigger → Stop promotions → Set File ID → Tag Mail with 'n8n' → Gmail (download attachments)
+  Gmail Trigger → Stop promotions → Set File ID → Tag inProgress → Gmail (download attachments)
     ↓
   Empty? (check for attachments)
     ├─ No Attachments → Clean Email object
@@ -67,18 +70,16 @@ Email → Label 'n8n' → Download Attachments → Text Extraction → AI Classi
     ↓
   email-info-hub → subject-classifier-LM (LM1)
     ↓
-  Routing branches:
-    ├→ financial doc router → [disabled] sender_whitelist
-    ├→ [disabled] notify the category (Telegram)
-    └→ [disabled] ContactManager-lineage → record-search → smart-table-fill
+  Three routing branches (all converge at Merge):
+    ├→ financial doc router (Switch with fallbackOutput: "extra")
+    │     ├─ financial → [disabled] sender_whitelist → Prepare Attachments → LM2 → If
+    │     │     ├─ Yes → GDrive upload → Tag gdr → Prepare Ledger Row → Sheets → Telegram & done → Merge[2]
+    │     │     └─ No  → Prepare Ledger Row → Sheets → Telegram & done → Merge[2]
+    │     └─ fallback (non-financial) → Merge[2]
+    ├→ [disabled] notify the category (Telegram) → Merge[1]
+    └→ [disabled] ContactManager → record-search → smart-CRM-fill → Merge[0]
     ↓
-  IF FINANCIAL:
-  Prepare Attachments → Accountant-concierge-LM (LM2)
-    ↓
-  If (has attachments?)
-    ├─ Yes → input folder lookup → Call 'gdrive-recursion' → Get binary data2 → save doc to folder
-    │        → Mark as Processed1 → Remove label from message → Prepare Ledger Row → insert doc record → craft report note → Telegram & done
-    └─ No  → Mark as Processed1 → Remove label from message → Prepare Ledger Row → insert doc record → craft report note → Telegram & done
+  Merge (3 inputs) → Tag n8n → Remove inProgress
 ```
 
 ### Contact-Centric Data Model
@@ -94,7 +95,7 @@ START: Gmail Trigger
   │
   ├→ Stop promotions (filter)
   ├→ Set File ID (email_ID, owner_name, company_name, label_ID)
-  ├→ Tag Mail with 'n8n' (add Gmail label)
+  ├→ Tag inProgress (add Gmail label)
   ├→ Gmail (get full email + download attachments)
   └→ Empty? (check binary attachment count)
      │
@@ -109,37 +110,39 @@ START: Gmail Trigger
         └→ email-info-hub
    *11    └→ subject-classifier-LM
               │
-              ├→ [disabled] notify the category (Telegram)
-              ├→ [disabled] ContactManager-lineage
+              ├→ [disabled] notify the category (Telegram) ──→ Merge[1]
+              ├→ [disabled] ContactManager
               │     └→ Call 'record-search'
               │        └→ Prepare Contact Input
-              │           └→ Call 'smart-table-fill'
-              └→ financial doc router → [disabled] sender_whitelist
+              │           └→ Call 'smart-CRM-fill' ──→ Merge[0]
+              └→ financial doc router (Switch, fallbackOutput: "extra")
+                    │
+                    ├─ FINANCIAL (output 0):
+                    │  └→ [disabled] sender_whitelist
+                    │     └→ Prepare Attachments
+                    │        └→ Accountant-concierge-LM
+                    │           └→ If (has attachments?)
+                    │              │
+                    │              ├─ YES (upload + log):
+                    │              │  └→ input folder lookup
+                    │              │     └→ Call 'gdrive-recursion'
+                    │              │        └→ Get binary data2
+                    │              │           └→ save doc to folder
+                    │              │              └→ Tag gdr ──→ Prepare Ledger Row
+                    │              │                                └→ insert doc record
+                    │              │                                   └→ craft report note
+                    │              │                                      └→ Telegram & done ──→ Merge[2]
+                    │              │
+                    │              └─ NO (log only):
+                    │                 └→ Prepare Ledger Row
+                    │                    └→ insert doc record
+                    │                       └→ craft report note
+                    │                          └→ Telegram & done ──→ Merge[2]
+                    │
+                    └─ FALLBACK (output 1, non-financial):
+                       └→ Merge[2]
 
-              IF FINANCIAL (via router):
-              └→ Prepare Attachments
-                 └→ Accountant-concierge-LM
-                    └→ If (has attachments?)
-                       │
-                       ├─ YES (upload + log):
-                       │  └→ input folder lookup
-                       │     └→ Call 'gdrive-recursion'
-                       │        └→ Get binary data2
-                       │           └→ save doc to folder
-                       │              └→ Mark as Processed1
-                       │                 └→ Remove label from message
-                       │                    └→ Prepare Ledger Row
-                       │                       └→ insert doc record
-                       │                       └→ craft report note
-                       │                          └→ Telegram & done
-                       │
-                       └─ NO (log only):
-                          └→ Mark as Processed1
-                             └→ Remove label from message
-                                └→ Prepare Ledger Row
-                                   └→ insert doc record
-                                   └→ craft report note
-                                      └→ Telegram & done
+  ──→ Merge (3 inputs) → Tag n8n → Remove inProgress
 
 ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ```
@@ -220,6 +223,7 @@ Both AI nodes use an LLM with structured output support.
 ## Notes
 - Google Sheets provides a queryable database of all processed invoices
 - The folder structure makes manual file browsing intuitive
-- The 'n8n' label acts as a processing-in-progress indicator: Tag Mail adds it early (before downloading attachments), and Remove label from message strips it after successful processing. Emails still carrying the label indicate incomplete or failed processing.
+- **Three Gmail labels**: `inProgress` is a temporary canary applied at start and removed on success (emails still carrying it indicate failed processing). `n8n` is a permanent success marker applied once after the Merge convergence. `gdr` marks emails whose attachments were saved to Google Drive (attachment branch only).
+- **Merge convergence**: All three output branches (ContactManager, notify, financial/fallback) feed into a 3-input Merge node. `Tag n8n` and `Remove inProgress` execute exactly once after Merge, regardless of which branches were active.
 - Financial documents without attachments still get logged via the "No" branch (LLM extracts data from email body)
 - sender_whitelist is disabled by default; enable it to restrict financial processing to known senders only

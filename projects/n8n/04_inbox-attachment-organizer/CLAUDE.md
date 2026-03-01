@@ -17,12 +17,12 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ## Where Information Lives
 
 ### Documentation
-- `mainflow.md` - Complete 34-node breakdown by phases (1-5: trigger & labeling, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
+- `mainflow.md` - Complete 37-node breakdown by phases (1-5: trigger & labeling, 6-10: attachments, 11-18: classification & routing, 19-30: extraction & storage, Merge convergence), data flow diagrams, AI node purposes, and subworkflow call points. Read this before reverse-engineering JSON.
 - `docs/setup-guide.md` - Billing_Ledger sheet schema (15 columns), PathToIDLookup schema (4 columns), folder structure template, credential setup sequence
 - `main-sticky-note.md` - Author's setup checklist showing deployment priorities and post-activation tasks
 
 ### Workflows
-- `workflows/inbox-attachment-organizer.json` - Main workflow (34 nodes) orchestrating the full pipeline
+- `workflows/inbox-attachment-organizer.json` - Main workflow (37 nodes) orchestrating the full pipeline
 - Calls `03_any-file2json-converter` subworkflow - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`. See `../03_any-file2json-converter/CLAUDE.md` for details.
 - `workflows/subworkflows/gdrive-recursion.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
 - `workflows/subworkflows/gmail-processor-datesize.json` - Standalone batch processor for existing inbox emails
@@ -31,7 +31,7 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 **Two AI stages (both require structured output)**: subject-classifier-LM classifies everything → Accountant-concierge-LM only processes "financial" types. Whitelist check (disabled by default) sits between stages.
 
-**'n8n' label as processing indicator**: Tag Mail adds the 'n8n' label early (before Gmail downloads attachments). Remove label from message strips it after successful processing. Emails still carrying the label indicate incomplete or failed runs.
+**Three Gmail labels**: `inProgress` is a temporary canary applied at start (Tag inProgress) and removed on success (Remove inProgress) — emails still carrying it indicate failed runs. `n8n` (Tag n8n) is a permanent success marker applied once after the Merge convergence node. `gdr` (Tag gdr) marks emails whose attachments were saved to Google Drive (attachment branch only). All three routing branches (ContactManager, notify, financial/fallback) converge at a 3-input Merge → Tag n8n → Remove inProgress.
 
 **Financial docs without attachments**: The If node after Accountant-concierge-LM checks for attachments. Financial emails without attachments skip the Drive upload but still get logged to Sheets and notified via Telegram.
 
@@ -41,10 +41,10 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 
 ## Workflow Phases (from mainflow.md)
 
-Nodes 1-5: Email Trigger & Labeling (Gmail Trigger polls every 1 min, filters promotions, sets metadata incl. label_ID, tags with 'n8n' label, downloads attachments)
+Nodes 1-5: Email Trigger & Labeling (Gmail Trigger polls every 1 min, filters promotions, sets metadata incl. label_ID, tags with 'inProgress' label, downloads attachments)
 Nodes 6-10: Attachment Processing (splits attachments, calls any-file2json-converter per item, Clean Email object sanitizes body + builds attachment map, email-info-hub aggregates contact/direction data)
 Nodes 11-18: Classification & Routing (subject-classifier-LM classifies, financial doc router, sender_whitelist disabled, notify the category disabled)
-Nodes 19-30: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, If checks attachments, gdrive-recursion call, upload to Drive, Mark as Processed, Remove label from message, log to Billing_Ledger sheet, craft report, Telegram notification)
+Nodes 19-30+: Deep Invoice Extraction & Storage (Prepare Attachments, Accountant-concierge-LM extracts fields, If checks attachments, gdrive-recursion call, upload to Drive, Tag gdr, log to Billing_Ledger sheet, craft report, Telegram notification → Merge convergence → Tag n8n → Remove inProgress)
 ContactManager (disabled): record-search → Prepare Contact Input → smart-table-fill
 Alternative Entry: When Executed by Another Workflow
 
