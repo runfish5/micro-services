@@ -588,7 +588,7 @@
             {
               "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
               "name": "Message",
-              "value": "=EMAIL: completed\n---\nTitle ✍: {{ $('Set File ID').first().json.subject }}\nContact 📤: {{ $('email-info-hub').first().json.contact_email }}\nFinished 🗄️: {{ $('subject-classifier-LM').item.json.output.type_of_document }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>",
+              "value": "=EMAIL: completed\n---\nTitle ✍: {{ $('Set File ID').first().json.subject }}\nContact 📤: `{{ $('email-info-hub').first().json.contact_email }}`\nFinished 🗄️: {{ $('subject-classifier-LM').item.json.output.type_of_document }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>",
               "type": "string"
             }
           ]
