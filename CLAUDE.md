@@ -55,7 +55,8 @@ projects/n8n/
 ├── 08_8-hours-incident-resolver/    - Works thorugh a google sheet
 ├── 10_steward/                      - Personal assistant: briefing, dispatch, subworkflows
 ├── 11_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
-└── 12_db-janitor/                   - Scheduled DB cleanup reporter (stub)
+├── 12_db-janitor/                   - Scheduled DB cleanup reporter (stub)
+└── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (standalone intake door)
 ```
 
 Projects 02, 03, and 04 have their own `CLAUDE.md` files with detailed architecture documentation.

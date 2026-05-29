@@ -1,0 +1,741 @@
+{
+  "name": "Signup Intake → CRM triage",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Waitlist Webhook** — for senders that *have* a site (e.g. the promptpotter-web `/api/waitlist` function POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
+        "height": 420,
+        "width": 460,
+        "color": 4
+      },
+      "id": "a1b2c3d4-0010-4010-8010-000000000010",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-460, 120]
+    },
+    {
+      "parameters": {
+        "content": "### Door 1 — site senders\n\n`POST /webhook/signup-intake`\n\nBody: `{ email, name, use_case, signup_source }`\n\nThe sender (e.g. promptpotter-web) sets `signup_source`. Responds immediately, then processes async.",
+        "height": 260,
+        "width": 300,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0011-4011-8011-000000000011",
+      "name": "Door 1 label",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [40, -120]
+    },
+    {
+      "parameters": {
+        "content": "### Door 2 — no website needed\n\nThe **Form Trigger** makes n8n host a public signup page. The form URL is your shareable / bookmarkable link — that's the whole 'no website' trick.\n\nField labels here MUST match the keys read in *Normalize (Form)*.",
+        "height": 260,
+        "width": 300,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0012-4012-8012-000000000012",
+      "name": "Door 2 label",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [40, 600]
+    },
+    {
+      "parameters": {
+        "content": "### Human in the loop\n\nTelegram tells you about each signup and whether they're **already in the CRM**.\n\nButtons:\n• **✅ Add to CRM** → writes them into *Entries* + marks the Signups row `promoted`.\n• **🗑 Dismiss** → marks the row `dismissed`.\n\nAfter a tap, the message KEEPS the signup details, stamps your decision underneath (`✅ ADDED TO CRM` / `🗑 DISMISSED`), and the buttons are REMOVED entirely — nothing left to re-press.\n\nThe **Telegram Trigger** below catches the button taps (callback queries).\n\n⚠ Set your chat ID + bind the Telegram credential on import.",
+        "height": 320,
+        "width": 320,
+        "color": 6
+      },
+      "id": "a1b2c3d4-0013-4013-8013-000000000013",
+      "name": "HITL label",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [2000, 60]
+    },
+    {
+      "parameters": {
+        "content": "## Bind on import\n\nThe JSON ships with placeholders. Two SEPARATE spreadsheets are used:\n\n• **CRM Lookup** + **Add to CRM (Entries)** → your CRM doc (`YOUR_ENTRIES_SPREADSHEET_ID`), `Entries` tab.\n• **Append to Signups / Lookup Signup / Mark Promoted / Mark Dismissed** → the Signups doc (`YOUR_SIGNUPS_SPREADSHEET_ID`).\n\nAfter importing:\n1. On each Google Sheets node bind the *Google Sheets OAuth* credential + re-pick the correct document (per above).\n2. In the Signups doc, the tab is `Sheet1` — give it headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`.\n3. **Telegram nodes** — bind the bot credential, set `YOUR_CHAT_ID`.\n4. **Activate**, then copy the Webhook **Production URL** into the sender's `N8N_WAITLIST_WEBHOOK_URL`, and grab the **Form Trigger** URL to share/bookmark.",
+        "height": 420,
+        "width": 460,
+        "color": 3
+      },
+      "id": "a1b2c3d4-0014-4014-8014-000000000014",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-460, 600]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "signup-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4001-8001-000000000001",
+      "name": "Waitlist Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [120, 40],
+      "webhookId": "signup-intake-hook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4002-8002-000000000002",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [360, -80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w-email",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').toString().trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "w-name",
+              "name": "name",
+              "value": "={{ ($json.body.name || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "w-usecase",
+              "name": "use_case",
+              "value": "={{ ($json.body.use_case || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "w-source",
+              "name": "source",
+              "value": "={{ ($json.body.signup_source || 'web').toString().trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4003-8003-000000000003",
+      "name": "Normalize (Web)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [360, 120]
+    },
+    {
+      "parameters": {
+        "formTitle": "Join the waitlist",
+        "formDescription": "Leave your details and we'll be in touch.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Name",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Use case",
+              "fieldType": "textarea",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4004-8004-000000000004",
+      "name": "Hosted Signup Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [120, 720],
+      "webhookId": "signup-intake-form"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-email",
+              "name": "email",
+              "value": "={{ ($json['Email'] || '').toString().trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "f-name",
+              "name": "name",
+              "value": "={{ ($json['Name'] || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f-usecase",
+              "name": "use_case",
+              "value": "={{ ($json['Use case'] || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f-source",
+              "name": "source",
+              "value": "hosted-form",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4005-8005-000000000005",
+      "name": "Normalize (Form)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [360, 720]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unify whichever door fired into one canonical signup shape.\nconst j = $json;\nconst name = (j.name || '').toString().trim();\nconst parts = name.split(/\\s+/).filter(Boolean);\nreturn [{\n  json: {\n    email: (j.email || '').toString().trim().toLowerCase(),\n    first_name: parts[0] || '',\n    surname: parts.slice(1).join(' '),\n    use_case: j.use_case || '',\n    source: j.source || 'web',\n    signup_timestamp: $now.toISO()\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0006-4006-8006-000000000006",
+      "name": "Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 420]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_ENTRIES_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Entries",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $('Normalize').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-4007-8007-000000000007",
+      "name": "CRM Lookup",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [840, 420],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t-email",
+              "name": "email",
+              "value": "={{ $('Normalize').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "t-first",
+              "name": "first_name",
+              "value": "={{ $('Normalize').item.json.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "t-surname",
+              "name": "surname",
+              "value": "={{ $('Normalize').item.json.surname }}",
+              "type": "string"
+            },
+            {
+              "id": "t-usecase",
+              "name": "use_case",
+              "value": "={{ $('Normalize').item.json.use_case }}",
+              "type": "string"
+            },
+            {
+              "id": "t-source",
+              "name": "source",
+              "value": "={{ $('Normalize').item.json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "t-ts",
+              "name": "signup_timestamp",
+              "value": "={{ $('Normalize').item.json.signup_timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "t-known",
+              "name": "known_in_crm",
+              "value": "={{ $json.email ? 'yes' : 'no' }}",
+              "type": "string"
+            },
+            {
+              "id": "t-status",
+              "name": "status",
+              "value": "new",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-4008-8008-000000000008",
+      "name": "Triage",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1060, 420]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["email"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-4009-8009-000000000009",
+      "name": "Append to Signups",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1280, 420],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🆕 *New signup*\n\n*Name:* {{ $json.first_name }} {{ $json.surname }}\n*Email:* `{{ $json.email }}`\n*Source:* {{ $json.source }}\n*Use case:* {{ $json.use_case || '—' }}\n\n🔎 Already in CRM: *{{ $json.known_in_crm === 'yes' ? 'YES' : 'no' }}*",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Add to CRM",
+                    "additionalFields": {
+                      "callback_data": "=addcrm:{{ $json.email }}"
+                    }
+                  },
+                  {
+                    "text": "🗑 Dismiss",
+                    "additionalFields": {
+                      "callback_data": "=dismiss:{{ $json.email }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-000a-400a-800a-00000000000a",
+      "name": "Notify (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": ["callback_query"],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-000b-400b-800b-00000000000b",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [120, 1100],
+      "webhookId": "signup-intake-callback",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the inline-button tap: callback_data is \"action:email\".\nconst cq = $json.callback_query || {};\nconst raw = (cq.data || '').toString();\nconst idx = raw.indexOf(':');\nconst action = idx === -1 ? raw : raw.slice(0, idx);\nconst email = idx === -1 ? '' : raw.slice(idx + 1);\nreturn [{\n  json: {\n    action,\n    email: email.trim().toLowerCase(),\n    message_id: cq.message && cq.message.message_id,\n    chat_id: cq.message && cq.message.chat && cq.message.chat.id,\n    original_text: (cq.message && cq.message.text) || ''\n  }\n}];"
+      },
+      "id": "a1b2c3d4-000c-400c-800c-00000000000c",
+      "name": "Parse Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [360, 1100]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "addcrm",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "addcrm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "dismiss",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "dismiss"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-000d-400d-800d-00000000000d",
+      "name": "Action?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [580, 1100]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $('Parse Callback').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-000e-400e-800e-00000000000e",
+      "name": "Lookup Signup",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [840, 980],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_ENTRIES_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Entries",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "first_name": "={{ $json.first_name }}",
+            "surname": "={{ $json.surname }}",
+            "status": "lead",
+            "groups": "website-waitlist",
+            "association": "={{ $json.source }}",
+            "last_topic": "Waitlist signup",
+            "notes": "={{ $json.use_case }}",
+            "contact_created_at": "={{ $now.toISO() }}",
+            "contact_updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": ["email"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-000f-400f-800f-00000000000f",
+      "name": "Add to CRM (Entries)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1060, 980],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fp-email",
+              "name": "email",
+              "value": "={{ $('Parse Callback').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "fp-status",
+              "name": "status",
+              "value": "promoted",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0024-4024-8024-000000000024",
+      "name": "Flag Promoted",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1280, 980]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["email"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0020-4020-8020-000000000020",
+      "name": "Mark Promoted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1500, 980],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "messageId": "={{ $('Parse Callback').item.json.message_id }}",
+        "text": "={{ $('Parse Callback').item.json.original_text }}\n\n✅ ADDED TO CRM",
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0021-4021-8021-000000000021",
+      "name": "Confirm Added",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1720, 980],
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $('Parse Callback').item.json.email }}",
+            "status": "dismissed"
+          },
+          "matchingColumns": ["email"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0022-4022-8022-000000000022",
+      "name": "Mark Dismissed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [840, 1240],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "messageId": "={{ $('Parse Callback').item.json.message_id }}",
+        "text": "={{ $('Parse Callback').item.json.original_text }}\n\n🗑 DISMISSED",
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0023-4023-8023-000000000023",
+      "name": "Confirm Dismissed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1060, 1240],
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Waitlist Webhook": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    },
+    "Respond OK": {
+      "main": [[{ "node": "Normalize (Web)", "type": "main", "index": 0 }]]
+    },
+    "Normalize (Web)": {
+      "main": [[{ "node": "Normalize", "type": "main", "index": 0 }]]
+    },
+    "Hosted Signup Form": {
+      "main": [[{ "node": "Normalize (Form)", "type": "main", "index": 0 }]]
+    },
+    "Normalize (Form)": {
+      "main": [[{ "node": "Normalize", "type": "main", "index": 0 }]]
+    },
+    "Normalize": {
+      "main": [[{ "node": "CRM Lookup", "type": "main", "index": 0 }]]
+    },
+    "CRM Lookup": {
+      "main": [[{ "node": "Triage", "type": "main", "index": 0 }]]
+    },
+    "Triage": {
+      "main": [[{ "node": "Append to Signups", "type": "main", "index": 0 }]]
+    },
+    "Append to Signups": {
+      "main": [[{ "node": "Notify (Telegram)", "type": "main", "index": 0 }]]
+    },
+    "Telegram Trigger": {
+      "main": [[{ "node": "Parse Callback", "type": "main", "index": 0 }]]
+    },
+    "Parse Callback": {
+      "main": [[{ "node": "Action?", "type": "main", "index": 0 }]]
+    },
+    "Action?": {
+      "main": [
+        [{ "node": "Lookup Signup", "type": "main", "index": 0 }],
+        [{ "node": "Mark Dismissed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lookup Signup": {
+      "main": [[{ "node": "Add to CRM (Entries)", "type": "main", "index": 0 }]]
+    },
+    "Add to CRM (Entries)": {
+      "main": [[{ "node": "Flag Promoted", "type": "main", "index": 0 }]]
+    },
+    "Flag Promoted": {
+      "main": [[{ "node": "Mark Promoted", "type": "main", "index": 0 }]]
+    },
+    "Mark Promoted": {
+      "main": [[{ "node": "Confirm Added", "type": "main", "index": 0 }]]
+    },
+    "Mark Dismissed": {
+      "main": [[{ "node": "Confirm Dismissed", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {},
+  "tags": []
+}

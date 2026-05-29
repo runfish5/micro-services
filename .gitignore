@@ -6,6 +6,8 @@
 
 # n8n
 .n8n/
+# Local import copies with real IDs/chat IDs bound (never committed — repo is public)
+*.local.n8n.json
 
 # OS
 .DS_Store
