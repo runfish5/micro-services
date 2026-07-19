@@ -9,6 +9,12 @@ Workflow monitoring and incident management via Telegram — check execution sta
 3. Activate the workflow
 4. Send `/help` to the bot in Telegram
 
+## Safety Net (active — treat like a security control)
+
+This project hosts the lab's **failure-alerting safety net**:
+- **External heartbeat** — `.github/workflows/n8n-heartbeat.yml` + `scripts/n8n-heartbeat-check.sh` (one-time setup: `scripts/setup-heartbeat.sh`). Pings n8n every 15 min from outside Railway; failure → GitHub email. Full detail: **`docs/external-heartbeat.md`**.
+- **In-n8n runner-proof + email alerts** live in `07_error-handler` (survive task-runner outages).
+
 ## Commands
 
 | Command | Usage | Description |

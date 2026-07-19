@@ -34,6 +34,10 @@ Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for 
 
 **Skill**: `/n8n-executions` - Fetch recent execution logs
 
+## Monitoring & Alerting (active)
+
+A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/11_n8n-ops-center/docs/external-heartbeat.md`**.
+
 ## Code Patterns
 
 Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on free-tier LLM APIs, but optional capabities that cost are also present.

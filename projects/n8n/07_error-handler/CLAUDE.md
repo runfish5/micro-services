@@ -8,8 +8,10 @@ Set as n8n's Error Workflow (Settings > Error Workflow) to catch all workflow fa
 - Error classification by type and severity
 - Persistent logging to FailedItems Google Sheet
 - Telegram alerts with color-coded severity
-- CODE RED alerts for watchdog failures (8-hour Task Resolver)
+- CODE RED alerts for watchdog failures (8-hour Task Resolver) — these also continue into normal logging + alerts
 - Long message chunking for Telegram's 4096 char limit
+
+**Alerting (runner-proof + email):** every failure fires on **both Telegram and email** (email reuses the Gmail OAuth credential). A `Runner/Infra Down?` branch sends an **expression-only** alert (no Code node) so it survives task-runner outages — the normal Code-node pipeline can't. Regex must be plain JS (no inline `(?i)` flag). Part of the lab's active safety net → see `../11_n8n-ops-center/docs/external-heartbeat.md`.
 
 ## Error Classification
 

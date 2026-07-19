@@ -1,0 +1,36 @@
+name: n8n-heartbeat
+
+# External safety net for the Railway-hosted n8n instance.
+# Runs OUTSIDE Railway so it still fires during a full outage. On failure,
+# GitHub emails the repo owner (Actions failure notifications, on by default),
+# so no alerting credentials are required. Telegram is optional (see secrets).
+#
+# Setup (one time):  bash scripts/setup-heartbeat.sh   (reuses .claude/n8n-api.env)
+#
+# Secrets used:
+#   N8N_API_URL         (required)
+#   N8N_API_KEY         (optional — enables the runner/error-rate check)
+#   TELEGRAM_BOT_TOKEN  (optional — enables an extra Telegram alert)
+#   TELEGRAM_CHAT_ID    (optional)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 min (UTC); GitHub may delay under load
+  workflow_dispatch: {}        # lets you run it on demand from the Actions tab
+
+concurrency:
+  group: n8n-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run heartbeat check
+        env:
+          N8N_API_URL: ${{ secrets.N8N_API_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: bash scripts/n8n-heartbeat-check.sh

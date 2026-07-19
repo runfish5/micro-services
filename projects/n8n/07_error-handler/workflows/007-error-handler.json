@@ -9,22 +9,22 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -48,
-        80
+        224,
+        64
       ],
       "id": "31d79e15-243e-4416-a1eb-ef083978548f",
       "name": "Sticky Note"
     },
     {
       "parameters": {
-        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**CODE RED Alert:**\nIf the failing workflow is \"8-hour Task Resolver\", sends immediate CODE RED Telegram alert before normal processing. This catches the watchdog-failure scenario where the error handler itself is down.\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `llm_schema_error` → High, auto-retry after 8h (retryable)\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
+        "content": "## Error Handler Workflow\n\n**Purpose:** Catch failed executions from all workflows, classify errors, log to Google Sheets, send Telegram alerts.\n\n**Setup:**\n1. Activate this workflow\n2. In n8n Settings → Error Workflow → Select this workflow\n3. Create `FailedItems` sheet tab with headers\n\n**CODE RED Alert:**\nIf the failing workflow is \"8-hour Task Resolver\", sends an immediate CODE RED Telegram alert and then continues into normal logging + alerts (FailedItems, Telegram, email). This catches the watchdog-failure scenario where automatic error recovery is broken.\n\n**Error Types:**\n- `auth_error` (401/403) → Critical, refresh credentials\n- `rate_limit` (429) → High, wait and retry\n- `network_error` → High, retry with backoff\n- `llm_schema_error` → High, auto-retry after 8h (retryable)\n- `parse_error` → Medium, check LLM output\n- `validation_error` → Medium, check input data\n- `unknown` → Medium, manual review\n\n**Long Message Support:**\nMessages over 4000 chars are split into chunks and sent as multiple Telegram messages with part numbers [1/3], [2/3], etc.\n\n\nuse a code-node like this to test:\n```\n// Test Error Handler - uncomment ONE at a time\n\n// Rate Limit (retryable)\nthrow new Error(\"429 Too Many Requests - rate limit exceeded\");     \n\n// Auth Error (critical)\n// throw new Error(\"401 Unauthorized - invalid credentials\");       \n\n// Network Error (retryable)\n// throw new Error(\"ETIMEDOUT - connection timed out\");\n\n// Parse Error\n// throw new Error(\"Unexpected token in JSON at position 0\");       \n\n// Validation Error\n// throw new Error(\"Required field 'email' is missing\");\n\n// Resource Error (critical)\n// throw new Error(\"Out of memory - cannot allocate buffer\");       \n\n// Unknown Error\n// throw new Error(\"Something weird happened\");\n```",
         "height": 944,
         "width": 480
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1088,
+        -1312,
         144
       ],
       "id": "97da6e44-5c8f-4f09-b9a8-85dfd7b87899",
@@ -35,7 +35,7 @@
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        -544,
+        -768,
         592
       ],
       "id": "ac4bfaba-1429-46fb-a165-c58f6302ab7a",
@@ -43,7 +43,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare Error Record\n// Extracts execution context from n8n error trigger\n// Also extracts attachment count for LLM cost estimation\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted || \n                   error.node || \n                   error.nodeName || \n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet errorMsg = error.message;\n\n// If no message, try alternative properties n8n might use\nif (!errorMsg) {\n  errorMsg = error.description || error.reason || error.cause ||\n             error.details || error.errorMessage;\n}\n\n// If still no message but error has a name that's descriptive, use it\nif (!errorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  errorMsg = error.name;\n}\n\n// Last resort: stringify, but check if it's actually useful\nif (!errorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    errorMsg = stringified;\n  }\n}\n\n// Final fallback with specific hint\nif (!errorMsg) {\n  errorMsg = 'LLM output did not match required schema - check model response format';\n}\n\n// Extract retry_input - data needed to restart workflow from scratch\n// Searches execution runData for email_ID or other identifying info\nlet retryInputData = {};\nconst runData = execution.data?.resultData?.runData || {};\n\n// Search common nodes that hold identifying data\nconst nodesToCheck = ['Set File ID', 'Gmail', 'Gmail Trigger', 'Clean Email', 'Manual Trigger'];\nfor (const nodeName of nodesToCheck) {\n  const nodeData = runData[nodeName]?.[0]?.data?.main?.[0]?.[0]?.json;\n  if (nodeData) {\n    if (nodeData.email_ID) retryInputData.email_ID = nodeData.email_ID;\n    if (nodeData.id && !retryInputData.email_ID) retryInputData.email_ID = nodeData.id;\n    if (nodeData.messageId) retryInputData.messageId = nodeData.messageId;\n    break; // Found data, stop searching\n  }\n}\n\n// ====== Extract attachment count for LLM cost estimation ======\nlet attachmentCount = 0;\n\n// Strategy 1: Check Gmail node for binary attachments\nconst gmailNodeData = runData['Gmail']?.[0]?.data?.main?.[0]?.[0];\nif (gmailNodeData?.binary) {\n  attachmentCount = Object.keys(gmailNodeData.binary).length;\n}\n\n// Strategy 2: Check Gmail Trigger node\nif (attachmentCount === 0) {\n  const gmailTriggerData = runData['Gmail Trigger']?.[0]?.data?.main?.[0]?.[0];\n  if (gmailTriggerData?.binary) {\n    attachmentCount = Object.keys(gmailTriggerData.binary).length;\n  }\n}\n\n// Strategy 3: Check \"sp\" (Split Out) node output count\nif (attachmentCount === 0) {\n  const spNodeData = runData['sp'];\n  if (spNodeData && spNodeData[0]?.data?.main?.[0]) {\n    attachmentCount = spNodeData[0].data.main[0].length;\n  }\n}\n\n// Strategy 4: Check Clean Email object for attachmentNames\nif (attachmentCount === 0) {\n  const cleanEmailData = runData['Clean Email object']?.[0]?.data?.main?.[0]?.[0]?.json;\n  if (cleanEmailData?.data?.[0]?.attachmentNames) {\n    attachmentCount = cleanEmailData.data[0].attachmentNames.length;\n  }\n}\n\n// Default to 1 if we couldn't determine (conservative estimate)\nif (attachmentCount === 0) {\n  attachmentCount = 1;\n}\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    workflow_id: workflow.id || 'unknown',\n    workflow_name: workflow.name || 'unknown',\n    execution_id: execution.retryOf || execution.id || 'unknown',\n    execution_mode: execution.mode || 'unknown',\n    failed_node: failedNode,\n    retry_of: execution.retryOf || '',\n    error_message: errorMsg.substring(0, 500),\n    error_stack: (error.stack || '').substring(0, 1000),\n    error_name: error.name || 'Error',\n    started_at: execution.startedAt || '',\n    status: 'pending_retry',\n    retry_count: 0,\n    retry_input: JSON.stringify(retryInputData),\n    attachment_count: attachmentCount\n  }\n}];"
+        "jsCode": "// Prepare & Classify Error\n// 1) Extracts execution context from the error trigger (record fields)\n// 2) Classifies error type/severity/retryability, LLM cost estimate, auto-retry registry\n\nconst execution = $json.execution || {};\nconst workflow = $json.workflow || {};\nconst error = $json.error || {};\n\n// ====== 1) Prepare record ======\n\n// Extract failing node name from multiple possible locations\nconst failedNode = execution.lastNodeExecuted ||\n                   error.node ||\n                   error.nodeName ||\n                   (error.context && error.context.nodeName) ||\n                   'unknown';\n\n// Extract error message from multiple possible locations\nlet rawErrorMsg = error.message;\nif (!rawErrorMsg) {\n  rawErrorMsg = error.description || error.reason || error.cause ||\n                error.details || error.errorMessage;\n}\n// If still no message but error has a name that's descriptive, use it\nif (!rawErrorMsg && error.name && error.name !== 'Error' && error.name !== 'NodeOperationError') {\n  rawErrorMsg = error.name;\n}\n// Last resort: stringify, but check if it's actually useful\nif (!rawErrorMsg) {\n  const stringified = JSON.stringify(error);\n  if (stringified && stringified !== '{}' && stringified !== 'null' && stringified.length > 2) {\n    rawErrorMsg = stringified;\n  }\n}\n// Final fallback with specific hint\nif (!rawErrorMsg) {\n  rawErrorMsg = 'LLM output did not match required schema - check model response format';\n}\n\n// Extract retry_input - data needed to restart workflow from scratch\nlet retryInputData = {};\nconst runData = execution.data?.resultData?.runData || {};\nconst nodesToCheck = ['Set File ID', 'Gmail', 'Gmail Trigger', 'Clean Email', 'Manual Trigger'];\nfor (const nodeName of nodesToCheck) {\n  const nodeData = runData[nodeName]?.[0]?.data?.main?.[0]?.[0]?.json;\n  if (nodeData) {\n    if (nodeData.email_ID) retryInputData.email_ID = nodeData.email_ID;\n    if (nodeData.id && !retryInputData.email_ID) retryInputData.email_ID = nodeData.id;\n    if (nodeData.messageId) retryInputData.messageId = nodeData.messageId;\n    break; // Found data, stop searching\n  }\n}\n\n// ====== Extract attachment count for LLM cost estimation ======\nlet attachmentCount = 0;\n\n// Strategy 1: Check Gmail node for binary attachments\nconst gmailNodeData = runData['Gmail']?.[0]?.data?.main?.[0]?.[0];\nif (gmailNodeData?.binary) {\n  attachmentCount = Object.keys(gmailNodeData.binary).length;\n}\n// Strategy 2: Check Gmail Trigger node\nif (attachmentCount === 0) {\n  const gmailTriggerData = runData['Gmail Trigger']?.[0]?.data?.main?.[0]?.[0];\n  if (gmailTriggerData?.binary) {\n    attachmentCount = Object.keys(gmailTriggerData.binary).length;\n  }\n}\n// Strategy 3: Check \"sp\" (Split Out) node output count\nif (attachmentCount === 0) {\n  const spNodeData = runData['sp'];\n  if (spNodeData && spNodeData[0]?.data?.main?.[0]) {\n    attachmentCount = spNodeData[0].data.main[0].length;\n  }\n}\n// Strategy 4: Check Clean Email object for attachmentNames\nif (attachmentCount === 0) {\n  const cleanEmailData = runData['Clean Email object']?.[0]?.data?.main?.[0]?.[0]?.json;\n  if (cleanEmailData?.data?.[0]?.attachmentNames) {\n    attachmentCount = cleanEmailData.data[0].attachmentNames.length;\n  }\n}\n// Default to 1 if we couldn't determine (conservative estimate)\nif (attachmentCount === 0) {\n  attachmentCount = 1;\n}\n\nconst record = {\n  timestamp: new Date().toISOString(),\n  workflow_id: workflow.id || 'unknown',\n  workflow_name: workflow.name || 'unknown',\n  execution_id: execution.retryOf || execution.id || 'unknown',\n  execution_mode: execution.mode || 'unknown',\n  failed_node: failedNode,\n  retry_of: execution.retryOf || '',\n  error_message: rawErrorMsg.substring(0, 500),\n  error_stack: (error.stack || '').substring(0, 1000),\n  error_name: error.name || 'Error',\n  started_at: execution.startedAt || '',\n  status: 'pending_retry',\n  retry_count: 0,\n  retry_input: JSON.stringify(retryInputData),\n  attachment_count: attachmentCount\n};\n\n// ====== 2) Classify ======\n\nconst errorMsg = record.error_message.toLowerCase();\nconst errorMsgOriginal = record.error_message;\nconst errorName = record.error_name.toLowerCase();\nconst workflowName = record.workflow_name;\n\n// ====== Auto-Retry Registry ======\n// Workflows that support automatic retry on rate limits\nconst AUTO_RETRY_REGISTRY = [\n  'smart-folder2table',\n  'any-file2json-converter',\n  // Add more as needed\n];\n\nconst canAutoRetry = AUTO_RETRY_REGISTRY.some(name =>\n  workflowName.toLowerCase().includes(name.toLowerCase())\n);\n\nlet errorType = 'unknown';\nlet severity = 'medium';\nlet isRetryable = false;\nlet suggestedAction = 'manual_review';\n\n// Auth errors (401, 403, credential issues)\nif (errorMsg.includes('401') || errorMsg.includes('403') ||\n    errorMsg.includes('unauthorized') || errorMsg.includes('forbidden') ||\n    errorMsg.includes('credential') || errorMsg.includes('token expired') ||\n    errorMsg.includes('invalid_grant') || errorMsg.includes('authentication')) {\n  errorType = 'auth_error';\n  severity = 'critical';\n  suggestedAction = 'refresh_credentials';\n  isRetryable = false;\n}\n// Rate limits (429)\nelse if (errorMsg.includes('429') || errorMsg.includes('rate limit') ||\n         errorMsg.includes('too many requests') || errorMsg.includes('quota') ||\n         errorMsg.includes('throttl')) {\n  errorType = 'rate_limit';\n  severity = 'high';\n  suggestedAction = 'wait_and_retry';\n  isRetryable = true;\n}\n// Network/timeout errors\nelse if (errorMsg.includes('timeout') || errorMsg.includes('etimedout') ||\n         errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') ||\n         errorMsg.includes('network') || errorMsg.includes('enotfound') ||\n         errorMsg.includes('socket hang up') || errorMsg.includes('502') ||\n         errorMsg.includes('503') || errorMsg.includes('504')) {\n  errorType = 'network_error';\n  severity = 'high';\n  suggestedAction = 'retry_with_backoff';\n  isRetryable = true;\n}\n// LLM Schema errors (specific pattern - retryable because LLMs are non-deterministic)\nelse if (errorMsg.includes('llm output did not match required schema')) {\n  errorType = 'llm_schema_error';\n  severity = 'high';\n  suggestedAction = 'auto_retry_8h';\n  isRetryable = true;\n}\n// Parse errors (JSON, schema) - general case, NOT retryable\nelse if (errorMsg.includes('json') || errorMsg.includes('parse') ||\n         errorMsg.includes('unexpected token') || errorMsg.includes('schema') ||\n         errorMsg.includes('syntax error') || errorName.includes('syntaxerror')) {\n  errorType = 'parse_error';\n  severity = 'medium';\n  suggestedAction = 'check_llm_output';\n  isRetryable = false;\n}\n// Validation errors\nelse if (errorMsg.includes('required') || errorMsg.includes('missing') ||\n         errorMsg.includes('invalid') || errorMsg.includes('validation') ||\n         errorMsg.includes('not found') || errorMsg.includes('does not exist')) {\n  errorType = 'validation_error';\n  severity = 'medium';\n  suggestedAction = 'check_input_data';\n  isRetryable = false;\n}\n// Resource errors\nelse if (errorMsg.includes('memory') || errorMsg.includes('disk') ||\n         errorMsg.includes('storage') || errorMsg.includes('out of space')) {\n  errorType = 'resource_error';\n  severity = 'critical';\n  suggestedAction = 'check_resources';\n  isRetryable = false;\n}\n\n// ====== LLM Cost Estimation by Provider ======\n// Rate limits are per API provider, so we track them separately:\n// - Groq: 5 req/min (bottleneck causing 429 errors)\n// - Google Gemini: Separate limit for OCR (not typically the bottleneck)\nconst LLM_COST_BY_NODE = {\n  // Early failures - most work remaining\n  'Gmail Trigger':           { groq_base: 1, groq_per_att: 1, google_per_att: 1 },\n  'Clean Email object':      { groq_base: 1, groq_per_att: 1, google_per_att: 1 },\n\n  // Classification stage (Groq)\n  'subject-classifier-LM':   { groq_base: 1, groq_per_att: 1, google_per_att: 0 },\n\n  // Attachment processing stage\n  'any-file2json-converter': { groq_base: 0, groq_per_att: 1, google_per_att: 1 },\n  'Create Attachment Profile':{ groq_base: 0, groq_per_att: 1, google_per_att: 1 },\n\n  // Invoice extraction stage (Groq only)\n  'Accountant-concierge-LM': { groq_base: 0, groq_per_att: 1, google_per_att: 0 },\n\n  // smart-table-fill (Groq, batched) - 4 batches typical\n  'Extract Data from String':{ groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n  \"Call 'smart-table-fill'\": { groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n  'smart-table-fill':        { groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n\n  // Default for unknown nodes\n  '_default':                { groq_base: 1, groq_per_att: 1, google_per_att: 1 }\n};\n\nconst cost = LLM_COST_BY_NODE[record.failed_node] || LLM_COST_BY_NODE['_default'];\nconst expected_groq_requests = cost.groq_base + (attachmentCount * cost.groq_per_att);\nconst expected_google_requests = attachmentCount * cost.google_per_att;\n\n// Package LLM cost estimate as single JSON field\n// Different workflows have different cost structures, so keep as flexible package\nconst llmCostEstimate = {\n  attachment_count: attachmentCount,\n  groq: expected_groq_requests,\n  google: expected_google_requests\n};\n\n// ====== Extract Retry Timing for Rate Limits ======\nlet retryAfterSeconds = 60; // default\nif (errorType === 'rate_limit') {\n  // Pattern: \"retry in 55.251598518s\" or \"retry in 55 seconds\"\n  const retryMatch = errorMsgOriginal.match(/retry in (\\d+(?:\\.\\d+)?)\\s*s/i);\n  if (retryMatch) {\n    retryAfterSeconds = Math.ceil(parseFloat(retryMatch[1]));\n  }\n}\n\nreturn [{\n  json: {\n    ...record,\n    error_type: errorType,\n    severity: severity,\n    is_retryable: isRetryable,\n    suggested_action: suggestedAction,\n    retry_params: JSON.stringify(llmCostEstimate),\n    can_auto_retry: canAutoRetry,\n    retry_after_seconds: retryAfterSeconds\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -51,21 +51,8 @@
         -320,
         592
       ],
-      "id": "c4ae7909-8ba0-413b-babf-efff2a799d07",
-      "name": "Prepare Error Record"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Classify Error by Type\n// Determines severity, retryability, suggested action\n// Also calculates expected LLM requests for rate-limit-aware retries\n\nconst errorMsg = ($json.error_message || '').toLowerCase();\nconst errorMsgOriginal = $json.error_message || '';\nconst errorStack = ($json.error_stack || '').toLowerCase();\nconst errorName = ($json.error_name || '').toLowerCase();\nconst failedNode = $json.failed_node || 'unknown';\nconst attachmentCount = $json.attachment_count || 1;\nconst workflowName = $json.workflow_name || '';\n\n// ====== Auto-Retry Registry ======\n// Workflows that support automatic retry on rate limits\nconst AUTO_RETRY_REGISTRY = [\n  'smart-folder2table',\n  'any-file2json-converter',\n  // Add more as needed\n];\n\nconst canAutoRetry = AUTO_RETRY_REGISTRY.some(name =>\n  workflowName.toLowerCase().includes(name.toLowerCase())\n);\n\nlet errorType = 'unknown';\nlet severity = 'medium';\nlet isRetryable = false;\nlet suggestedAction = 'manual_review';\n\n// Auth errors (401, 403, credential issues)\nif (errorMsg.includes('401') || errorMsg.includes('403') ||\n    errorMsg.includes('unauthorized') || errorMsg.includes('forbidden') ||\n    errorMsg.includes('credential') || errorMsg.includes('token expired') ||\n    errorMsg.includes('invalid_grant') || errorMsg.includes('authentication')) {\n  errorType = 'auth_error';\n  severity = 'critical';\n  suggestedAction = 'refresh_credentials';\n  isRetryable = false;\n}\n// Rate limits (429)\nelse if (errorMsg.includes('429') || errorMsg.includes('rate limit') ||\n         errorMsg.includes('too many requests') || errorMsg.includes('quota') ||\n         errorMsg.includes('throttl')) {\n  errorType = 'rate_limit';\n  severity = 'high';\n  suggestedAction = 'wait_and_retry';\n  isRetryable = true;\n}\n// Network/timeout errors\nelse if (errorMsg.includes('timeout') || errorMsg.includes('etimedout') ||\n         errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') ||\n         errorMsg.includes('network') || errorMsg.includes('enotfound') ||\n         errorMsg.includes('socket hang up') || errorMsg.includes('502') ||\n         errorMsg.includes('503') || errorMsg.includes('504')) {\n  errorType = 'network_error';\n  severity = 'high';\n  suggestedAction = 'retry_with_backoff';\n  isRetryable = true;\n}\n// LLM Schema errors (specific pattern - retryable because LLMs are non-deterministic)\nelse if (errorMsg.includes('llm output did not match required schema')) {\n  errorType = 'llm_schema_error';\n  severity = 'high';\n  suggestedAction = 'auto_retry_8h';\n  isRetryable = true;\n}\n// Parse errors (JSON, schema) - general case, NOT retryable\nelse if (errorMsg.includes('json') || errorMsg.includes('parse') ||\n         errorMsg.includes('unexpected token') || errorMsg.includes('schema') ||\n         errorMsg.includes('syntax error') || errorName.includes('syntaxerror')) {\n  errorType = 'parse_error';\n  severity = 'medium';\n  suggestedAction = 'check_llm_output';\n  isRetryable = false;\n}\n// Validation errors\nelse if (errorMsg.includes('required') || errorMsg.includes('missing') ||\n         errorMsg.includes('invalid') || errorMsg.includes('validation') ||\n         errorMsg.includes('not found') || errorMsg.includes('does not exist')) {\n  errorType = 'validation_error';\n  severity = 'medium';\n  suggestedAction = 'check_input_data';\n  isRetryable = false;\n}\n// Resource errors\nelse if (errorMsg.includes('memory') || errorMsg.includes('disk') ||\n         errorMsg.includes('storage') || errorMsg.includes('out of space')) {\n  errorType = 'resource_error';\n  severity = 'critical';\n  suggestedAction = 'check_resources';\n  isRetryable = false;\n}\n\n// ====== LLM Cost Estimation by Provider ======\n// Rate limits are per API provider, so we track them separately:\n// - Groq: 5 req/min (bottleneck causing 429 errors)\n// - Google Gemini: Separate limit for OCR (not typically the bottleneck)\nconst LLM_COST_BY_NODE = {\n  // Early failures - most work remaining\n  'Gmail Trigger':           { groq_base: 1, groq_per_att: 1, google_per_att: 1 },\n  'Clean Email object':      { groq_base: 1, groq_per_att: 1, google_per_att: 1 },\n  \n  // Classification stage (Groq)\n  'subject-classifier-LM':   { groq_base: 1, groq_per_att: 1, google_per_att: 0 },\n  \n  // Attachment processing stage\n  'any-file2json-converter': { groq_base: 0, groq_per_att: 1, google_per_att: 1 },\n  'Create Attachment Profile':{ groq_base: 0, groq_per_att: 1, google_per_att: 1 },\n  \n  // Invoice extraction stage (Groq only)\n  'Accountant-concierge-LM': { groq_base: 0, groq_per_att: 1, google_per_att: 0 },\n  \n  // smart-table-fill (Groq, batched) - 4 batches typical\n  'Extract Data from String':{ groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n  \"Call 'smart-table-fill'\": { groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n  'smart-table-fill':        { groq_base: 0, groq_per_att: 4, google_per_att: 0 },\n  \n  // Default for unknown nodes\n  '_default':                { groq_base: 1, groq_per_att: 1, google_per_att: 1 }\n};\n\nconst cost = LLM_COST_BY_NODE[failedNode] || LLM_COST_BY_NODE['_default'];\nconst expected_groq_requests = cost.groq_base + (attachmentCount * cost.groq_per_att);\nconst expected_google_requests = attachmentCount * cost.google_per_att;\n\n// Package LLM cost estimate as single JSON field\n// Different workflows have different cost structures, so keep as flexible package\nconst llmCostEstimate = {\n  attachment_count: attachmentCount,\n  groq: expected_groq_requests,\n  google: expected_google_requests\n};\n\n// ====== Extract Retry Timing for Rate Limits ======\nlet retryAfterSeconds = 60; // default\nif (errorType === 'rate_limit') {\n  // Pattern: \"retry in 55.251598518s\" or \"retry in 55 seconds\"\n  const retryMatch = errorMsgOriginal.match(/retry in (\\d+(?:\\.\\d+)?)\\s*s/i);\n  if (retryMatch) {\n    retryAfterSeconds = Math.ceil(parseFloat(retryMatch[1]));\n  }\n}\n\nreturn [{\n  json: {\n    ...($json),\n    error_type: errorType,\n    severity: severity,\n    is_retryable: isRetryable,\n    suggested_action: suggestedAction,\n    retry_params: JSON.stringify(llmCostEstimate),\n    can_auto_retry: canAutoRetry,\n    retry_after_seconds: retryAfterSeconds\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -96,
-        592
-      ],
       "id": "fc3a9fa9-042f-4b1c-a01e-6dad08795d7e",
-      "name": "Classify Error"
+      "name": "Prepare & Classify Error"
     },
     {
       "parameters": {
@@ -263,7 +250,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        128,
+        352,
         592
       ],
       "id": "44879a1e-9691-43e0-978f-2ed0026a8572",
@@ -277,12 +264,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format Telegram Alert with Severity Emoji\n// Outputs FULL message (no truncation) - chunking handled downstream\n// Includes LLM cost estimates for rate-limit awareness\n\nconst esc = (s) => String(s).replace(/_/g, '\\\\_');\n\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34', // Red circle\n  high: '\\uD83D\\uDFE0',     // Orange circle\n  medium: '\\uD83D\\uDFE1',   // Yellow circle\n  low: '\\uD83D\\uDFE2'       // Green circle\n};\n\nconst emoji = severityEmoji[$json.severity] || '\\u26AA'; // White circle default\n\n// Parse LLM cost estimate JSON\nconst llmCost = JSON.parse($json.retry_params || '{}');\n\n// Build full message with failed node prominently displayed\n// Added attachment count and LLM estimates for rate limit visibility\nconst msg = `${emoji} ${esc($json.error_type).toUpperCase()}\n\\u274C Workflow: ${esc($json.workflow_name)}\n\\uD83D\\uDCCD Node: ${esc($json.failed_node || 'unknown')}\n---\nError: ${esc($json.error_message)}\n---\nExecution: ${$json.execution_id}\nSeverity: ${$json.severity}\nRetryable: ${$json.is_retryable ? 'Yes' : 'No'}\nAction: ${esc($json.suggested_action)}\nAttachments: ${llmCost.attachment_count || 0}\nLLM calls: Groq=${llmCost.groq || 0} | Google=${llmCost.google || 0}\nStack: ${esc($json.error_stack || 'N/A')}`;\n\nreturn [{\n  json: {\n    chatId: 'YOUR_TELEGRAM_CHAT_ID',\n    fullMessage: msg\n  }\n}];"
+        "jsCode": "// Format Telegram Alert with Severity Emoji\n// Outputs FULL message (no truncation) - chunking handled downstream\n// Includes LLM cost estimates for rate-limit awareness\n\nconst esc = (s) => String(s).replace(/_/g, '\\\\_');\n\nconst severityEmoji = {\n  critical: '\\uD83D\\uDD34', // Red circle\n  high: '\\uD83D\\uDFE0',     // Orange circle\n  medium: '\\uD83D\\uDFE1',   // Yellow circle\n  low: '\\uD83D\\uDFE2'       // Green circle\n};\n\nconst emoji = severityEmoji[$json.severity] || '\\u26AA'; // White circle default\n\n// Parse LLM cost estimate JSON\nconst llmCost = JSON.parse($json.retry_params || '{}');\n\n// Build full message with failed node prominently displayed\n// Added attachment count and LLM estimates for rate limit visibility\nconst msg = `${emoji} ${esc($json.error_type).toUpperCase()}\n\\u274C Workflow: ${esc($json.workflow_name)}\n\\uD83D\\uDCCD Node: ${esc($json.failed_node || 'unknown')}\n---\nError: ${esc($json.error_message)}\n---\nExecution: ${$json.execution_id}\nSeverity: ${$json.severity}\nRetryable: ${$json.is_retryable ? 'Yes' : 'No'}\nAction: ${esc($json.suggested_action)}\nAttachments: ${llmCost.attachment_count || 0}\nLLM calls: Groq=${llmCost.groq || 0} | Google=${llmCost.google || 0}\nStack: ${esc($json.error_stack || 'N/A')}`;\n\nreturn [{\n  json: {\n    fullMessage: msg\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        352,
+        576,
         592
       ],
       "id": "e7f5d957-8e4d-49d7-a9a0-d00fc403e7f0",
@@ -290,12 +277,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Split Long Message into Chunks\n// Telegram max message length is ~4096 chars, using 4000 to be safe\n\nconst message = $json.fullMessage || 'No error message';\nconst chatId = $json.chatId;\nconst maxLength = 4000;\nconst chunks = [];\n\nfor (let i = 0; i < message.length; i += maxLength) {\n  chunks.push(message.substring(i, i + maxLength));\n}\n\nreturn chunks.map((chunk, idx) => ({\n  json: {\n    chatId: chatId,\n    chunk: chunk,\n    part: idx + 1,\n    total: chunks.length\n  }\n}));"
+        "jsCode": "// Split Long Message into Chunks\n// Telegram max message length is ~4096 chars, using 4000 to be safe\n\nconst message = $json.fullMessage || 'No error message';\nconst maxLength = 4000;\nconst chunks = [];\n\nfor (let i = 0; i < message.length; i += maxLength) {\n  chunks.push(message.substring(i, i + maxLength));\n}\n\nreturn chunks.map((chunk, idx) => ({\n  json: {\n    chunk: chunk,\n    part: idx + 1,\n    total: chunks.length\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        576,
+        800,
         592
       ],
       "id": "fbc7df72-a695-42f1-b1a5-29f9055b93fd",
@@ -308,7 +295,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        800,
+        1024,
         592
       ],
       "id": "ff1ddec4-fe63-4059-ba4f-b8fb2b711ef0",
@@ -316,7 +303,7 @@
     },
     {
       "parameters": {
-        "chatId": "=YOUR_CHAT_ID_1",
+        "chatId": "YOUR_CHAT_ID_1",
         "text": "={{ $json.total > 1 ? '[' + $json.part + '/' + $json.total + '] ' : '' }}{{ $json.chunk }}",
         "additionalFields": {
           "appendAttribution": false
@@ -325,7 +312,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1024,
+        1248,
         592
       ],
       "id": "cf9f8582-c986-49e3-9ddc-d35bbb196100",
@@ -365,8 +352,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        192,
-        976
+        128,
+        592
       ],
       "id": "300a706d-0ff2-4945-ae32-b1b0efcbd59e",
       "name": "Is Resolver Failure?"
@@ -382,7 +369,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        192,
+        128,
         784
       ],
       "id": "ac4c8411-3c5f-4d31-bd8e-6d108fe297f3",
@@ -433,34 +420,34 @@
       "typeVersion": 2.2,
       "position": [
         -96,
-        976
+        592
       ],
       "id": "eh-if-rate-limit-auto-retry",
       "name": "IF: Rate Limit Auto-Retry?"
     },
     {
       "parameters": {
-        "jsCode": "// Extract Config for Execute Workflow retry\n// Gets original Config values from failed execution's runData\nconst execution = $('Error Trigger').first().json.execution || {};\nconst runData = execution.data?.resultData?.runData || {};\n\n// Extract Config node output from smart-folder2table\nconst configData = runData['Config']?.[0]?.data?.main?.[0]?.[0]?.json || {};\n\nreturn [{\n  json: {\n    // Pass original config values\n    folder_id: configData.folder_id || '',\n    spreadsheet_id: configData.spreadsheet_id || '',\n    data_sheet_name: configData.data_sheet_name || 'Sheet1',\n    source_file_column: configData.source_file_column || 'source_file',\n    match_column: configData.match_column || 'source_file',\n    batch_size: configData.batch_size || 10,\n    schema_sheet_name: configData.schema_sheet_name || 'Description_hig7f6',\n    // Add new rate limit param from error classification\n    rate_limit_wait_seconds: $('Classify Error').first().json.retry_after_seconds || 60\n  }\n}];"
+        "jsCode": "// Extract Config for Execute Workflow retry\n// Gets original Config values from failed execution's runData\nconst execution = $('Error Trigger').first().json.execution || {};\nconst runData = execution.data?.resultData?.runData || {};\n\n// Extract Config node output from smart-folder2table\nconst configData = runData['Config']?.[0]?.data?.main?.[0]?.[0]?.json || {};\n\nreturn [{\n  json: {\n    // Pass original config values\n    folder_id: configData.folder_id || '',\n    spreadsheet_id: configData.spreadsheet_id || '',\n    data_sheet_name: configData.data_sheet_name || 'Sheet1',\n    source_file_column: configData.source_file_column || 'source_file',\n    match_column: configData.match_column || 'source_file',\n    batch_size: configData.batch_size || 10,\n    schema_sheet_name: configData.schema_sheet_name || 'Description_hig7f6',\n    // Add new rate limit param from error classification\n    rate_limit_wait_seconds: $('Prepare & Classify Error').first().json.retry_after_seconds || 60\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128,
-        1168
+        -96,
+        976
       ],
       "id": "eh-extract-config-for-retry",
       "name": "Extract Config for Retry"
     },
     {
       "parameters": {
-        "amount": "={{ $('Classify Error').first().json.retry_after_seconds }}",
+        "amount": "={{ $('Prepare & Classify Error').first().json.retry_after_seconds }}",
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        352,
-        1168
+        128,
+        976
       ],
       "id": "eh-wait-rate-limit",
       "name": "Wait (Rate Limit)"
@@ -469,7 +456,7 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "={{ $('Classify Error').first().json.workflow_id }}",
+          "value": "={{ $('Prepare & Classify Error').first().json.workflow_id }}",
           "mode": "id"
         },
         "workflowInputs": {
@@ -496,8 +483,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        576,
-        1168
+        352,
+        976
       ],
       "id": "eh-execute-smart-folder2table",
       "name": "Retry Workflow (Execute)"
@@ -505,7 +492,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
-        "text": "=⏳ Rate limit hit in {{ $('Classify Error').first().json.workflow_name }}\n\nRestarting via Execute Workflow after {{ $('Classify Error').first().json.retry_after_seconds }}s delay...\n\nFailed node: {{ $('Classify Error').first().json.failed_node }}\nrate_limit_wait_seconds={{ $('Classify Error').first().json.retry_after_seconds }}\n\nResumability: Already-processed files will be skipped.",
+        "text": "=⏳ Rate limit hit in {{ $('Prepare & Classify Error').first().json.workflow_name }}\n\nRestarting via Execute Workflow after {{ $('Prepare & Classify Error').first().json.retry_after_seconds }}s delay...\n\nFailed node: {{ $('Prepare & Classify Error').first().json.failed_node }}\nrate_limit_wait_seconds={{ $('Prepare & Classify Error').first().json.retry_after_seconds }}\n\nResumability: Already-processed files will be skipped.",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -513,8 +500,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        800,
-        1168
+        576,
+        976
       ],
       "id": "eh-auto-retry-alert",
       "name": "Send Auto-Retry Alert",
@@ -527,15 +514,15 @@
     },
     {
       "parameters": {
-        "content": "## Auto-Retry for Rate Limits\n\n**Registry-based**: Only workflows in AUTO_RETRY_REGISTRY get immediate retry.\nOthers go through normal flow → 8-hour resolver.\n\n**Current registry:**\n- smart-folder2table\n- any-file2json-converter\n\n**Timing:** Extracts \"retry in Xs\" from error message, defaults to 60s.\n\n**How it works:**\n1. Extracts original Config values from failed execution's runData\n2. Waits for rate limit period\n3. Calls the SAME workflow that failed (by ID from error data):\n   - Original config (folder_id, spreadsheet_id, etc.)\n   - rate_limit_wait_seconds = extracted retry timing\n\n**Workflow-agnostic:** Uses dynamic workflow_id from Classify Error,\nso any workflow in the registry can be auto-retried.\n\n**Resumability:**\nWorkflows check sheet for already-processed files.\nAfter restart, completed items are skipped.",
-        "height": 480,
-        "width": 380
+        "content": "## Auto-Retry for Rate Limits\n\n**Registry-based:** only workflows in `AUTO_RETRY_REGISTRY` (in the `Prepare & Classify Error` code node) get immediate retry; others go through the normal flow → 8-hour resolver. Current registry: smart-folder2table, any-file2json-converter.\n\n**How:** extract original Config values from the failed execution's runData → wait \"retry in Xs\" from the error message (default 60s) → re-run the SAME workflow (dynamic workflow_id) with the original config + rate_limit_wait_seconds.\n\n**Resumability:** restarted workflows check the sheet and skip already-processed files.",
+        "height": 300,
+        "width": 940
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -280,
-        1080
+        -160,
+        912
       ],
       "id": "eh-sticky-auto-retry",
       "name": "Sticky Note - Auto-Retry"
@@ -543,17 +530,138 @@
     {
       "parameters": {
         "content": "### If stops here\n\nSet document → your FailedItems spreadsheet,\nsheet → `FailedItems`,\nmatch column → `execution_id`",
-        "height": 80,
-        "width": 150
+        "height": 140,
+        "width": 220,
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        100,
-        560
+        352,
+        432
       ],
       "id": "eh-sticky-faileditems-setup",
       "name": "Sticky Note - FailedItems Setup"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "runner-down-check",
+              "leftValue": "={{ ($json.execution?.error?.message || '').toLowerCase() }}",
+              "rightValue": "task request timed out|task runner|no runner|not ready|at capacity|task broker",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1f00d00-0000-4000-8000-000000000001",
+      "name": "Runner/Infra Down?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -544,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "=🚨 n8n ALERT — infra / task-runner failure\n\nA workflow failed with a Code-node / task-runner timeout, so the normal error pipeline (which starts with Code nodes) cannot run and would NOT alert you.\n\nWorkflow: {{ $json.workflow?.name || $json.workflow?.id }}\nFailed node: {{ $json.execution?.error?.node?.name }}\nError: {{ $json.execution?.error?.message }}\nExecution: {{ $json.execution?.id }}\n\nLikely cause: external task runner is down or version-drifted vs primary.\nFix: Railway → redeploy n8n-runner + primary.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b1f00d00-0000-4000-8000-000000000002",
+      "name": "🚨 Runner-Proof Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM_IMPORTANT",
+          "name": "Telegram inbox_important"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 🛡️ Runner-proof alert branch\n\nThe normal pipeline starts with **Code nodes** (Prepare & Classify Error). When the **task runner is down**, those Code nodes time out (~60s) and this workflow dies BEFORE reaching any Telegram node — so you get total silence.\n\nThis IF checks the raw error message for runner/timeout signatures. If matched, it sends a Telegram alert built with **expressions only** (no Code node → runs in n8n's main process → survives a runner outage).\n\nFALSE → normal rich pipeline (unchanged).",
+        "height": 320,
+        "width": 560,
+        "color": 4
+      },
+      "id": "b1f00d00-0000-4000-8000-000000000003",
+      "name": "Sticky Note - Runner-Proof Branch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "YOUR_ALERT_EMAIL",
+        "subject": "=🚨 n8n infra/runner failure — {{ $json.workflow?.name || $json.workflow?.id }}",
+        "emailType": "text",
+        "message": "=🚨 n8n ALERT — infra / task-runner failure\n\nA workflow failed with a Code-node / task-runner timeout, so the normal error pipeline (Code nodes) cannot run and would NOT alert you.\n\nWorkflow: {{ $json.workflow?.name || $json.workflow?.id }}\nFailed node: {{ $json.execution?.error?.node?.name }}\nError: {{ $json.execution?.error?.message }}\nExecution: {{ $json.execution?.id }}\n\nLikely cause: external task runner down or version-drifted vs primary.\nFix: Railway → redeploy n8n-runner + primary.",
+        "options": {}
+      },
+      "id": "b1f00d00-0000-4000-8000-000000000004",
+      "name": "📧 Runner-Proof Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        400
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "YOUR_ALERT_EMAIL",
+        "subject": "=⚠️ n8n workflow failure alert",
+        "emailType": "text",
+        "message": "={{ $json.fullMessage }}",
+        "options": {}
+      },
+      "id": "b1f00d00-0000-4000-8000-000000000005",
+      "name": "📧 Email Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        576,
+        784
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth"
+        }
+      }
     }
   ],
   "connections": {
@@ -561,29 +669,7 @@
       "main": [
         [
           {
-            "node": "Prepare Error Record",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Error Record": {
-      "main": [
-        [
-          {
-            "node": "Classify Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Classify Error": {
-      "main": [
-        [
-          {
-            "node": "IF: Rate Limit Auto-Retry?",
+            "node": "Runner/Infra Down?",
             "type": "main",
             "index": 0
           }
@@ -659,6 +745,11 @@
             "node": "Split Long Message",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "📧 Email Alert",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -704,6 +795,11 @@
             "node": "CODE RED Alert",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Append to FailedItems",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -715,43 +811,43 @@
         ]
       ]
     },
-    "Sticky Note - FailedItems Setup": {}
-  },
-  "pinData": {
-    "Error Trigger": [
-      {
-        "execution": {
-          "id": "36155",
-          "url": "https://YOUR_N8N_INSTANCE.up.railway.app/workflow/WUOHyjdXfHdaL_oxpgtsY/executions/36155",
-          "error": {
-            "level": "warning",
-            "shouldReport": false,
-            "description": "Your Code node task was not matched to a runner within the timeout period. This indicates that the task runner is currently down, or not ready, or at capacity, so it cannot service your task.<br/><br/>If you are repeatedly executing Code nodes with long-running tasks across your instance, please space them apart to give the runner time to catch up. If this does not describe your use case, please open a GitHub issue or reach out to support.<br/><br/>If needed, you can increase the timeout using the N8N_RUNNERS_TASK_REQUEST_TIMEOUT environment variable.",
-            "tags": {},
-            "message": "Task request timed out after 60 seconds",
-            "stack": "Error: Task request timed out after 60 seconds\n    at LocalTaskRequester.requestExpired (/usr/local/lib/node_modules/n8n/src/task-runners/task-managers/task-requester.ts:304:17)\n    at LocalTaskRequester.onMessage (/usr/local/lib/node_modules/n8n/src/task-runners/task-managers/task-requester.ts:272:10)\n    at TaskBroker.handleRequestTimeout (/usr/local/lib/node_modules/n8n/src/task-runners/task-broker/task-broker.service.ts:115:50)\n    at Timeout.<anonymous> (/usr/local/lib/node_modules/n8n/src/task-runners/task-broker/task-broker.service.ts:102:9)\n    at listOnTimeout (node:internal/timers:588:17)\n    at processTimers (node:internal/timers:523:7)"
+    "Runner/Infra Down?": {
+      "main": [
+        [
+          {
+            "node": "🚨 Runner-Proof Alert",
+            "type": "main",
+            "index": 0
           },
-          "lastNodeExecuted": "Calculate Retry Delay",
-          "mode": "trigger",
-          "executionContext": {
-            "version": 1,
-            "establishedAt": 1769086831075,
-            "source": "trigger",
-            "triggerNode": {
-              "name": "Every 8 Hours",
-              "type": "n8n-nodes-base.scheduleTrigger"
-            }
+          {
+            "node": "📧 Runner-Proof Email",
+            "type": "main",
+            "index": 0
           }
-        },
-        "workflow": {
-          "id": "WUOHyjdXfHdaL_oxpgtsY",
-          "name": "8-hour Task Resolver"
-        }
-      }
-    ]
+        ],
+        [
+          {
+            "node": "Prepare & Classify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare & Classify Error": {
+      "main": [
+        [
+          {
+            "node": "IF: Rate Limit Auto-Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
+  "pinData": {},
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "09a80676641fdc883fcaa67648f06322bebbd00adb281b1cf481107091bcc026"
+    "templateCredsSetupCompleted": true
   }
 }
