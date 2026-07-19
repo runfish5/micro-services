@@ -1,0 +1,17 @@
+{
+  "name": "micro-services-n8n",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tooling host for the n8n automation repo. Not an app — exists only so the n8n workflow SDK is runnable for code-first authoring/refactoring. See CLAUDE.md > n8n Workflows.",
+  "type": "commonjs",
+  "scripts": {
+    "wf:to-ts": "node scripts/n8n-sdk.js to-ts",
+    "wf:from-ts": "node scripts/n8n-sdk.js from-ts"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@n8n/workflow-sdk": "0.23.2"
+  }
+}

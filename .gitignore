@@ -24,3 +24,11 @@ tmp/
 # Claude Code - track governance files, ignore local settings
 .claude/settings.local.json
 *.tmp
+
+# Node tooling (workflow SDK). Track package.json + lockfile, ignore installed deps.
+node_modules/
+
+# Throwaway TypeScript from @n8n/workflow-sdk codegen — never committed (may carry
+# real credential/chat IDs when generated from a live export). JSON is source of truth.
+*.workflow.ts
+sdk-scratch/

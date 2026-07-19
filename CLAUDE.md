@@ -78,6 +78,22 @@ n8n workflows are JSON-based node configurations. Key practices:
 - **Expression-first, node-last**: Prefer n8n expressions and Code node logic over adding new nodes. Each node adds visual complexity and connection overhead. A ternary in an expression is better than an IF node for simple conditions.
 - **Sticky note behind Execute Workflow nodes**: n8n's UI can silently clear `workflowInputs` when re-selecting a subworkflow. Always place a small sticky note (color 5, blue) directly behind each Execute Workflow node documenting the parameter values being passed (name: value, one per line). This serves as a quick-restore reference. When editing workflow JSON, verify these notes exist and are up to date.
 
+### Authoring/refactoring workflows as code (`@n8n/workflow-sdk`)
+
+The workflow JSON can be turned into typed TypeScript and back, using the official `@n8n/workflow-sdk` (installed at repo root — run `npm install` once). Reach for this when a hand-edit of raw JSON is error-prone: large structural refactors, bulk renames, or just reading a dense workflow's topology (the generated `.to()/.onTrue()/.onFalse()` chain mirrors the `mainflow.md` diagram).
+
+Two commands (no CLI ships with the SDK; this repo wraps it in `scripts/n8n-sdk.js`):
+
+```bash
+npm run wf:to-ts   -- <workflow.json> sdk-scratch/x.workflow.ts   # JSON → TypeScript
+npm run wf:from-ts -- sdk-scratch/x.workflow.ts <workflow.json>   # TypeScript → JSON
+```
+
+- **The `.ts` is throwaway — n8n UI/JSON stays the source of truth.** Do NOT commit generated `.ts` (`.gitignore` blocks `*.workflow.ts` and `sdk-scratch/`). Edit the TS, build back to JSON, re-import via the normal path, delete the TS. This does not replace the "Edit in n8n UI, export JSON" rule — it's a scratch tool alongside it.
+- **Security (primary control = what you feed it)**: codegen copies parameter values, credential *reference IDs*, and chat IDs verbatim — not the actual API keys/tokens (those stay encrypted in the instance). **Run it against the committed placeholder JSON**, which already uses `CREDENTIAL_ID_*` / `YOUR_CHAT_ID_1`, so the generated TS is inherently placeholdered. Do NOT run it against a live `*.local.n8n.json` export (that carries real instance IDs). The `*.workflow.ts` gitignore is a backstop, not the safeguard. See the public-repo rules at the top of this file.
+- **No skill** — invoke the `npm run` commands directly. LLM-oriented SDK reference strings ship at `@n8n/workflow-sdk/prompts/sdk-reference` if you need the builder API while editing.
+- Full how-to, API notes, and round-trip verification: `projects/n8n/docs/workflow-as-code-sdk.md`.
+
 ### Sticky Note Conventions
 
 | Color | Code | Usage |
@@ -122,3 +138,4 @@ Blue sticky notes behind Execute Workflow nodes serve as quick-restore reference
 - `projects/n8n/docs/row-index-pattern.md` - Batch table operations pattern
 - `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
 - `projects/n8n/docs/infra-ops.md` - Infrastructure, binary data mode, volume management
+- `projects/n8n/docs/workflow-as-code-sdk.md` - Code-first authoring/refactoring via `@n8n/workflow-sdk` (throwaway TS)

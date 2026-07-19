@@ -38,6 +38,9 @@ Extract structured data from unstructured text into any Google Sheets table — 
 
 - [credentials-guide.md](credentials-guide.md) — Setting up API credentials
 - [troubleshooting.md](troubleshooting.md) — Common issues and fixes
+- [docs/workflow-as-code-sdk.md](docs/workflow-as-code-sdk.md) — Optional: edit these workflows as typed TypeScript
+
+> **Prefer code over the visual editor?** These workflows are plain JSON, so you can integrate the official [`@n8n/workflow-sdk`](https://www.npmjs.com/package/@n8n/workflow-sdk) to turn any workflow into typed TypeScript, refactor it with full autocomplete and type-checking, and build it back to JSON. It's an optional add-on — the n8n UI remains the primary way to edit. Setup and commands: [docs/workflow-as-code-sdk.md](docs/workflow-as-code-sdk.md).
 
 
 > **Privacy:** LLM providers often have lenient data policies to improve their services. If you're concerned about privacy, review provider policies first. You can configure privacy settings at the provider level when creating your API key. See [PRIVACY.md](PRIVACY.md).
