@@ -9,8 +9,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1744,
-        208
+        1856,
+        32
       ],
       "id": "931680a0-7cc1-4776-b776-a1621bad2efe",
       "name": "Sticky Note17"
@@ -190,8 +190,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        2160,
-        544
+        2288,
+        352
       ],
       "id": "976a53e1-32ad-48c3-a83e-e5de3412f66e",
       "name": "insert doc record",
@@ -206,14 +206,14 @@
       "parameters": {
         "content": "⚙️ insert doc record\n---\nMapping Column Mode: Auto-Map\nInput: Prepare Ledger Row (flat JSON)\nSheet: Billing_Ledger\n\nSchema: github.com/runfish5/micro-services\n  …/04_inbox-attachment-organizer/docs/setup-guide.md\n\nEasy setup — paste into Sheet row 1:\naccounting_category\tinvoice_status\tinvoice_number\tattachment_count\temail_id\tcounterparty_name\tinvoice_date\tsubtotal_amount\tcurrency_code\tpayment_method\tdue_date_or_payment_terms\tpayment_reference\tdate_paid\ttax_amount\tdiscount_amount\tpurchase_order_number",
         "height": 80,
-        "width": 150,
+        "width": 214,
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2112,
-        544
+        2256,
+        368
       ],
       "id": "174b6924-3db8-4f66-b933-58b8c935fe65",
       "name": "Sticky Note27"
@@ -225,8 +225,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2528,
-        48
+        2928,
+        16
       ],
       "id": "d0e654c0-25bf-4759-873a-981811d1a5fd",
       "name": "Merge"
@@ -253,8 +253,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        2320,
-        -160
+        2576,
+        -112
       ],
       "id": "ee5a6c54-3ce6-4599-b07f-b659d7fe7b79",
       "name": "Call 'smart-CRM-fill'"
@@ -262,15 +262,15 @@
     {
       "parameters": {
         "content": "## After Import\n1. Create Gmail label `inProgress`\n   (`n8n` and `gdr` labels already exist)\n2. Update Set File ID → label_ID\n   with your inProgress label ID\n   (Tag inProgress + Remove inProgress\n   reference it via expression)",
-        "height": 172,
-        "width": 668,
+        "height": 108,
+        "width": 380,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        672,
-        -256
+        -384,
+        -208
       ],
       "id": "83c13b8c-6e43-473e-852b-c6f69ca7939a",
       "name": "Sticky Note29"
@@ -288,8 +288,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1744,
-        416
+        2032,
+        512
       ],
       "webhookId": "f781db1e-ff98-4794-bcb6-051174c15636",
       "credentials": {
@@ -308,8 +308,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1104,
-        192
+        992,
+        240
       ],
       "id": "80685f86-62bc-4221-8363-17008b6aac04",
       "name": "Sticky Note28"
@@ -321,8 +321,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1936,
-        544
+        2112,
+        352
       ],
       "id": "cfe38e63-eeea-48e7-b614-a64f9c64a2f3",
       "name": "Prepare Ledger Row"
@@ -337,8 +337,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1200,
-        416
+        1520,
+        512
       ],
       "id": "0a008555-370c-48d8-ad8b-b501eaa650db",
       "name": "Sticky Note26"
@@ -352,8 +352,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        2976,
-        64
+        3184,
+        32
       ],
       "id": "0c7b9537-eb52-4f02-8d93-56bbc81921fb",
       "name": "Remove inProgress",
@@ -372,8 +372,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1776,
-        208
+        1904,
+        32
       ],
       "id": "c7b086ee-13f0-4315-854b-783cb9f236da",
       "name": "sender_whitelist",
@@ -407,8 +407,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        864,
-        528
+        1904,
+        288
       ],
       "id": "e88f6297-b187-430f-b1f6-fcb25238e400",
       "name": "If"
@@ -491,8 +491,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        1248,
-        416
+        1552,
+        512
       ],
       "id": "f47b7579-6cdc-47c7-83c3-69643855c151",
       "name": "Call 'gdrive-recursion'",
@@ -509,7 +509,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2096,
+        2608,
         32
       ],
       "id": "bedab3b3-5cf1-4bf7-b91a-77d7b2456d60",
@@ -597,8 +597,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2096,
-        -160
+        2368,
+        -112
       ],
       "id": "2d19e58c-e491-4686-8541-fac93188f266",
       "name": "Prepare Contact Input"
@@ -625,8 +625,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        1872,
-        -160
+        2160,
+        -112
       ],
       "id": "26394bc8-49f9-4bea-b06d-47ed6bfcb624",
       "name": "Call 'record-search'"
@@ -634,15 +634,15 @@
     {
       "parameters": {
         "content": "### ContactManager-lineage",
-        "height": 204,
-        "width": 680,
+        "height": 236,
+        "width": 632,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1808,
-        -192
+        2112,
+        -176
       ],
       "id": "1058419a-8d56-4605-8d01-fe2ffea6673e",
       "name": "Sticky Note25",
@@ -655,8 +655,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        512
+        1360,
+        288
       ],
       "id": "e0f4a2ed-7e88-46da-aaed-e5c560b5f93d",
       "name": "Prepare Attachments"
@@ -714,8 +714,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1136,
-        16
+        1024,
+        64
       ],
       "id": "f64b57eb-2933-49bc-833b-f30bdd78f1a5",
       "name": "email-info-hub"
@@ -733,8 +733,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        2752,
-        64
+        3056,
+        32
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
       "credentials": {
@@ -752,8 +752,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        1408,
-        96
+        1360,
+        32
       ],
       "id": "e136c3e3-12d3-488f-b615-dda01e459ef5",
       "name": "Any LM",
@@ -775,7 +775,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        240,
+        224,
         256
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
@@ -788,15 +788,15 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts\nNodes 19-30",
-        "height": 304,
-        "width": 2128,
+        "content": "#  Invoices & Receipts (is there a file to file away in Drive?)\nNodes 19-30",
+        "height": 416,
+        "width": 1136,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        192,
-        416
+        1328,
+        208
       ],
       "typeVersion": 1,
       "id": "0f4724bb-5650-451e-93de-100dcee84bae",
@@ -804,15 +804,15 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 11-18",
-        "height": 576,
-        "width": 416,
+        "content": "# subject classifier\nNodes 11-13",
+        "height": 352,
+        "width": 672,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1376,
-        -192
+        1344,
+        -160
       ],
       "typeVersion": 1,
       "id": "5b189e7b-6020-4f2c-93a9-1b07486e7409",
@@ -821,13 +821,13 @@
     {
       "parameters": {
         "content": "# E-Mail trigger\nNodes 1-5",
-        "height": 592,
-        "width": 448,
+        "height": 768,
+        "width": 1168,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        192,
+        16,
         -208
       ],
       "typeVersion": 1,
@@ -837,14 +837,14 @@
     {
       "parameters": {
         "content": "# attachment processer\nNodes 6-10",
-        "height": 448,
-        "width": 672,
+        "height": 416,
+        "width": 544,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        672,
-        -64
+        624,
+        -32
       ],
       "typeVersion": 1,
       "id": "7db33e93-5612-41d1-938a-54233cbe64f0",
@@ -867,8 +867,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1440,
-        416
+        1728,
+        512
       ],
       "id": "ca3d504a-c6e4-49be-b42b-cca38b1b5309",
       "name": "Get binary data2"
@@ -908,8 +908,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1040,
-        416
+        1360,
+        512
       ],
       "id": "088452ce-c2d3-4a1e-afe3-2684e4fc0afb",
       "name": "input folder lookup"
@@ -922,8 +922,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        688,
-        592
+        1728,
+        384
       ],
       "id": "dcf98772-8e29-46b5-b8ef-d7328c076a4b",
       "name": "Structured output"
@@ -936,8 +936,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        544,
-        592
+        1584,
+        384
       ],
       "id": "58ee3305-5296-4eac-b50a-d21df0e46770",
       "name": "any LM1",
@@ -965,8 +965,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2384,
-        544
+        2512,
+        352
       ],
       "id": "c76b5fb1-5cff-4836-ae49-f00661b09ac1",
       "name": "craft report note"
@@ -979,8 +979,8 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1552,
-        96
+        1504,
+        32
       ],
       "id": "156955f1-eb96-4694-ba7d-e85a2d503b1d",
       "name": "output profile"
@@ -1029,8 +1029,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1136,
-        192
+        1024,
+        240
       ],
       "id": "518e5617-8bdb-49a0-80d5-a0458f0e28cb",
       "name": "Create Attachment Profile",
@@ -1043,8 +1043,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        912,
-        16
+        864,
+        64
       ],
       "id": "ba35ffa3-9d13-44e3-828c-71c3e1be2f5b",
       "name": "Clean Email object"
@@ -1052,47 +1052,47 @@
     {
       "parameters": {
         "content": "Connect to the created google sheet.\n\n\n",
-        "height": 172,
-        "width": 184,
+        "height": 80,
+        "width": 150,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2096,
-        480
+        2256,
+        304
       ],
       "id": "274449ec-9b13-41ae-8cd2-7c908c423c0c",
       "name": "Sticky Note20"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
-        "height": 252,
+        "content": "\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
+        "height": 124,
         "width": 728,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        976,
-        416
+        1328,
+        512
       ],
       "id": "63119480-daab-4645-a866-fe1040c14f7e",
       "name": "Sticky Note19"
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-bas)",
-        "height": 364,
-        "width": 296,
+        "content": "\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-bas)",
+        "height": 428,
+        "width": 184,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1968,
-        48
+        2608,
+        32
       ],
       "id": "8a3feb6a-8161-4ca3-9fa9-3c3e93327a1c",
       "name": "Sticky Note18"
@@ -1105,8 +1105,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -368,
-        -208
+        -384,
+        -80
       ],
       "typeVersion": 1,
       "id": "0a1cc3eb-87e8-4f42-a269-dc095849201c",
@@ -1130,8 +1130,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1600,
-        416
+        1888,
+        512
       ],
       "id": "57dcb262-fe5a-4499-8fbf-df77d7030072",
       "name": "save doc to folder",
@@ -1149,7 +1149,7 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        240,
+        224,
         64
       ],
       "id": "ed49abc7-054b-4628-92d7-6cf770ab20a9",
@@ -1172,8 +1172,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        544,
-        416
+        1584,
+        288
       ],
       "id": "0a52d145-dedd-46ff-affc-c0d64011fdcf",
       "name": "Accountant-concierge-LM",
@@ -1197,8 +1197,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1408,
-        -80
+        1360,
+        -64
       ],
       "id": "b6f8fa01-1216-41b1-8b8e-97e949437cea",
       "name": "subject-classifier-LM",
@@ -1217,8 +1217,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        912,
-        192
+        864,
+        240
       ],
       "id": "ecfa206b-9517-47ec-bac9-cc0b60dbee22",
       "name": "sp"
@@ -1251,8 +1251,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        704,
-        64
+        656,
+        112
       ],
       "id": "d14916c4-5dc5-4fb8-b16c-54e93761515d",
       "name": "Empty?",
@@ -1294,8 +1294,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        1552,
-        208
+        1712,
+        48
       ],
       "id": "5ed77ebb-11d6-49e3-a621-e913b3094350",
       "name": "financial doc router"
@@ -1328,7 +1328,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        464,
+        416,
         -112
       ],
       "id": "a8941d6d-a477-429b-ae5c-a89439d266eb",
@@ -1345,8 +1345,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2096,
-        272
+        2704,
+        352
       ],
       "id": "71a49238-6e71-4f06-b2bc-300eb3ecba20",
       "name": "Telegram & done",
@@ -1399,7 +1399,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        464,
+        416,
         64
       ]
     },
@@ -1416,7 +1416,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        464,
+        416,
         256
       ],
       "id": "bd62d5a9-29fa-4bc3-9a11-dd7e751effcb",
@@ -1448,7 +1448,7 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        240,
+        224,
         -112
       ],
       "id": "ccbaad86-095c-43b0-8c16-cde25e616bb2",
@@ -1459,6 +1459,37 @@
           "name": "Gmail OAuth 260203"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "## Write to Fiscus History",
+        "height": 224,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        272
+      ],
+      "id": "298dcd70-3657-41a8-b878-a62e0c32acd9",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Silent Failure Detector\n\n\n\n\n\n\n`'n8n'` label = this run completed\n`'inProgress'` label = still there? that run died\n\nIf something throws, the error workflow alerts you and it shows up here too. But a workflow broken by mis-engineering throws nothing. That is what this catches.\n\nYour inbox is the status surface: the signal rides on the emails themselves, so there is no dashboard to check. Search `label:inProgress` to find the failures.",
+        "height": 176,
+        "width": 384,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        -48
+      ],
+      "id": "3b6df6ee-9b14-443a-9bfb-00fb42e4b0e4",
+      "name": "Sticky Note2"
     }
   ],
   "connections": {
