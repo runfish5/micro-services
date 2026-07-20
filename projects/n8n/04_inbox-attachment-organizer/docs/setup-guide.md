@@ -12,7 +12,7 @@
 Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](n8n.io) :
 1. [inbox-attachment-organizer.json](../workflows/inbox-attachment-organizer.json) - Main workflow
 2. [any-file2json-converter.json](../workflows/subworkflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
-3. [gdrive-recursion.json](../workflows/subworkflows/gdrive-recursion.json) - Subworkflow: Self-recursive folder locator/creator
+3. [gdrive-recursion.json](../../shared/gdrive-recursion.json) - Subworkflow: Self-recursive folder locator/creator
 4. [gmail-processor-datesize.json](../workflows/subworkflows/gmail-processor-datesize.json) - Batch processor for existing emails
 
 **Important:** After importing each workflow, click **Publish** to save it. If Publish button doesn't work, see [troubleshooting.md](../../troubleshooting.md).

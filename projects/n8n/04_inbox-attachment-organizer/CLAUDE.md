@@ -6,6 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ALWAYS read `mainflow.md` BEFORE looking at the workflow JSON files.** The mainflow.md is the authoritative representation of the workflow structure and logic. The JSON files are machine-readable exports that are difficult to understand without the context from mainflow.md. Do NOT attempt to reverse-engineer the JSON - read the documentation first.
 
+## Ledger Grain — read before touching the ledger path
+
+**One row per invoice, keyed by `invoice_number`.** Documents are evidence, rows are economic
+events; the mapping is many-to-one. Invoice + receipt = 1 row. Two orders = 2 rows. Row count
+follows `invoice_number`, never attachment or email count. Definition and case table:
+`README.md` FAQ.
+
+`Prepare Ledger Row` groups by `invoice_number`; `insert doc record` uses `appendOrUpdate` on
+that column. Both were fixed 2026-07-20 (previously `.first()` and blind `append`, which lost
+documents and duplicated rows while the run still reported success).
+
+Three constraints on that node — all bite *any* many-to-one Code node here:
+
+1. **`pairedItem` is mandatory.** Emitting fewer rows than consumed breaks n8n's item lineage
+   and `craft report note` dies with "Paired item data ... is unavailable" — *after* the sheet
+   write, so the ledger is correct while the execution reads as failed.
+2. **Placeholder invoice numbers are not keys.** Extractors emit `-`, `N/A`, `UNKNOWN` and
+   friends; upserting on those collapses every unkeyed row into one. Sentinels are detected and
+   given an `AUTOKEY::<party>::<date>::<msg-id>` key — the message id is required, since one
+   sender can send two unkeyed documents on the same day. `::` appears in no real invoice
+   number, so "contains `::`" reliably finds project-assigned keys.
+3. **Throughput caps documents per email — known, NOT fixed.** The extractor runs once per
+   attachment (~2.4k tokens) against an 8k tokens/minute ceiling, so a 4-document email needs
+   ~9.8k and fails on the last one. Measured 2026-07-20: execution 4909 wrote nothing; the same
+   email with `any LM1` at `options.maxRetries: 8` recovered from 15 rate-limit errors and wrote
+   both rows. Deliberately not applied — throughput is a separate concern from grain. Apply it
+   to `any LM1` alone if multi-document emails start failing.
+
 ## What This Is
 
 n8n workflow that auto-files email attachments to Google Drive using AI classification. Author's priority: single Google OAuth (vs typical 3-5 platform auths) + two-stage AI to cut costs (cheap classifier → expensive extractor only for financial docs).
@@ -24,7 +52,8 @@ n8n workflows are JSON-based node configurations best edited in the n8n UI for l
 ### Workflows
 - `workflows/inbox-attachment-organizer.json` - Main workflow (37 nodes) orchestrating the full pipeline
 - Calls `03_any-file2json-converter` subworkflow - Converts PDFs/images/DOCX to text (called per attachment). Returns `data.text`, `data.content_class`, `data.class_confidence`. Classification via LLM for images; PDF/text paths return `UNK`. See `../03_any-file2json-converter/CLAUDE.md` for details.
-- `workflows/subworkflows/gdrive-recursion.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query
+- `../shared/gdrive-recursion.json` - Looks up Drive folder IDs via PathToIDLookup Google Sheet (n8n requires IDs, not paths). Self-recursive; auto-creates missing folders, caches results, uses batch OR query. Live instance ID: `zBC03d42z8A_SjE0JSM5G` (single copy; both 04's call and the self-recursion point at it).
+  - **Cache-key trap**: `PathToIDLookup` is keyed on `path` alone — `root_folder_id` is *not* part of the key. A test copy that passes a different `root_folder_id` but the same `target_path` gets a cache **hit** resolving to the real folder ID, and writes into the production `/Accounting` tree. Any test must change `root_path` **and** `root_folder_id` together so its paths cannot collide with cached real ones.
 - `workflows/subworkflows/gmail-processor-datesize.json` - Standalone batch processor for existing inbox emails
 
 ## Non-Obvious Architecture

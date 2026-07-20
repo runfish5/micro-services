@@ -171,6 +171,15 @@ Both AI nodes use an LLM with structured output support.
   - Field extraction: dates, amounts, parties, line items
   - Filing path computation: year + month for folder structure
 
+### Ledger grain (one row = one invoice)
+
+**One row per invoice, keyed by `invoice_number`** — not per attachment, not per email.
+`Prepare Ledger Row` groups the extracted documents; `insert doc record` upserts on that column.
+The settlement columns (`date_paid`, `payment_reference`, `payment_method`, `invoice_status`)
+are filled in later, when the receipt arrives.
+
+Rules, constraints and the case table: `CLAUDE.md` (Ledger Grain) and `README.md` (FAQ).
+
 **Billing_Ledger Schema** (16 columns, 15 auto-populated + `invoice_status` manual):
 
 | Source | Fields |

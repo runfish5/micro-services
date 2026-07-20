@@ -126,6 +126,8 @@ Blue sticky notes behind Execute Workflow nodes serve as quick-restore reference
 
 **Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
 
+**State the grain of every output table**: the grain is what exactly one row represents — "one row per X, keyed by Y". Declare it in the project's docs before writing rows. Source documents are evidence, not rows: several can describe one event, one can describe several. Grain is almost never "one row per input item", so `.first()` and blind `append` both produce the wrong row count while the run reports success. Definition and worked example: `projects/n8n/04_inbox-attachment-organizer/README.md` (FAQ).
+
 **Incident retry mechanism**: For workflows that retry failed executions, ALWAYS use the n8n API retry endpoint (`POST /api/v1/executions/{id}/retry`), NOT Execute Workflow nodes. API retry preserves original trigger data (Gmail messages, webhooks, etc.) while Execute Workflow starts fresh with no context. See `projects/n8n/04_inbox-attachment-organizer/config/8-hour-incident-resolver-docs.md` for rationale
 
 

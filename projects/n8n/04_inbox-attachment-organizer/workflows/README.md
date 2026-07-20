@@ -26,7 +26,7 @@ flowchart LR
 
 ---
 
-### [gdrive-recursion](subworkflows/gdrive-recursion.json)
+### [gdrive-recursion](../../shared/gdrive-recursion.json)
 Finds folder ID for a given path (e.g. `/Accounting/2025/05_May`)
 
 ```mermaid
