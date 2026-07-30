@@ -11,7 +11,7 @@ Set as n8n's Error Workflow (Settings > Error Workflow) to catch all workflow fa
 - CODE RED alerts for watchdog failures (8-hour Task Resolver) — these also continue into normal logging + alerts
 - Long message chunking for Telegram's 4096 char limit
 
-**Alerting (runner-proof + email):** every failure fires on **both Telegram and email** (email reuses the Gmail OAuth credential). A `Runner/Infra Down?` branch sends an **expression-only** alert (no Code node) so it survives task-runner outages — the normal Code-node pipeline can't. Regex must be plain JS (no inline `(?i)` flag). Part of the lab's active safety net → see `../11_n8n-ops-center/docs/external-heartbeat.md`.
+**Alerting (runner-proof + email):** every failure fires on **both Telegram and email** (email reuses the Gmail OAuth credential). A `Runner/Infra Down?` branch sends an **expression-only** alert (no Code node) so it survives task-runner outages — the normal Code-node pipeline can't. Regex must be plain JS (no inline `(?i)` flag). Part of the lab's active safety net → see `../13_n8n-ops-center/docs/external-heartbeat.md`.
 
 ## Error Classification
 
@@ -32,7 +32,7 @@ Calculates expected Groq/Google API calls for retry scheduling (rate-limit aware
 
 ## Setup
 
-1. Import workflows/007-error-handler.json into n8n
+1. Import workflows/010-error-handler.json into n8n
 2. Configure credentials (Google Sheets, Telegram)
 3. Create `FailedItems` sheet with headers (see workflow sticky note)
 4. Activate workflow

@@ -421,7 +421,7 @@ File #6 onwards with 55s waits
 
 **Usage:**
 - **Manual mode**: If you hit rate limits, increase `rate_limit_wait_seconds` in Config (try 60s, or more if needed). Restart the workflow - resumability skips already-processed files.
-- **Production mode**: When published and called via subworkflow trigger, the 007-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
+- **Production mode**: When published and called via subworkflow trigger, the 010-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
 
 #### Resumability (Skip-on-Retry)
 

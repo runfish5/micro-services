@@ -144,7 +144,7 @@
     },
     {
       "parameters": {
-        "content": "## Button Callbacks\n📊 briefing:expenses · 📚 briefing:learning · 🛍️ briefing:deals · ❓ briefing:help\nRouted by menu-handler.json in [10_steward](YOUR_GITHUB_REPO_URL/tree/main/projects/n8n/10_steward)",
+        "content": "## Button Callbacks\n📊 briefing:expenses · 📚 briefing:learning · 🛍️ briefing:deals · ❓ briefing:help\nRouted by menu-handler.json in [12_steward](YOUR_GITHUB_REPO_URL/tree/main/projects/n8n/12_steward)",
         "height": 140,
         "width": 400
       },

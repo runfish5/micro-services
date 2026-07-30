@@ -8,7 +8,7 @@ A **GitHub Actions** watchdog that pings the Railway-hosted n8n instance from
 The in-n8n error handler can't warn you about failures that break n8n itself:
 - **Task-runner outage** (queue mode): every Code node times out at 60s. The error
   handler's own Code nodes die too. Covered internally by the `Runner/Infra Down?`
-  branch in `07_error-handler` (expression-only alert) — but that still relies on
+  branch in `10_error-handler` (expression-only alert) — but that still relies on
   n8n being up enough to trigger.
 - **Full outage / crash-loop** (e.g. a failed DB migration): no workflow runs at all,
   so nothing inside n8n can tell you.

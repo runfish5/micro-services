@@ -31,7 +31,7 @@ logs to Google Sheets, and sends Telegram alerts.
 
 ### Step 2: Import the Workflow
 
-1. Download [`007-error-handler.json`](../workflows/007-error-handler.json)
+1. Download [`010-error-handler.json`](../workflows/010-error-handler.json)
 2. In n8n: **Workflows → Import from File** → select the JSON
 3. **Save**
 

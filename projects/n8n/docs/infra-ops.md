@@ -39,9 +39,9 @@ These prune execution *records* but don't reclaim PostgreSQL disk space (see VAC
 
 ## DB Janitor Workflow
 
-The `12_db-janitor` workflow runs weekly (Sunday 3 AM) and sends a Telegram report of old/oversized executions. Stub mode — reports only, no automatic deletion.
+The `14_db-janitor` workflow runs weekly (Sunday 3 AM) and sends a Telegram report of old/oversized executions. Stub mode — reports only, no automatic deletion.
 
-See [`12_db-janitor/workflows/mainflow.md`](../12_db-janitor/workflows/mainflow.md) for setup.
+See [`14_db-janitor/workflows/mainflow.md`](../14_db-janitor/workflows/mainflow.md) for setup.
 
 ## Volume Management
 

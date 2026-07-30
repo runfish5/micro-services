@@ -28,7 +28,7 @@ The SDK (`@n8n/workflow-sdk`, pinned to `0.23.2`) ships **no CLI**, so `scripts/
 
 ```bash
 # JSON -> TypeScript (read/refactor)
-npm run wf:to-ts   -- projects/n8n/07_error-handler/workflows/007-error-handler.json sdk-scratch/eh.workflow.ts
+npm run wf:to-ts   -- projects/n8n/10_error-handler/workflows/010-error-handler.json sdk-scratch/eh.workflow.ts
 
 # ...edit sdk-scratch/eh.workflow.ts...
 
@@ -81,7 +81,7 @@ See the public-repo rules in the root `CLAUDE.md`.
 
 ## Package choice
 
-The official **`@n8n/workflow-sdk`** (by n8n) is used because its round-trip is programmatic and lossless. Verified on `007-error-handler.json` (23 nodes, 19 connections): JSON→TS→JSON preserved all nodes and connections, and `validateWorkflow` returned `valid: true`. The community `@vahor/n8n-kit` (alpha) is a viable alternative with its own import CLI, but is not used here — no need for a fallback.
+The official **`@n8n/workflow-sdk`** (by n8n) is used because its round-trip is programmatic and lossless. Verified on `010-error-handler.json` (23 nodes, 19 connections): JSON→TS→JSON preserved all nodes and connections, and `validateWorkflow` returned `valid: true`. The community `@vahor/n8n-kit` (alpha) is a viable alternative with its own import CLI, but is not used here — no need for a fallback.
 
 The SDK also exports LLM-oriented reference strings at `@n8n/workflow-sdk/prompts/sdk-reference` (`SDK_LANGUAGE_REFERENCE`, `WORKFLOW_RULES`, `WORKFLOW_SDK_PATTERNS`, …) — pull these into context when writing a workflow from scratch in TS.
 

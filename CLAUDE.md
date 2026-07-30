@@ -36,7 +36,7 @@ Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for 
 
 ## Monitoring & Alerting (active)
 
-A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/11_n8n-ops-center/docs/external-heartbeat.md`**.
+A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md`**.
 
 ## Code Patterns
 
@@ -55,11 +55,11 @@ projects/n8n/
 ├── 04_inbox-attachment-organizer/   - Email attachments → AI → Google Drive
 |   └── 04_expense-analytics/        - Monthly expense chart to Telegram
 ├── 05_daily-briefing/               - Morning calendar briefing to Telegram
-├── 07_error-handler/                - Global error handler, classification, alerts
-├── 08_8-hours-incident-resolver/    - Works thorugh a google sheet
-├── 10_steward/                      - Personal assistant: briefing, dispatch, subworkflows
-├── 11_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
-├── 12_db-janitor/                   - Scheduled DB cleanup reporter (stub)
+├── 10_error-handler/                - Global error handler, classification, alerts
+├── 11_8-hours-incident-resolver/    - Works thorugh a google sheet
+├── 12_steward/                      - Personal assistant: briefing, dispatch, subworkflows
+├── 13_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
+├── 14_db-janitor/                   - Scheduled DB cleanup reporter (stub)
 └── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (standalone intake door)
 ```
 
