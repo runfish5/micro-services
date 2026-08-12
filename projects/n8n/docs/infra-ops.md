@@ -74,11 +74,44 @@ If the volume is already bloated from binary data stored before enabling filesys
 
 ## Environment Variables Reference
 
-| Variable | Purpose |
-|----------|---------|
-| `N8N_DEFAULT_BINARY_DATA_MODE` | `default` (PostgreSQL) or `filesystem` (disk) |
-| `EXECUTIONS_DATA_PRUNE` | Enable automatic execution pruning |
-| `EXECUTIONS_DATA_MAX_AGE` | Max age in hours before pruning |
-| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | Max total executions to keep |
-| `DB_POSTGRESDB_HOST` | PostgreSQL host |
-| `DB_POSTGRESDB_DATABASE` | Database name |
+Queue mode, several Railway services. **A variable set on only one service is the usual way this
+breaks, and it breaks silently.** Define them as project-level *shared* variables, then `Add All`
+per service — per-service copies drift.
+
+| Variable | Primary | Worker | Runner | Purpose |
+|---|:-:|:-:|:-:|---|
+| `N8N_ENCRYPTION_KEY` | ✅ | ✅ | — | ⚠️ Identical everywhere, never regenerated — see below |
+| `GENERIC_TIMEZONE` | ✅ | ✅ | — | Timezone the Schedule Trigger resolves hours in |
+| `TZ` | ✅ | ✅ | ✅ | Node process TZ — `new Date()` wherever code actually runs |
+| `EXECUTIONS_MODE` | ✅ | ✅ | — | `queue` |
+| `DB_TYPE`, `DB_POSTGRESDB_*` | ✅ | ✅ | — | Host, port, database, user, password |
+| `QUEUE_BULL_REDIS_*` | ✅ | ✅ | — | Host, port, username, password |
+| `WEBHOOK_URL` | ✅ | — | — | Public URL for webhook + OAuth callbacks |
+| `N8N_DEFAULT_BINARY_DATA_MODE` | ✅ | ✅ | — | `default` (PostgreSQL) or `filesystem` |
+| `EXECUTIONS_DATA_PRUNE[_MAX_COUNT]`, `_MAX_AGE` | ✅ | — | — | Execution pruning |
+| `N8N_RUNNERS_*` | ✅ | ✅ | ✅ | Enable/mode/auth/broker — **verify exact names against your service** |
+
+**⚠️ `N8N_ENCRYPTION_KEY`:** every credential is encrypted with it. Rebuild without the *same* key
+and n8n starts clean, workflows look fine, and every credential silently fails to decrypt. Save it
+outside Railway before any teardown.
+
+**Timezone (set 2026-08-12):** instance was on UTC−4 while the operator is UTC+2, so every schedule
+landed six hours late — the "7 AM briefing" arrived at 13:00.
+
+```
+GENERIC_TIMEZONE=Europe/Zurich
+TZ=Europe/Zurich
+```
+
+Not interchangeable: the first is read by the scheduler on the primary, the second by whichever
+service executes the node. Only the first → schedules fire right while `new Date()` stays six hours
+off, which is worse than being uniformly wrong.
+
+Neither the public API nor `/rest/settings` exposes the timezone, so **verify by where a schedule
+lands**: `daily briefing @07:00` should start at 05:00 UTC. Still 11:00 UTC → the variable never
+reached the service owning the schedule.
+
+**Rebuild:** export *all* variables first (26 on the primary; this table is a guide, not an
+inventory) → restore `N8N_ENCRYPTION_KEY` → shared vars onto every service → confirm
+`Settings → Error Workflow` still points at `007_error-handler.n8n` (unbound logs nothing, and says
+nothing) → confirm one schedule fires at the expected UTC time.
