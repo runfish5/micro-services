@@ -56,12 +56,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calendar events from upstream\nconst events = $('Get Today\\'s Events').all();\nconst lines = [];\n\nfor (const item of events) {\n  const ev = item.json;\n  // Skip empty items (alwaysOutputData sends one empty item when no events)\n  if (!ev.summary && !ev.start) continue;\n\n  const start = ev.start?.dateTime || ev.start?.date || '';\n  const end = ev.end?.dateTime || ev.end?.date || '';\n\n  // Format times (HH:MM)\n  let timeRange = '';\n  if (start.includes('T')) {\n    const s = new Date(start);\n    const e = new Date(end);\n    const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });\n    timeRange = `${fmt(s)}-${fmt(e)}`;\n  } else {\n    timeRange = 'All day';\n  }\n\n  lines.push(`${timeRange}  ${ev.summary || '(no title)'}`);\n}\n\nconst calendarBlock = lines.length > 0\n  ? lines.join('\\n')\n  : 'No events today';\n\n// Price section from price-checker\nconst priceSection = $input.first().json.priceSection || '';\n\nconst message = `\\u2600\\uFE0F Good morning! Your day:\\n${calendarBlock}${priceSection}`;\n\nreturn [{ json: { message } }];"
+        "jsCode": "// Calendar events from upstream\nconst events = $('Get Today\\'s Events').all();\nconst lines = [];\n\nfor (const item of events) {\n  const ev = item.json;\n  // Skip empty items (alwaysOutputData sends one empty item when no events)\n  if (!ev.summary && !ev.start) continue;\n\n  const start = ev.start?.dateTime || ev.start?.date || '';\n  const end = ev.end?.dateTime || ev.end?.date || '';\n\n  // Format times (HH:MM)\n  let timeRange = '';\n  if (start.includes('T')) {\n    const s = new Date(start);\n    const e = new Date(end);\n    const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });\n    timeRange = `${fmt(s)}-${fmt(e)}`;\n  } else {\n    timeRange = 'All day';\n  }\n\n  lines.push(`${timeRange}  ${ev.summary || '(no title)'}`);\n}\n\nconst calendarBlock = lines.length > 0\n  ? lines.join('\\n')\n  : 'No events today';\n\n// Price section from price-checker. Read by node name, not $input: the two\n// Sheets reads now sit between Check Prices and this node.\nconst priceSection = $('Check Prices').first().json.priceSection || '';\n\n// --- Site digest ----------------------------------------------------------\n// Your own public IPs. Anything listed here is counted separately and kept out\n// of the visitor totals — otherwise your own browsing is the most engaged\n// visitor on the site every single day. Loopback and private ranges never\n// reach the sheet at all; /api/track drops them.\n// Residential addresses rotate. If your own browsing starts showing up as a\n// stranger from your own city, find the address in the Visits sheet and add it\n// here — in the n8n UI, never in the public repo copy of this workflow.\nconst SELF_IPS = []; // set on the live instance — never commit real IPs\n\n// Telegram renders this with parse_mode HTML and everything below is\n// visitor-supplied (link labels, use cases, emails). Escape all of it, or one\n// stray '<' silently kills the whole message.\nconst esc = (v) => String(v ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst clip = (v, n) => {\n  const s = String(v ?? '').trim();\n  return s.length > n ? s.slice(0, n - 1) + '…' : s;\n};\n\n// The beacon stores clicks as \"label → href\". The href is for the sheet and\n// /visits; in a summary the label alone is what reads.\nconst label = (target) => String(target ?? '').split(' → ')[0].trim();\n\nconst cutoff = Date.now() - 24 * 60 * 60 * 1000;\nconst fresh = (value) => {\n  const t = Date.parse(value);\n  return Number.isFinite(t) && t >= cutoff;\n};\n\n// Rank a {key: count} tally and render the top n as \"key · count\" lines.\nconst topOf = (tally, n) => Object.entries(tally)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, n);\n\nconst rows = $('Get Visits').all()\n  .map((i) => i.json)\n  .filter((r) => r.ip && fresh(r.ts));\n\nconst mine = rows.filter((r) => SELF_IPS.includes(r.ip));\nconst theirs = rows.filter((r) => !SELF_IPS.includes(r.ip));\n\nconst visitors = new Map();\nconst pages = {};\nconst countries = {};\nlet views = 0;\nlet clicks = 0;\n\nfor (const r of theirs) {\n  let v = visitors.get(r.ip);\n  if (!v) {\n    v = { where: [r.city, r.country].filter(Boolean).join(', '), views: 0, clicks: [] };\n    visitors.set(r.ip, v);\n  }\n  if (r.event === 'pageview') {\n    views += 1;\n    v.views += 1;\n    if (r.path) pages[r.path] = (pages[r.path] || 0) + 1;\n    if (r.country) countries[r.country] = (countries[r.country] || 0) + 1;\n  } else if (r.event === 'click') {\n    clicks += 1;\n    const l = label(r.target);\n    if (l && !v.clicks.includes(l)) v.clicks.push(l);\n  }\n}\n\n// The site block ALWAYS renders, even on a dead-quiet day. A missing section is\n// indistinguishable from a broken pipeline, and that ambiguity cost real\n// confusion the first morning this shipped: no visitors looked like no feature.\nconst parts = [`\\n\\n👀 <b>SITE</b> · last 24h`];\nlet siteSection = '';\n\nif (visitors.size === 0) {\n  parts.push(mine.length\n    ? `\\nNo outside visitors (you: ${mine.length} event${mine.length === 1 ? '' : 's'})`\n    : '\\nNo visitors');\n  siteSection = parts.join('');\n} else {\n  parts.push(`\\n${visitors.size} visitor${visitors.size === 1 ? '' : 's'} · ${views} view${views === 1 ? '' : 's'} · ${clicks} click${clicks === 1 ? '' : 's'}`);\n\n  const topPages = topOf(pages, 5);\n  if (topPages.length) {\n    parts.push('\\n\\nTop pages');\n    for (const [path, n] of topPages) parts.push(`\\n  ${esc(clip(path, 40))} · ${n}`);\n  }\n\n  const topCountries = topOf(countries, 5);\n  if (topCountries.length) {\n    parts.push('\\n\\nFrom\\n  ' + topCountries.map(([c, n]) => `${esc(c)} ${n}`).join(' · '));\n  }\n\n  // Only visitors who did more than bounce are worth naming.\n  const engaged = [...visitors.values()]\n    .filter((v) => v.views > 1 || v.clicks.length > 0)\n    .sort((a, b) => b.views - a.views || b.clicks.length - a.clicks.length)\n    .slice(0, 3);\n  if (engaged.length) {\n    parts.push('\\n\\nMost engaged');\n    for (const v of engaged) {\n      parts.push(`\\n  ${esc(v.where || 'unknown')} — ${v.views} view${v.views === 1 ? '' : 's'}`);\n      if (v.clicks.length) {\n        parts.push(`\\n    clicked ${v.clicks.slice(0, 2).map((c) => `“${esc(clip(c, 30))}”`).join(', ')}`);\n      }\n    }\n  }\n\n  if (mine.length) parts.push(`\\n\\n(you: ${mine.length} event${mine.length === 1 ? '' : 's'}, not counted)`);\n  // Points at the sheet, not a /visits command — that command does not exist\n  // yet. When it is added to the menu-handler registry, swap this line.\n  if (visitors.size > engaged.length) parts.push(`\\n\\n→ full detail in the Visits sheet`);\n  siteSection = parts.join('');\n}\n\n// Signups: the Signups sheet is upserted on email, so a row is one person.\nconst signupRows = $('Get Signups').all()\n  .map((i) => i.json)\n  .filter((r) => r.email);\nconst freshSignups = signupRows.filter((r) => fresh(r.signup_timestamp));\nlet signupSection = '';\n\nif (freshSignups.length > 0) {\n  const listed = freshSignups.map((r) => {\n    const name = [r.first_name, r.surname].filter(Boolean).join(' ').trim();\n    const who = name ? esc(name) : esc(r.email);\n    const why = r.use_case ? ` — ${esc(clip(r.use_case, 50))}` : '';\n    return `\\n  ${who}${why}`;\n  }).join('');\n  signupSection = `\\n\\n🌱 <b>WAITLIST</b> · ${freshSignups.length} new (${signupRows.length} total)${listed}`;\n}\n\n// --- Plugin sections ------------------------------------------------------\n// Sections installed through the seam. A registry entry names a subworkflow,\n// Run Plugin executes each, and each returns { key, icon, title, blocks, actions }.\n// Rendering is generic: this node does not know what a commitment is.\n//\n// Matching is by KEY, never by position. A plugin that threw comes back as an\n// error item with no key, so any registry key missing from the results is a\n// failure we can still name — which is what makes continueOnFail worth having.\n// Escaping happens HERE, centrally: plugins return plain text so that one\n// forgotten esc() in any project cannot kill the whole sendMessage.\nconst registry = $('Plugins').all().map((i) => i.json).filter((r) => r && r.enabled);\nconst returned = new Map(\n  $('Run Plugin').all().map((i) => i.json).filter((p) => p && p.key).map((p) => [p.key, p]),\n);\n\nconst actions = [];\n\nconst pluginSections = registry\n  .slice()\n  .sort((a, b) => (a.order || 0) - (b.order || 0))\n  .map((r) => {\n    const p = returned.get(r.key);\n    if (!p) return `\\n\\n⚠️ <b>${esc(String(r.key || '?').toUpperCase())}</b> unavailable`;\n\n    // Collected verbatim and validated downstream in Split Actions — the\n    // briefing does not interpret a plugin's buttons, it only carries them.\n    for (const a of (Array.isArray(p.actions) ? p.actions : [])) {\n      if (a && a.text && Array.isArray(a.buttons) && a.buttons.length) actions.push(a);\n    }\n\n    const head = `\\n\\n${p.icon || '•'} <b>${esc(p.title || r.key)}</b>`;\n    const blocks = (Array.isArray(p.blocks) ? p.blocks : [])\n      .filter((b) => b && Array.isArray(b.items) && b.items.length);\n    if (!blocks.length) return `${head}\\n${esc(p.empty || 'Nothing to report')}`;\n\n    return head + blocks.map((b) => (b.heading ? `\\n<b>${esc(b.heading)}</b>` : '')\n      + b.items.map((it) => `\\n  ${esc(it)}`).join('')).join('');\n  })\n  .join('');\n\nlet message = `☀️ Good morning! Your day:\\n${calendarBlock}${pluginSections}${priceSection}${siteSection}${signupSection}`;\n\n// Telegram rejects anything over 4096 characters. Cut on a line boundary so a\n// truncation can never split an HTML entity and break parsing.\nconst LIMIT = 4096;\nif (message.length > LIMIT) {\n  const cut = message.slice(0, LIMIT - 16);\n  message = cut.slice(0, cut.lastIndexOf('\\n')) + '\\n… (truncated)';\n}\n\nreturn [{ json: { message, actions } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1184,
+        1920,
         144
       ],
       "id": "7dd737b0-7c4c-4c14-955f-01356f83d2b9",
@@ -120,7 +120,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1392,
+        2120,
         144
       ],
       "id": "7cb8f9c2-7b6b-4f4d-b45b-1c6d6ce204c2",
@@ -129,8 +129,8 @@
     },
     {
       "parameters": {
-        "content": "## Daily Briefing\n\nSends calendar summary + price tracker report every morning at 7 AM.\n\n**Flow:** Schedule/Manual → Calendar → Price Check → Format → Telegram\n\nManual Trigger wired for testing.",
-        "height": 180,
+        "content": "## Daily Briefing\n\nSends calendar summary + price tracker + site digest every morning at 7 AM.\n\n**Flow:** Schedule/Manual → Calendar → Price Check → Signups → Visits → Format → Telegram\n\nThe two Sheets reads feed the visitor / waitlist sections; see [15_site-visits](YOUR_GITHUB_REPO_URL/tree/main/projects/n8n/15_site-visits).\n\nManual Trigger wired for testing.",
+        "height": 240,
         "width": 320
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -190,6 +190,169 @@
       ],
       "id": "db100001-0001-0001-0001-000000000002",
       "name": "Check Prices"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "d1e2f3a4-0001-4001-8001-000000000001",
+      "name": "Get Signups",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Visits",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "d1e2f3a4-0002-4002-8002-000000000002",
+      "name": "Get Visits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1300,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin registry — THE SEAM.\n//\n// Adding a morning section means adding one line here. Nothing else in this\n// workflow changes: Run Plugin dispatches dynamically on workflowId, and\n// Format Message renders whatever comes back by key.\n//\n// 'order' is message position, and it is a real decision rather than cosmetics.\n// Telegram hard-caps at 4096 characters and truncates from the TAIL, so anything\n// actionable sorts first. A commitments list cut off by a busy traffic day is a\n// missed payment.\n//\n// 'enabled: false' is the kill switch — a misbehaving plugin is switched off in\n// one place, with no nodes to unwire.\n// date/tz ride on the registry item: the plugin trigger accepts passthrough, so\n// whatever is emitted here IS the plugin's input. Named inputs on the trigger\n// would strip every other field, which the task-tap path depends on.\nconst ctx = { date: $now.toFormat('yyyy-MM-dd'), tz: 'Europe/Zurich' };\n\nreturn [\n  { json: { key: 'commitments', order: 20, workflowId: 'ID_COMMITMENTS', enabled: true, ...ctx } },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        300
+      ],
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "Plugins"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $json.workflowId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1700,
+        300
+      ],
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "Run Plugin",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "### Run Plugin — parameters\n\nworkflowId: ={{ $json.workflowId }}  (mode: id)\nworkflowInputs: none — the plugin trigger is\n  set to passthrough, so the Plugins registry item\n  (key, order, date, tz) IS the input.\n\nn8n silently clears workflowInputs when a subworkflow\nis re-selected. If a mapping reappears here, delete it.\n\nonError = continueRegularOutput is load-bearing: a plugin\nthat throws must cost its own section, not the morning.",
+        "height": 260,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1640,
+        440
+      ],
+      "id": "c3000000-0000-4000-8000-000000000003",
+      "name": "Sticky - Run Plugin Params"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One message per actionable item, each with its own buttons.\n//\n// The buttons cannot live on the main briefing message: n8n's Telegram node\n// builds its keyboard from a fixedCollection, so the NUMBER of buttons cannot\n// vary at runtime. A separate message per action sidesteps that entirely — and\n// it makes ticking one item a single-message edit instead of a rebuild of the\n// whole briefing.\n//\n// The 2-slot shape below is the cost of that: an action must supply exactly two\n// buttons. Anything else is dropped rather than sent malformed, because Telegram\n// rejects the ENTIRE keyboard when one button is invalid.\nconst actions = $('Format Message').first().json.actions || [];\n\nreturn actions\n  .filter((a) => a && a.text && Array.isArray(a.buttons) && a.buttons.length === 2)\n  .map((a) => ({\n    json: {\n      text: a.text,\n      b1label: a.buttons[0].label,\n      b1cb: a.buttons[0].cb,\n      b2label: a.buttons[1].label,\n      b2cb: a.buttons[1].cb,\n    },\n  }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        344
+      ],
+      "id": "c3000000-0000-4000-8000-000000000004",
+      "name": "Split Actions"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.b1label }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.b1cb }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.b2label }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.b2cb }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2340,
+        344
+      ],
+      "id": "c3000000-0000-4000-8000-000000000005",
+      "name": "Send Task Button",
+      "webhookId": "c3000000-0000-4000-8000-0000000000b1"
     }
   ],
   "connections": {
@@ -230,7 +393,29 @@
       "main": [
         [
           {
-            "node": "Format Message",
+            "node": "Get Signups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Signups": {
+      "main": [
+        [
+          {
+            "node": "Get Visits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Visits": {
+      "main": [
+        [
+          {
+            "node": "Plugins",
             "type": "main",
             "index": 0
           }
@@ -242,6 +427,50 @@
         [
           {
             "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plugins": {
+      "main": [
+        [
+          {
+            "node": "Run Plugin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Plugin": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Split Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Actions": {
+      "main": [
+        [
+          {
+            "node": "Send Task Button",
             "type": "main",
             "index": 0
           }

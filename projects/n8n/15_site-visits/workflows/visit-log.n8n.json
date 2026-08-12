@@ -1,0 +1,107 @@
+{
+  "name": "visit-log",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Visit Log\n\nIntake door for website visit telemetry. The site's `/api/track` beacon POSTs one event per pageview / click; this appends it to the **Visits** tab.\n\n**Grain:** one row per event, keyed by (ts, ip, event, path, target).\n\n**Flow:** Webhook → Respond 204 → Append to Visits\n\nThe 7 AM `daily briefing` reads this tab and digests the last 24 h.\n\n⚠️ The append is a raw HTTP call, NOT the Google Sheets node, so it can pass **insertDataOption=INSERT_ROWS**. That makes concurrent appends atomic server-side. The Sheets node cannot set it and silently loses rows when two visits overlap — verified: 2/8 survived without it, 16/16 with it.\n\n⚠️ *Save successful production executions* is set to **none** — one execution per pageview would otherwise bury the execution list.",
+        "height": 460,
+        "width": 380
+      },
+      "id": "c1d2e3f4-0001-4001-8001-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "visit-log",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1d2e3f4-0002-4002-8002-000000000002",
+      "name": "Visit Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "webhookId": "c1d2e3f4-0002-4002-8002-000000000002"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 204
+        }
+      },
+      "id": "c1d2e3f4-0003-4003-8003-000000000003",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID/values/Visits:append",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "valueInputOption", "value": "RAW" },
+            { "name": "insertDataOption", "value": "INSERT_ROWS" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ $('Visit Webhook').item.json.body.ts, $('Visit Webhook').item.json.body.ip, $('Visit Webhook').item.json.body.country, $('Visit Webhook').item.json.body.city, $('Visit Webhook').item.json.body.event, $('Visit Webhook').item.json.body.path, $('Visit Webhook').item.json.body.target, $('Visit Webhook').item.json.body.referrer, $('Visit Webhook').item.json.body.ua ]] }) }}",
+        "options": {}
+      },
+      "id": "c1d2e3f4-0004-4004-8004-000000000004",
+      "name": "Append to Visits",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Visit Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond OK": {
+      "main": [
+        [
+          {
+            "node": "Append to Visits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "YOUR_INSTANCE_ID"
+  }
+}

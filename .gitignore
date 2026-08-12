@@ -8,6 +8,9 @@
 .n8n/
 # Local import copies with real IDs/chat IDs bound (never committed — repo is public)
 *.local.n8n.json
+# Local paste-ready sheet rows carrying real account refs (phone/customer numbers)
+*.local.tsv
+*.local.csv
 
 # OS
 .DS_Store

@@ -1,0 +1,150 @@
+{
+  "name": "visits-prune",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Visits Prune\n\nDeletes `Visits` rows older than **90 days**, daily at 03:00.\n\nThis is not housekeeping — the website's privacy policy *states* a 90-day retention window, and raw IP addresses are personal data. Without this workflow that published claim is false.\n\n**Flow:** Schedule → Read Timestamps → Anything To Prune? → Delete Old Rows\n\nNo Code node: the row maths lives in the delete node's body expression, so a task-runner outage cannot silently stop retention from being enforced.\n\nRows are deleted bottom-up so earlier indices stay valid. A row whose timestamp will not parse is left alone (NaN comparisons are false) rather than guessed at.",
+        "height": 460,
+        "width": 380
+      },
+      "id": "a5b6c7d8-0001-4001-8001-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "a5b6c7d8-0002-4002-8002-000000000002",
+      "name": "Daily 03:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID/values/Visits!A1:A10000",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "a5b6c7d8-0003-4003-8003-000000000003",
+      "name": "Read Timestamps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-expired-rows",
+              "leftValue": "={{ (($json.values || []).slice(1).filter(r => Date.parse(r[0]) < $now.minus({ days: 90 }).toMillis()).length) > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a5b6c7d8-0004-4004-8004-000000000004",
+      "name": "Anything To Prune?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: ($('Read Timestamps').item.json.values || []).map((r, i) => ({ i, t: Date.parse(r[0]) })).filter(x => x.i > 0 && x.t < $now.minus({ days: 90 }).toMillis()).map(x => x.i).sort((a, b) => b - a).map(i => ({ deleteDimension: { range: { sheetId: YOUR_VISITS_SHEET_GID, dimension: 'ROWS', startIndex: i, endIndex: i + 1 } } })) }) }}",
+        "options": {}
+      },
+      "id": "a5b6c7d8-0005-4005-8005-000000000005",
+      "name": "Delete Old Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 220],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 03:00": {
+      "main": [
+        [
+          {
+            "node": "Read Timestamps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Timestamps": {
+      "main": [
+        [
+          {
+            "node": "Anything To Prune?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything To Prune?": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "YOUR_INSTANCE_ID"
+  }
+}

@@ -13,6 +13,10 @@ events; the mapping is many-to-one. Invoice + receipt = 1 row. Two orders = 2 ro
 follows `invoice_number`, never attachment or email count. Definition and case table:
 `README.md` FAQ.
 
+This ledger has a counterpart: `16_commitments-ledger` records what we signed up for, from our
+side, and reconciles against these rows. Keep the two independent — nothing in the matching
+process may write back into either book.
+
 `Prepare Ledger Row` groups by `invoice_number`; `insert doc record` uses `appendOrUpdate` on
 that column. Both were fixed 2026-07-20 (previously `.first()` and blind `append`, which lost
 documents and duplicated rows while the run still reported success).

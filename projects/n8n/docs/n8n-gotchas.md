@@ -55,3 +55,48 @@ The If node has two JSON formats (`version: 2` vs `3`) with different behavior. 
 </details>
 
 ---
+
+## Google Sheets v4: `defineBelow` needs `columns.schema` (2026-08)
+
+A hand-authored Sheets node using `mappingMode: "defineBelow"` fails at runtime with:
+
+```
+Could not get parameter "columns.schema"
+```
+
+The `columns` object needs a **`schema` array** alongside `mappingMode` / `matchingColumns` /
+`value`. The n8n UI generates it by reading the sheet's header row, so a node built in the
+canvas always has one and a node written directly into JSON never does.
+
+```json
+"columns": {
+  "mappingMode": "defineBelow",
+  "matchingColumns": ["task_id"],
+  "value": { "task_id": "={{ $json.taskId }}", "status": "done" },
+  "schema": [
+    { "id": "task_id", "displayName": "task_id", "type": "string",
+      "canBeUsedToMatch": true, "display": true, "required": false,
+      "defaultMatch": false, "removed": false },
+    { "id": "notes", "displayName": "notes", "type": "string",
+      "canBeUsedToMatch": true, "display": true, "required": false,
+      "defaultMatch": false, "removed": true }
+  ]
+}
+```
+
+List **every** header column; set `removed: true` on the ones not in `value`.
+
+**`autoMapInputData` needs no schema**, which is what makes this confusing — in
+`16_commitments-ledger/commitments.json` the append node worked from day one while the
+`appendOrUpdate` node in the same workflow failed on the first real button tap.
+
+Two things made it expensive to diagnose, both worth remembering:
+
+- The message names a *parameter*, not a column or a credential, so it reads like an n8n
+  internal fault rather than something missing from your JSON.
+- **`continueOnFail` on the calling Execute Workflow node does not contain it.** A sub-workflow
+  that fails this way still fails the parent — verified: `menu-handler`'s `Run Skill` carries
+  `continueOnFail: true` and the parent execution errored anyway. Do not assume a guarded
+  Execute Workflow node makes a broken subworkflow survivable.
+
+---

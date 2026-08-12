@@ -1,0 +1,1040 @@
+{
+  "name": "commitments",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -360,
+        -120
+      ],
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Daily 06:30"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        40
+      ],
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -360,
+        300
+      ],
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Called"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Commitments",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -140,
+        -40
+      ],
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Get Commitments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        60,
+        -40
+      ],
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Get Existing Tasks",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Materialise one task per (commitment, period) for this month and the next.\n//\n// APPEND-ONLY, and that is the whole point of the diff below. An upsert keyed on\n// task_id would look equivalent and would reset status/assignee/closed_at to\n// 'open' every single morning — silently undoing yesterday's taps and every\n// agent result. Existing task_ids are skipped, never rewritten.\n//\n// Emitting zero items is the normal quiet-day outcome: n8n simply does not run\n// the append node, so no If node is needed to guard it.\n\nconst commitments = $('Get Commitments').all().map((i) => i.json);\nconst existing = new Set(\n  $('Get Existing Tasks').all().map((i) => String(i.json.task_id || '')).filter(Boolean),\n);\n\nconst pad = (n) => String(n).padStart(2, '0');\nconst daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();\n\n// 'eom' rather than 31, because a literal 31 does not exist in February.\nconst dayOf = (v, y, m) => {\n  const s = String(v ?? '').trim().toLowerCase();\n  if (!s) return null;\n  if (s === 'eom') return daysInMonth(y, m);\n  const n = parseInt(s, 10);\n  return Number.isFinite(n) ? Math.min(n, daysInMonth(y, m)) : null;\n};\n\nconst now = new Date();\nconst y = now.getFullYear();\nconst m = now.getMonth();\nconst periods = [\n  { y, m },\n  { y: m === 11 ? y + 1 : y, m: (m + 1) % 12 },\n];\n\nconst out = [];\n\nfor (const c of commitments) {\n  if (!c.commitment_id) continue;\n  if (String(c.status || '').trim().toLowerCase() !== 'active') continue;\n  // A row with valid_to set is a superseded version kept for history.\n  if (String(c.valid_to || '').trim()) continue;\n  // v1 handles monthly only. Quarterly and yearly are skipped rather than shown\n  // with a guessed date — their next occurrence has to be anchored to valid_from.\n  if (String(c.cadence || '').trim().toLowerCase() !== 'monthly') continue;\n\n  const from = Date.parse(c.valid_from);\n\n  for (const p of periods) {\n    const period = `${p.y}-${pad(p.m + 1)}`;\n    const task_id = `${c.commitment_id}@${period}`;\n    if (existing.has(task_id)) continue;\n\n    const dd = dayOf(c.due_day || c.charge_day, p.y, p.m);\n    if (dd === null) continue;\n\n    const due = new Date(p.y, p.m, dd);\n\n    // The invoice date, which is a different day from the deadline and is the one\n    // the reconciler hunts for in Billing_Ledger.\n    const cd = dayOf(c.charge_day || c.due_day, p.y, p.m);\n    const charge = cd === null ? due : new Date(p.y, p.m, cd);\n\n    // No backfill, gated on the CHARGE date rather than the deadline. An\n    // obligation is created when the invoice is issued, not when it falls due.\n    // Gating on the deadline pulls in the period whose invoice was issued — and\n    // quite possibly already paid — before this ledger existed, and then nags\n    // about it for three weeks.\n    if (Number.isFinite(from) && charge.getTime() < from) continue;\n\n    out.push({\n      json: {\n        task_id,\n        commitment_id: c.commitment_id,\n        vendor: c.vendor || '',\n        period,\n        charge_date: `${p.y}-${pad(p.m + 1)}-${pad(cd ?? dd)}`,\n        due_date: `${p.y}-${pad(p.m + 1)}-${pad(dd)}`,\n        amount: c.amount_expected ?? '',\n        currency: c.currency || '',\n        // Denormalised so the digest reads one tab, and so the row records the\n        // terms as they stood when the task was created.\n        payment_method: String(c.payment_method || '').trim().toLowerCase(),\n        action: 'pay',\n        status: 'open',\n        assignee: '',\n        assigned_at: '',\n        closed_at: '',\n        evidence: '',\n        attempts: 0,\n        notes: '',\n      },\n    });\n  }\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -40
+      ],
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Build New Tasks"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "task_id"
+          ],
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "RAW"
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        460,
+        -40
+      ],
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Append Tasks",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-tap",
+              "leftValue": "={{ $json.taskId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -140,
+        300
+      ],
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Tap or Digest?"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "task_id"
+          ],
+          "value": {
+            "task_id": "={{ $json.taskId }}",
+            "status": "={{ $json.taskVerb === 'd' ? 'done' : 'assigned' }}",
+            "assignee": "={{ $json.taskVerb === 'd' ? 'me' : 'agent:unassigned' }}",
+            "assigned_at": "={{ $now.toISO() }}",
+            "closed_at": "={{ $json.taskVerb === 'd' ? $now.toISO() : '' }}"
+          },
+          "schema": [
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "commitment_id",
+              "displayName": "commitment_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "period",
+              "displayName": "period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "charge_date",
+              "displayName": "charge_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assignee",
+              "displayName": "assignee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assigned_at",
+              "displayName": "assigned_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "closed_at",
+              "displayName": "closed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "evidence",
+              "displayName": "evidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "attempts",
+              "displayName": "attempts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        200
+      ],
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Update Task",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Called').first().json.chatId }}",
+        "messageId": "={{ $('Called').first().json.messageId }}",
+        "text": "={{ $('Called').first().json.taskText + ($('Called').first().json.taskVerb === 'd' ? '\\n✅ done' : '\\n🤖 assigned to an agent') }}",
+        "replyMarkup": "none",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        280,
+        200
+      ],
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "Tick Message",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram account"
+        }
+      },
+      "webhookId": "a1000000-0000-4000-8000-0000000000c1"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "operation": "answerQuery",
+        "queryId": "={{ $('Called').first().json.callbackId }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        200
+      ],
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "Answer Tap",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram account"
+        }
+      },
+      "webhookId": "a1000000-0000-4000-8000-0000000000c2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return an empty object on purpose.\n//\n// menu-handler's 'Format Skill Response' forwards a reply only when the\n// subworkflow returns a 'response' field, and shows \"temporarily unavailable\"\n// when it sees an 'error'. Both Telegram nodes above are continueOnFail, so\n// without this node a failed redraw would emit an error payload and tell the\n// user the tap failed — after the row was already written. The write is what\n// matters; the redraw is cosmetic.\nreturn [{ json: {} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        200
+      ],
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "Tap Done"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        400
+      ],
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "Get Tasks",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin. Returns ONE item shaped by the contract in\n// 05_daily-briefing/docs/briefing-plugin-spec.md.\n//\n// PLAIN TEXT ONLY — never HTML. The briefing escapes centrally. Emitting markup\n// here would make escaping every plugin's shared responsibility, and one missed\n// escape anywhere kills the whole sendMessage.\n\nconst MANUAL = ['qr-invoice', 'bank-transfer', 'twint'];\nconst MAX_BUTTONS = 5;\n// Telegram caps callback_data at 64 bytes and rejects the ENTIRE keyboard if one\n// button is over — so an oversized id costs every button, not just its own.\nconst CB_LIMIT = 60;\nconst DAY = 86400000;\n\nconst input = $('Called').first().json;\nconst parsed = Date.parse(`${String(input.date || '').slice(0, 10)}T00:00:00`);\nconst base = Number.isFinite(parsed) ? new Date(parsed) : new Date();\nconst startOfDay = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();\n\nconst rows = $('Get Tasks').all().map((i) => i.json).filter((t) => t && t.task_id);\n\nconst closed = ['done', 'cancelled'];\nconst live = rows.filter((t) => !closed.includes(String(t.status || '').trim().toLowerCase()));\n\n// One line per commitment: the nearest outstanding period. The generator keeps\n// two months of tasks alive, but showing both would double the list every day —\n// next month surfaces only once this month is closed.\nconst byCommitment = new Map();\nfor (const t of live) {\n  const key = String(t.commitment_id || t.task_id);\n  const prev = byCommitment.get(key);\n  if (!prev || String(t.due_date) < String(prev.due_date)) byCommitment.set(key, t);\n}\n\nconst shown = [...byCommitment.values()]\n  .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));\n\nconst toPay = [];\nconst leaving = [];\nconst actions = [];\nlet total = 0;\nlet currency = '';\n\nfor (const t of shown) {\n  const amt = parseFloat(String(t.amount ?? '').replace(',', '.'));\n  if (Number.isFinite(amt)) {\n    total += amt;\n    currency = currency || String(t.currency || '');\n  }\n\n  const dueTs = Date.parse(`${String(t.due_date || '')}T00:00:00`);\n  const d = Number.isFinite(dueTs) ? Math.round((dueTs - startOfDay) / DAY) : null;\n  const when = d === null ? 'no due date'\n    : d < 0 ? `⚠️ ${-d}d overdue`\n      : d === 0 ? '⚠️ due today'\n        : `due in ${d}d`;\n\n  const money = Number.isFinite(amt)\n    ? `${t.currency || ''} ${amt.toFixed(2)}`.trim()\n    : 'amount unknown';\n\n  const status = String(t.status || '').trim().toLowerCase();\n  // 'failed' stays on the list and says so. Presence is the default state, so a\n  // task nobody finished needs no error handling to remain visible.\n  const state = status === 'assigned' ? ' · ⏳ assigned'\n    : status === 'failed' ? ' · ⚠️ failed'\n      : '';\n\n  // Audit findings ride on notes and are shown for ANY status — a reopened task\n  // is 'open' again, so gating this on 'failed' would hide the reason it came back.\n  const flag = String(t.notes || '').trim();\n  const who = t.vendor || t.commitment_id;\n  const line = `${who} · ${money} · ${when}${state}${flag ? ` · ⚠️ ${flag}` : ''}`;\n\n  if (MANUAL.includes(String(t.payment_method || '').trim().toLowerCase())) {\n    toPay.push(line);\n\n    // Only money that leaves if we act gets a button. A checkbox next to a direct\n    // debit invites ticking something you did not do.\n    // Two verbs, because they are genuinely different claims: 'done' is a\n    // self-report that the money moved, 'assign' hands the task to an agent and\n    // leaves it open. Collapsing them would make an assignment look like payment.\n    const cbAssign = `tk|a|${t.task_id}`;\n    if (actions.length < MAX_BUTTONS && cbAssign.length <= CB_LIMIT && status === 'open') {\n      actions.push({\n        text: `${who} · ${money} · ${when}`,\n        buttons: [\n          { label: '✅ Done', cb: `tk|d|${t.task_id}` },\n          { label: '🤖 Assign', cb: cbAssign },\n        ],\n      });\n    }\n  } else {\n    leaving.push(line);\n  }\n}\n\nconst blocks = [];\nif (shown.length) {\n  blocks.push({\n    items: [`${currency} ${total.toFixed(2)}/mo · ${shown.length} commitment${shown.length === 1 ? '' : 's'}`],\n  });\n}\nif (toPay.length) blocks.push({ heading: 'To pay', items: toPay });\nif (leaving.length) blocks.push({ heading: 'Leaving', items: leaving });\n\nreturn [{\n  json: {\n    key: 'commitments',\n    icon: '💳',\n    title: 'COMMITMENTS',\n    blocks,\n    actions,\n    empty: 'Nothing tracked yet',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        400
+      ],
+      "id": "a1000000-0000-4000-8000-000000000014",
+      "name": "Build Section"
+    },
+    {
+      "parameters": {
+        "content": "## commitments — one workflow, three jobs\n\nThe whole of project 16. Kept as a single workflow because all three\nbranches need the *same* paste-time configuration: one spreadsheet id\nand one Sheets credential.\n\n**1. Generate** (Daily 06:30) — Commitments → Tasks, append-only.\n**2. Digest** (called by 05 briefing) — Tasks → morning section.\n**3. Tap** (called by 12 menu-handler) — button press → Tasks row + tick.\n\nBranches 2 and 3 share one Execute Workflow Trigger because n8n allows\nonly one per workflow; `Tap or Digest?` splits them on whether a\ntaskId came in.\n\nGrain, columns and the append-only rule: `../README.md`",
+        "height": 340,
+        "width": 460,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        -420
+      ],
+      "id": "a1000000-0000-4000-8000-000000000015",
+      "name": "Sticky - Overview"
+    },
+    {
+      "parameters": {
+        "content": "### Setup — replace before first run\n\n* `YOUR_BILLING_LEDGER_SPREADSHEET_ID` in all 5 Sheets nodes\n  (the **Billing_Ledger** doc, not the Signups one)\n* Create the `Commitments` and `Tasks` tabs + header rows —\n  nothing here creates them\n* **Activate the workflow.** A subworkflow that is not active\n  fails with \"Workflow is not active and cannot be executed\"\n  and the briefing renders `⚠️ COMMITMENTS unavailable`\n* Register the id in two places: the briefing's `Plugins` node\n  and menu-handler's `Config` (`task` entry)",
+        "height": 320,
+        "width": 420,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -420
+      ],
+      "id": "a1000000-0000-4000-8000-000000000016",
+      "name": "Sticky - Setup"
+    },
+    {
+      "parameters": {
+        "content": "### 1. generate",
+        "height": 60,
+        "width": 800,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -180
+      ],
+      "id": "a1000000-0000-4000-8000-000000000017",
+      "name": "Sticky - Generate"
+    },
+    {
+      "parameters": {
+        "content": "### 3. tap (from menu-handler)",
+        "height": 60,
+        "width": 820,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        40,
+        120
+      ],
+      "id": "a1000000-0000-4000-8000-000000000018",
+      "name": "Sticky - Tap"
+    },
+    {
+      "parameters": {
+        "content": "### 2. digest (from the briefing)",
+        "height": 60,
+        "width": 420,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        40,
+        340
+      ],
+      "id": "a1000000-0000-4000-8000-000000000019",
+      "name": "Sticky - Digest"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        260,
+        80
+      ],
+      "id": "a1000000-0000-4000-8000-000000000020",
+      "name": "Get Ledger",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage 4 audit. Runs daily straight after the generator and writes what it finds\n// as STATE on Tasks rows — so the morning briefing renders it without ever having\n// to read the ledger itself.\n//\n// What this can and cannot prove, because the difference matters:\n// Billing_Ledger holds INVOICES. It can confirm that a bill existed and what it\n// said. It cannot confirm that money moved, unless a receipt happens to arrive\n// and fill date_paid. So a claimed-done WITH a matching invoice is left alone —\n// there is no evidence source that would justify second-guessing it. A\n// claimed-done with NO invoice at all is reopened, because that claim is about a\n// bill that never existed.\n\nconst commitments = $('Get Commitments').all().map((i) => i.json).filter((c) => c && c.commitment_id);\nconst tasks = $('Get Existing Tasks').all().map((i) => i.json).filter((t) => t && t.task_id);\nconst ledger = $('Get Ledger').all().map((i) => i.json).filter((r) => r && (r.counterparty_name || r.email_id));\n\n// An invoice cannot be missing before it was ever due to exist. The audit only\n// judges a period once its charge date has passed AND the ledger has had time to\n// receive it — project 04 fills Billing_Ledger from email, which is not instant.\n// Without this gate, ticking next month's bill today gets reopened tomorrow for\n// the absence of a document nobody has issued yet.\nconst EVIDENCE_GRACE_DAYS = 7;\nconst NOW = Date.now();\n\nconst byId = new Map(commitments.map((c) => [c.commitment_id, c]));\nconst norm = (s) => String(s ?? '').toLowerCase().trim();\nconst num = (v) => parseFloat(String(v ?? '').replace(',', '.'));\n\n// counterparty_name is LLM-extracted from whatever the letterhead said, so it\n// arrives as \"TalkTalk\", \"Talk Talk AG\" or \"talktalk\". match_hints exists exactly\n// to absorb that; email_id is the more reliable half of the haystack.\nconst matches = (row, c) => {\n  const hints = String(c.match_hints || '').split('|').map(norm).filter(Boolean);\n  if (!hints.length) return false;\n  const hay = norm(row.counterparty_name) + ' ' + norm(row.email_id);\n  return hints.some((h) => hay.includes(h));\n};\n\nconst out = [];\n\nfor (const t of tasks) {\n  const c = byId.get(t.commitment_id);\n  if (!c) continue;\n\n  const period = String(t.period || '');\n  const found = ledger.filter((r) => String(r.invoice_date || '').startsWith(period) && matches(r, c));\n\n  const status = norm(t.status);\n  const notes = [];\n  let newStatus = t.status;\n\n  const chargeTs = Date.parse(String(t.charge_date || '') + 'T00:00:00');\n  // Unparseable charge_date => never reopen. A missing date is a reason to leave\n  // the claim alone, not to overturn it.\n  const evidenceIsDue = Number.isFinite(chargeTs)\n    && NOW > chargeTs + EVIDENCE_GRACE_DAYS * 86400000;\n\n  // OPT-IN, per commitment, and off unless the sheet says otherwise.\n  //\n  // Reopening is the only thing here that OVERTURNS a human decision rather than\n  // annotating it, so it has to be asked for. It is also only meaningful where an\n  // absent document actually means something: a vendor that bills but never\n  // confirms payment gives the audit nothing to find, and reopening on that\n  // silence would just undo a tick every week for no reason.\n  const verifyDone = ['yes', 'true', 'on', '1'].includes(norm(c.verify_done));\n\n  if (status === 'done' && found.length === 0 && evidenceIsDue && verifyDone) {\n    // Resurrection. Optimistic hide is fine; an unexamined claim is not.\n    newStatus = 'open';\n    notes.push('reopened: marked done but no invoice found for ' + period);\n  }\n\n  if (found.length) {\n    const expected = num(t.amount);\n    const billed = found.reduce((s, r) => s + (num(r.subtotal_amount) || 0), 0);\n    const tol = num(c.tolerance_pct) || 0;\n    if (expected > 0 && billed > 0) {\n      const drift = Math.abs(billed - expected) / expected * 100;\n      if (drift > tol) {\n        notes.push('billed ' + billed.toFixed(2) + ' vs expected ' + expected.toFixed(2)\n          + ' (' + drift.toFixed(0) + '% over a ' + tol + '% tolerance)');\n      }\n    }\n  }\n\n  const note = notes.join('; ');\n\n  // Write only on an actual change. An unconditional upsert would rewrite every\n  // row every morning, and a findings column that churns daily is one nobody reads.\n  if (note !== String(t.notes || '') || newStatus !== t.status) {\n    out.push({ json: { task_id: t.task_id, status: newStatus, notes: note } });\n  }\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        80
+      ],
+      "id": "a1000000-0000-4000-8000-000000000021",
+      "name": "Reconcile"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "task_id"
+          ],
+          "value": {
+            "task_id": "={{ $json.task_id }}",
+            "status": "={{ $json.status }}",
+            "notes": "={{ $json.notes }}"
+          },
+          "schema": [
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "commitment_id",
+              "displayName": "commitment_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "period",
+              "displayName": "period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "charge_date",
+              "displayName": "charge_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assignee",
+              "displayName": "assignee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "assigned_at",
+              "displayName": "assigned_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "closed_at",
+              "displayName": "closed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "evidence",
+              "displayName": "evidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "attempts",
+              "displayName": "attempts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        80
+      ],
+      "id": "a1000000-0000-4000-8000-000000000022",
+      "name": "Write Findings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 4. audit (daily, after generate)",
+        "height": 60,
+        "width": 620,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        20
+      ],
+      "id": "a1000000-0000-4000-8000-000000000023",
+      "name": "Sticky - Audit"
+    }
+  ],
+  "connections": {
+    "Daily 06:30": {
+      "main": [
+        [
+          {
+            "node": "Get Commitments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Commitments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Commitments": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Tasks": {
+      "main": [
+        [
+          {
+            "node": "Build New Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build New Tasks": {
+      "main": [
+        [
+          {
+            "node": "Append Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Called": {
+      "main": [
+        [
+          {
+            "node": "Tap or Digest?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tap or Digest?": {
+      "main": [
+        [
+          {
+            "node": "Update Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Task": {
+      "main": [
+        [
+          {
+            "node": "Tick Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tick Message": {
+      "main": [
+        [
+          {
+            "node": "Answer Tap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Tap": {
+      "main": [
+        [
+          {
+            "node": "Tap Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Build Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ledger": {
+      "main": [
+        [
+          {
+            "node": "Reconcile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconcile": {
+      "main": [
+        [
+          {
+            "node": "Write Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID",
+    "timezone": "Europe/Zurich"
+  },
+  "pinData": {}
+}

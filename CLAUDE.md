@@ -38,6 +38,66 @@ Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for 
 
 A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md`**.
 
+## Open thread — `/visits` command (read before touching the daily briefing)
+
+The 7 AM briefing's site digest deliberately ends with **"→ full detail in the Visits sheet"**
+rather than "→ /visits". That wording is a placeholder for a command that does not exist yet.
+
+**The gap:** the digest only names the 3 most engaged visitors; there is no way to ask for the
+rest from Telegram. The intended fix is a `/visits` agent, built the documented way —
+`12_steward/CLAUDE.md` § "Adding a New Agent": a subworkflow that reads the `Visits` tab and
+returns `{chatId, response}`, an entry in the menu-handler **Config** registry, and the key
+added to the Classifier Output Parser `route_type` enum. When it lands, swap that closing line
+in `05_daily-briefing` → `Format Message`.
+
+**Also worth knowing while you are in there:** `13_n8n-ops-center/telegram-command-interface.n8n.json`
+is **committed but never imported** — `/status`, `/failures`, `/retry` and `/search` do *not*
+exist on the live bot, despite what that project's README implies. The only live Telegram
+command surface is `menu-handler` (`/help`, the agent registry, free-text AI routing). Either
+import the ops-center or stop advertising its commands.
+
+## Open thread — SVG kills `03_any-file2json-converter` (open, reproducible)
+
+**The bug:** the Switch routes `image/*` to branch 0 → `conversion` (GraphicsMagick / `editImage`),
+which has **no SVG decode delegate**. Any `image/svg+xml` input dies there with:
+
+```
+Command failed: gm identify: No decode delegate for this image format (/tmp/gmXXXXXX).
+gm identify: Request did not return an image.
+```
+
+**Why the fallback does not save it:** route 8 catches *unknown* MIME types. `image/svg+xml` is
+perfectly **known** — it matches `image/*` and is routed confidently into a raster decoder. The
+graceful `status: "unresolved"` path is never reached. The general lesson, worth remembering
+elsewhere in this repo: **a MIME label is a category, not a capability.**
+
+**Evidence (live instance, 27 Jul 2026).** Eight failed executions, two bursts (10:35–10:46 and
+14:04–14:19), all identical — `mimeType: image/svg+xml`, `fileName: "inline"`, 7.99 kB, an inline
+logo from someone's email signature:
+
+```
+5194  5200  5215  5222  5256  5262  5268  5285
+```
+
+This is **8 of the converter's 10 failures** in the retained window (27 Jun – 11 Aug 2026; 87 runs,
+77 success). The other two are infrastructure, not this workflow: a task-runner 60s timeout at
+`Modify File & Input` (exec 5939) and a model-API `503` at `Image-to-text` (exec 4422).
+
+**Suggested fix — route it, don't rasterise.** An SVG *is* text (XML), so the smaller change is to
+exclude `image/svg+xml` from the `image/*` rule and send it down the text path, where it lands in
+`Text-to-Structured` like any other markup. Adding a rasterisation step to `conversion` is the bigger,
+heavier alternative. Either way, keep the `Return node` output shape unchanged — three callers depend
+on it (see below). Note that `content_class` already has a `style_element` value for exactly this kind
+of decorative signature asset, so the intended behaviour is likely "classify and move on", not "extract".
+
+**While you are in there — `06_exact-recall-across-collections` points at a dead workflow ID.** Its
+`Execute Workflow1` node targets `GtcLjBMusAUB0h30` (cached name "Any-file2json converter"), which
+**404s on the live instance**. The live converter is a different ID. As committed, that RAG pipeline's
+extraction step cannot resolve. Verify before assuming all three callers work.
+
+**Callers to re-test after any change:** `04_inbox-attachment-organizer`,
+`02_smart-table-fill/smart-folder2table`, `06_exact-recall-across-collections`.
+
 ## Code Patterns
 
 Collection of n8n automation workflows for document processing and AI-powered data extraction. Projects connect LLMs to real tasks: batch processing spreadsheets, organizing email attachments, extracting structured data from messy text. Runs on free-tier LLM APIs, but optional capabities that cost are also present.
@@ -60,6 +120,8 @@ projects/n8n/
 ├── 12_steward/                      - Personal assistant: briefing, dispatch, subworkflows
 ├── 13_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
 ├── 14_db-janitor/                   - Scheduled DB cleanup reporter (stub)
+├── 15_site-visits/                  - Website visit telemetry intake (beacon → Visits sheet)
+├── 16_commitments-ledger/           - Our own record of what we signed up for; reconciles against 04's Billing_Ledger
 └── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (standalone intake door)
 ```
 
