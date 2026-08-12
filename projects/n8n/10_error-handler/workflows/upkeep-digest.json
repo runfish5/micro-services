@@ -1,0 +1,165 @@
+{
+  "name": "upkeep-digest",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        300
+      ],
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Called"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_FAILEDITEMS_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "FailedItems",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -180,
+        300
+      ],
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Get Failures",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_BILLING_LEDGER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        60,
+        300
+      ],
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Get Tasks",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin — the UPKEEP section.\n//\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n// Design and the reason behind every filter: 10_error-handler/docs/upkeep-tasks-spec.md\n//\n// PLAIN TEXT ONLY — never HTML. The briefing escapes centrally, and error text is\n// exactly the kind of string that carries angle brackets. One unescaped '<' fails\n// the whole sendMessage and the morning message never arrives.\n\n// ---- tuning, all read-side on purpose -------------------------------------\n// 010 only labels and counts; every policy decision lives here, so tuning never\n// means editing the error path.\nconst THRESHOLD    = 3;      // identical occurrences before a signature is a defect\n// EVERY row is tappable — each one is a thing you either did or handed to someone.\n// The ceiling is a blast guard, not a display limit: each action is its own Telegram\n// message, and the section's text also competes for the 4096-char cap on the main\n// one. Fifteen is well above the real list (8) and well below anything that breaks\n// the morning. Overflow is REPORTED, never silent.\nconst MAX_ITEMS    = 15;\nconst SIG_CHARS    = 46;\nconst CB_LIMIT     = 60;     // Telegram caps callback_data at 64 BYTES and rejects the\n                             // entire keyboard if one button is over\nconst COMMITMENT   = 'self::code-health';\n\n// Tier gate — root CLAUDE.md § User tiers. 'off' | 'fix' | 'report'\n//   off    text only, no buttons. The default for anyone who has not chosen.\n//   fix    ✅ Done / 🤖 Assign  — a reader who edits these workflows (T3)\n//   report NOT BUILT. See the spec § Beyond.\n// This is not a permission check. Setting 'fix' on a box whose owner does not code\n// grants nothing — it just puts a useless button on a message.\nconst ACTION_MODE = 'fix';\n\nconst input  = $('Called').first().json;\nconst parsed = Date.parse(String(input.date || '').slice(0, 10) + 'T00:00:00');\nconst nowTs  = Number.isFinite(parsed) ? parsed : Date.now();\n\nconst lower = (v) => String(v ?? '').trim().toLowerCase();\nconst ts    = (v) => { const n = Date.parse(String(v || '')); return Number.isFinite(n) ? n : null; };\nconst dayOf = (n) => new Date(n).toISOString().slice(0, 10);\n\nconst failures = $('Get Failures').all().map((i) => i.json).filter((r) => r && r.fingerprint);\nconst tasks    = $('Get Tasks').all().map((i) => i.json).filter((r) => r && r.task_id);\nconst byId     = new Map(tasks.map((t) => [String(t.task_id).trim(), t]));\n\n// ---- OBSERVED — grouped from the failure log, never counted into a column --\n// Counting at write time would race: failures arrive in bursts (four in eleven\n// minutes, in the case this was built for) and Sheets read-then-write is not\n// atomic, so two handlers both read 3 and both write 4. Worse, an upsert could\n// reset a status a human set. Events are counted at read; state is stored.\nconst groups = new Map();\nfor (const r of failures) {\n  const fp = String(r.fingerprint).trim();\n  if (!fp) continue;\n  let g = groups.get(fp);\n  if (!g) groups.set(fp, (g = { fp, n: 0, first: null, last: null, row: r }));\n  g.n++;\n  const t = ts(r.timestamp);\n  if (t === null) continue;\n  if (g.first === null || t < g.first) g.first = t;\n  if (g.last === null || t > g.last) { g.last = t; g.row = r; }\n}\n\nconst observed = [];\nfor (const g of groups.values()) {\n  if (g.n < THRESHOLD) continue;\n\n  // RECURRENCE PROMOTES, IT NEVER DEMOTES.\n  // Repeating identically is not evidence of a defect — the two largest recurring\n  // signatures on this instance are rate limits and task-runner timeouts, which is\n  // precisely what retry exists for. Recurrence can lift an already-non-retryable\n  // error to \"defect\"; the classifier keeps the veto on everything else.\n  // Empty / unknown counts as retryable, so an unclassifiable row is never elevated.\n  if (lower(g.row.is_retryable) !== 'false') continue;\n\n  const taskId = COMMITMENT + '@' + g.fp;\n  const t  = byId.get(taskId);\n  const st = lower(t && t.status);\n\n  if (st === 'wont_fix') continue;\n\n  // Optimistic hide, self-auditing. 'done' drops the row — but a NEW occurrence\n  // after closed_at is direct proof the fix did not work, so it comes back on its\n  // own. No reopen branch, no second book to check against.\n  let reopened = false;\n  if (st === 'done') {\n    const closed = ts(t.closed_at);\n    if (closed === null || g.last === null || g.last <= closed) continue;\n    reopened = true;\n  }\n  observed.push({ g, taskId, reopened, status: st });\n}\nobserved.sort((a, b) => (b.g.last || 0) - (a.g.last || 0));\n\n// 'assigned' stays on the list and says so. Nothing acts on an assignment yet, so a\n// row sits at ⏳ until it is closed by hand — which is the honest display, because it\n// is genuinely not done. Presence is the default; absence is the achievement.\nconst stateSuffix = (st) => (st === 'assigned' ? ' · ⏳ assigned'\n  : st === 'failed' ? ' · ⚠️ failed' : '');\n\n// Cutting the signature can bisect a normalisation placeholder and leave a bare\n// '<' (\"...item at index <n\" ). The briefing's esc() makes that safe rather than\n// dangerous, but it still reads as broken, so trim back to the last clean break.\nconst clipSig = (s) => {\n  let out = String(s || '').slice(0, SIG_CHARS);\n  const lt = out.lastIndexOf('<');\n  if (lt > -1 && !out.slice(lt).includes('>')) out = out.slice(0, lt);\n  return out.trim();\n};\n\nconst observedLine = ({ g, reopened, status }) => {\n  const wf   = String(g.row.workflow_name || 'unknown').replace(/\\.n8n$/, '');\n  const node = String(g.row.failed_node || '?');\n  const sig  = clipSig(g.row.error_signature);\n  const since = g.first === null ? 'unknown' : dayOf(g.first);\n  return wf + ' · ' + node + ' · ' + sig + ' · ' + g.n + '× since ' + since\n    + (reopened ? ' · ⚠️ recurred after being marked fixed' : '')\n    + stateSuffix(status);\n};\n\n// ---- DECLARED — hand-typed obligations, the Open thread blocks -------------\n// No parser reads CLAUDE.md. That file is prose written for an LLM; turning it\n// into a data source would put format constraints on the one file loaded into\n// every session. The block is the explanation, the row is the occurrence.\nconst declared = tasks\n  .filter((t) => lower(t.commitment_id) === COMMITMENT && lower(t.source) === 'declared')\n  .filter((t) => !['done', 'wont_fix', 'cancelled'].includes(lower(t.status)))\n  .sort((a, b) => String(a.task_id).localeCompare(String(b.task_id)));\n\nconst declaredLine = (t) => {\n  const txt = String(t.action || t.notes || String(t.task_id).split('@')[1] || t.task_id).trim();\n  return txt + stateSuffix(lower(t.status));\n};\n\n// ---- render ---------------------------------------------------------------\n// No silent caps: when the list is trimmed the section says so, because a\n// truncated list that looks complete is worse than a long one.\n// Text and buttons are cut by the SAME budget, shared across both headings, so a row\n// can never appear in the list without its buttons or the reverse.\nconst shown = [\n  ...observed.map((o) => ({ id: o.taskId, text: observedLine(o) })),\n  ...declared.map((t) => ({ id: String(t.task_id).trim(), text: declaredLine(t) })),\n].slice(0, MAX_ITEMS);\nconst dropped = observed.length + declared.length - shown.length;\n\nconst blocks = [];\nconst seen = new Set(shown.map((s) => s.id));\nconst obsItems = observed.filter((o) => seen.has(o.taskId)).map(observedLine);\nconst decItems = declared.filter((t) => seen.has(String(t.task_id).trim())).map(declaredLine);\nif (obsItems.length) blocks.push({ heading: 'Observed', items: obsItems });\nif (decItems.length) blocks.push({ heading: 'Declared', items: decItems });\n// No silent caps: a truncated list that looks complete is worse than a long one.\nif (dropped > 0) blocks.push({ items: ['… +' + dropped + ' more, not shown and not tappable'] });\n\n// ---- actions --------------------------------------------------------------\n// EVERY shown row gets its own two buttons — each is a separate thing you either\n// did or handed off, so a shared button would be a lie about which one you meant.\n//\n// Exactly two: the keyboard is a static fixedCollection, so the count cannot vary\n// at runtime, and Telegram rejects the ENTIRE keyboard if one button is invalid.\n//\n// The same two verbs as the commitments plugin, and for the same reason — they are\n// different claims. 'd' asserts the work is finished; 'a' hands it to an assistant\n// and leaves it OPEN. Nothing acts on an assignment yet, so an assigned row keeps\n// showing up at ⏳ until it is genuinely closed. That is correct, not a gap.\nconst actions = [];\nif (ACTION_MODE === 'fix') {\n  for (const row of shown) {\n    const done   = 'tk|d|' + row.id;\n    const assign = 'tk|a|' + row.id;\n    if (done.length > CB_LIMIT || assign.length > CB_LIMIT) continue;\n    actions.push({\n      text: row.text.slice(0, 120),\n      buttons: [\n        { label: '✅ Done', cb: done },\n        { label: '🤖 Assign', cb: assign },\n      ],\n    });\n  }\n}\n\n// Always exactly one item, even with nothing to report — returning zero items is\n// indistinguishable from a crash. Silence here answers a question you would\n// otherwise go and check, so the section prints rather than disappearing.\nreturn [{\n  json: {\n    key: 'upkeep',\n    icon: '🔧',\n    title: 'UPKEEP',\n    blocks,\n    actions,\n    empty: 'Nothing outstanding',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Build Section"
+    },
+    {
+      "parameters": {
+        "content": "## upkeep-digest — the UPKEEP briefing section\n\nOne morning section, **two producers**:\n\n- **Observed** — signatures that recurred in `FailedItems` and the classifier\n  already judged non-retryable. Grouped at READ time, never counted into a column.\n- **Declared** — `Tasks` rows typed by hand, `commitment_id = self::code-health`,\n  `source = declared`. The Open thread blocks in the root CLAUDE.md.\n\nBoth close by tap through **16_commitments-ledger** — same `Tasks` table, same\n`task_id` key, same handler. Nothing here writes.\n\nFull design: `10_error-handler/docs/upkeep-tasks-spec.md`",
+        "height": 320,
+        "width": 460,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -60
+      ],
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Sticky - Overview"
+    },
+    {
+      "parameters": {
+        "content": "## After importing — 4 things\n\n1. **Get Failures** → pick the FailedItems document + `FailedItems` sheet.\n2. **Get Tasks** → pick the **Billing_Ledger** document + `Tasks` sheet.\n   ⚠️ Two DIFFERENT spreadsheets. Check which one before copying a node.\n3. **ACTIVATE this workflow.** A subworkflow whose only trigger is an Execute\n   Workflow Trigger still has to be active, or the briefing renders\n   `⚠️ UPKEEP unavailable` and the symptom names no cause.\n4. Add the registry row in `05_daily-briefing` → **Plugins**.\n\n**`FailedItems` needs the `fingerprint` and `error_signature` headers**, or\n`autoMapInputData` in 010 drops them silently and this section stays empty.\n\n**`ACTION_MODE`** in *Build Section* is `'fix'` — for a reader who edits these\nworkflows. Set it to `'off'` if that is not you: text, no buttons.",
+        "height": 400,
+        "width": 460,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -60
+      ],
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Sticky - Setup"
+    }
+  ],
+  "connections": {
+    "Called": {
+      "main": [
+        [
+          {
+            "node": "Get Failures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Failures": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Build Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID",
+    "timezone": "Europe/Zurich",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {}
+}

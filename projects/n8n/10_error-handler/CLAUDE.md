@@ -53,8 +53,31 @@ Settings cleared on import that must be re-selected manually:
 | **CODE RED Alert** | Chat ID | `YOUR_CHAT_ID_1` |
 | **Send Auto-Retry Alert** | Chat ID | `YOUR_CHAT_ID_1` |
 
+## Recurrence → the morning UPKEEP section
+
+`Prepare & Classify Error` also computes a **`fingerprint`** — `hash(workflow_id + failed_node +
+normalised message)` — and writes it, with `error_signature`, to `FailedItems`. A failure that
+repeats byte-identically is a defect, not an incident, and this is the only thing in the lab that
+can tell the difference.
+
+`workflows/upkeep-digest.json` is the briefing plugin that renders them. It **groups at read
+time and never counts into a column**: failures arrive in bursts, Sheets read-then-write is not
+atomic, and an upsert could reset a status a human set. Events are counted; state is stored.
+
+Two rules that are easy to get wrong:
+
+- **Recurrence promotes, it never demotes.** Repeating identically is not evidence of a defect —
+  rate limits and runner timeouts do exactly that, and are what retry exists for. Recurrence may
+  lift an already-non-retryable error to "defect"; the classifier keeps the veto.
+- **`FailedItems` needs the `fingerprint` and `error_signature` headers.** The append uses
+  `autoMapInputData`, which silently drops fields with no matching column.
+
+Design, corpus evidence and the staged plan: [docs/upkeep-tasks-spec.md](docs/upkeep-tasks-spec.md).
+
 ## Dependencies
 
-- Google Sheets (FailedItems logging)
+- Google Sheets (FailedItems logging; `upkeep-digest` also reads the `Tasks` tab in the
+  Billing_Ledger document — two different spreadsheets)
 - Telegram (alerts)
-- Works with: `04_inbox-attachment-organizer/8-hour-incident-resolver`
+- Works with: `11_8-hours-incident-resolver`, `05_daily-briefing` (plugin seam),
+  `16_commitments-ledger` (the `Tasks` table and the tap handler)

@@ -34,6 +34,47 @@ Two ways to interact with n8n (see `.claude/skills/n8n-executions/skill.md` for 
 
 **Skill**: `/n8n-executions` - Fetch recent execution logs
 
+## User tiers — who a feature is for
+
+Borrowed in **shape** from PromptPotter's `docs/operations/access-model.md`, and deliberately
+not in **kind**. That model names security boundaries enforced by code, each a different kind of
+boundary, and its whole point is that conflating them makes the model illegible. So state this
+one's kind plainly: **this is a capability and audience model.** It decides what the lab
+*offers* a reader, never what it *permits*. There is no authorization boundary here — one
+operator, one n8n instance, one set of credentials. **A tier is not a control. Never present it
+as one.**
+
+| Tier | Profile | Acts on | On a defect, they can |
+|------|---------|---------|----------------------|
+| **T3 — maintainer** | `codes: true` | workflow JSON, republish, the n8n API key | fix it |
+| **T2 — operator** | `codes: false`, `configures: true` | Config nodes, sheets, credentials | report it, or change a setting |
+| **T1 — recipient** | neither | the Telegram surface | read it, and tap what is offered |
+
+**Current profile: T3 (`codes: true`)** — the only occupant. Every rule below is therefore
+unexercised, and worth writing anyway: this repo is public, and T2 is who imports it.
+
+Three rules, each with the consequence that earns it:
+
+1. **A tier gates the ACTION, never the INFORMATION.** T1 still sees that something is broken —
+   they get a different button, not a shorter briefing. Hiding the fact is how a lab becomes
+   untrustworthy to exactly the people who cannot fix it themselves.
+2. **Most of the lab is tierless and should stay that way.** The converter, the invoice OCR, the
+   calendar digest serve everyone identically. Naming a tier is the exception and owes a reason
+   in the project's own docs, or the annotation spreads until it means nothing.
+3. **Unset fails to the lowest tier.** No profile → T1 → information, no actions. That is the
+   honest offer while the lab does not yet know who is reading.
+
+**One definition per feature.** Anything that varies by tier says so in exactly one place — a
+Config-node value in a controlled vocabulary, the way `payment_method` (16, live) and
+`upkeep_action_mode` (10, proposed) do. Never a condition scattered across nodes.
+
+**Delegation is attenuation — roadmap, nothing implements it.** An assistant agent acting for a
+reader would hold `grant ∩ that reader's tier`, never more: a T1 reader's agent may draft a
+GitHub issue, but cannot push a workflow. One level, no re-delegation. Do not let a future
+feature claim otherwise without building the clamp first.
+
+Worked example: `projects/n8n/10_error-handler/docs/upkeep-tasks-spec.md` § Who this is for.
+
 ## Monitoring & Alerting (active)
 
 A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md`**.

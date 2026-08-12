@@ -203,10 +203,10 @@
           ],
           "value": {
             "task_id": "={{ $json.taskId }}",
-            "status": "={{ $json.taskVerb === 'd' ? 'done' : 'assigned' }}",
-            "assignee": "={{ $json.taskVerb === 'd' ? 'me' : 'agent:unassigned' }}",
+            "status": "={{ $json.taskVerb === 'd' ? 'done' : $json.taskVerb === 'm' ? 'wont_fix' : 'assigned' }}",
+            "assignee": "={{ $json.taskVerb === 'a' ? 'agent:unassigned' : 'me' }}",
             "assigned_at": "={{ $now.toISO() }}",
-            "closed_at": "={{ $json.taskVerb === 'd' ? $now.toISO() : '' }}"
+            "closed_at": "={{ $json.taskVerb === 'a' ? '' : $now.toISO() }}"
           },
           "schema": [
             {
@@ -416,7 +416,7 @@
         "operation": "editMessageText",
         "chatId": "={{ $('Called').first().json.chatId }}",
         "messageId": "={{ $('Called').first().json.messageId }}",
-        "text": "={{ $('Called').first().json.taskText + ($('Called').first().json.taskVerb === 'd' ? '\\n✅ done' : '\\n🤖 assigned to an agent') }}",
+        "text": "={{ $('Called').first().json.taskText + ($('Called').first().json.taskVerb === 'd' ? '\\n✅ done' : $('Called').first().json.taskVerb === 'm' ? '\\n🔕 won’t fix' : '\\n🤖 assigned to an agent') }}",
         "replyMarkup": "none",
         "additionalFields": {
           "appendAttribution": false

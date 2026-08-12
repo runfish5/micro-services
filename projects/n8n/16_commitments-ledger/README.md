@@ -218,25 +218,48 @@ with, because that is not a property of the agreement — it is a property of on
 it changes.
 
 So occurrences get their own tab, and `Commitments` stays declarative and hand-written. Three
-tabs, three writers:
+tabs, three jobs:
 
 | Tab | Holds | Written by |
 |-----|-------|-----------|
 | `Commitments` | what we agreed to | a human, by hand |
-| `Tasks` | what needs doing this period, and how it went | `task-generator`, then agents |
+| `Tasks` | what needs doing, and how it went | `task-generator`, the upkeep producers, then agents |
 | `Billing_Ledger` | what the counterparty actually billed | project 04 |
 
-**Grain: one row per (`commitment_id`, `period`)**, keyed by
-`task_id` = `talktalk::mobile@2026-09`. `@` separates the period so the `::` slug stays
-readable and no delimiter is doing two jobs.
+### `Tasks` is the lab's table, not this project's
+
+**Grain: one row per open obligation, keyed by `task_id`.**
+
+The everyday reading is still "one row per (`commitment_id`, `period`)" —
+`talktalk::mobile@2026-09` — and that remains the only shape *this* project writes. But the table
+grew a second and third producer, and the grain had to be stated one level up to stay true:
+
+| `task_id` | Producer | Arrives from |
+|---|---|---|
+| `talktalk::mobile@2026-09` | `task-generator` (this project) | a cadence rule |
+| `self::code-health@a3f9c1e2` | `10_error-handler` | a failure signature that recurred |
+| `self::code-health@visits-command` | a human typing | an Open thread in the root `CLAUDE.md` |
+
+`self::code-health` is never a row in `Commitments`, which is exactly what makes the audit skip
+those rows — its documented behaviour for an unknown `commitment_id`. The financial reconciler
+and the upkeep lifecycle stay mutually invisible with no code guarding the boundary.
+
+**16 is the custodian of this tab, not its owner.** Stating that matters: the next person to add
+a column here should not assume it is free to be finance-shaped. Design and reasoning for the
+other two producers: `10_error-handler/docs/upkeep-tasks-spec.md`.
 
 Paste into row 1 of a `Tasks` tab in the same spreadsheet:
 
 ```
-task_id	commitment_id	vendor	period	charge_date	due_date	amount	currency	payment_method	action	status	assignee	assigned_at	closed_at	evidence	attempts	notes
+task_id	commitment_id	vendor	period	charge_date	due_date	amount	currency	payment_method	action	status	assignee	assigned_at	closed_at	evidence	attempts	notes	source
 ```
 
-`status`: `open` → `assigned` → `done` | `failed`.
+`status`: `open` → `assigned` → `done` | `wont_fix` | `failed`.
+
+`source`: blank for anything generated (a commitment task, or the state row written when an
+observed defect is tapped); `declared` for a hand-typed upkeep thread. Only the upkeep digest
+reads it, and it reads it to answer one question — *did the lab find this, or did you?* An
+observed row can be reopened by evidence; a declared one can only be closed by you.
 
 `vendor`, `amount`, `currency` and `payment_method` are **denormalised** from the commitment at
 generation time. That is deliberate twice over: the digest then reads one tab instead of
