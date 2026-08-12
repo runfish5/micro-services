@@ -77,7 +77,17 @@ Worked example: `projects/n8n/10_error-handler/docs/upkeep-tasks-spec.md` § Who
 
 ## Monitoring & Alerting (active)
 
-A failure-alerting **safety net is turned on** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md`**.
+A failure-alerting **safety net exists** (in-n8n runner-proof + email alerts, plus an external GitHub-Actions heartbeat) — treat it like SECURITY: preserve it when editing workflows. Details: **`projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md`**.
+
+**It is only partly working. Audited against the live instance 2026-08-12:**
+
+| Finding | State |
+|---|---|
+| `Prepare & Classify Error` read `$json.error`; the Error Trigger nests it at `$json.execution.error` | **Fixed in repo, not deployed.** Every failure was logged as `llm_schema_error`/retryable with a fabricated message — the whole taxonomy was dead and the resolver retried things retry cannot fix |
+| `🚨 Runner-Proof Alert` 400s on workflow names containing `_` (unterminated Markdown entity) | **Fixed in repo, not deployed.** Failed 21× on 8–9 Aug, during the exact outage it exists for |
+| **14 of 21 active workflows have no `errorWorkflow` bound** | **Open.** The handler saw 107 of 285 failures in the retained window — ~62% of failures are never logged at all |
+
+The binding gap is the one to fix first: **an unbound workflow produces no `FailedItems` row**, so it is invisible to the error handler, the 8-hour resolver, and the UPKEEP briefing section alike. Bound today: `menu-handler`, `daily briefing`, `commitments`, `04_inbox-attachment-organizer`, `visit-log`, `visits-prune`. Everything else is not.
 
 ## Open thread — `/visits` command (read before touching the daily briefing)
 

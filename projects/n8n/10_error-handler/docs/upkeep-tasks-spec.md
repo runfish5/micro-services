@@ -626,6 +626,48 @@ Eight rows is a lot for a first morning, but it is a **backlog, and it drains** 
 are one fix each. The list is stable at this size only if new defects arrive faster than they are
 closed, which is the situation the section exists to make visible.
 
+### ⚠️ The corpus over-states what will actually appear
+
+The numbers above are computed from the **executions API**, which sees every failure. `FailedItems`
+does not. A workflow with no `errorWorkflow` bound never triggers the handler, so it never gets a
+row, so it has **no fingerprint** — invisible to this section by construction.
+
+Audited 2026-08-12: **14 of 21 active workflows are unbound**, and the handler ran 107 times
+against 285 instance-wide failures. Of the six observed rows above, only three survive that filter:
+
+| Row | Bound? |
+|---|---|
+| `04` · subject-classifier-LM · `04` · Create Attachment Profile · `visit-log` | ✅ appears |
+| `expense-trend-report` · `any-file2json-converter` · `007_error-handler` | ❌ invisible until bound |
+
+**Including the SVG bug this whole document was written for.** `any-file2json-converter` is
+unbound, so the defect that motivated the feature would not be caught by it. Fixing the bindings
+is a prerequisite, not a follow-up.
+
+### The classifier was reading the wrong field entirely
+
+Found while auditing the above, and it is worse than the missing branches: `Prepare & Classify
+Error` read `$json.error`, but the Error Trigger nests it at **`$json.execution.error`**. Verified
+across six consecutive live runs — every one produced:
+
+```
+error_type = llm_schema_error   is_retryable = true
+error_message = "LLM output did not match required schema - check model response format"
+```
+
+That string is the code's own last-resort fallback. **No real error message has ever reached the
+classifier.** Consequences, in ascending order of how much they matter here:
+
+1. The entire taxonomy was dead — every failure classified identically.
+2. Everything was marked retryable, so the resolver burned three retries on things that can
+   never succeed.
+3. **Every fingerprint would have collapsed to one-per-(workflow, node)**, since the message is
+   constant. This section would have grouped unrelated failures under one meaningless row.
+
+One line fixes all three: `$json.execution?.error || $json.error || {}`. Point 3 is why the
+corpus method mattered — the dry run originally fed a hand-built payload with `error` at the top
+level, which is a shape that never occurs, and it looked perfect.
+
 ### Three things the corpus changed
 
 1. **The retry gate got a second conjunct** — see above. This is the finding that mattered.
