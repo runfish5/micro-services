@@ -21,13 +21,19 @@ This works because the execution data fills in whatever n8n thinks is missing.
 
 ## LLM Structured Output Errors
 
-Error: "Model output doesn't fit required format" or empty error `{}` in error handler.
+Error: "Model output doesn't fit required format", "Failed to parse", or an error naming the
+structured output parser sub-node.
 
 **Cause**: The LLM failed to return valid JSON matching the required schema. Smaller or older models struggle with structured output.
 
-**Fix**: Use a model with better structured output support:
-- **OpenAI gpt-oss-120b** - Best open-source model for structured output (as of Jan 2026)
-- Simplify the schema if possible (fewer required fields, simpler nesting)
+**Fix**: Use a model with stronger structured-output support, or simplify the schema (fewer required
+fields, shallower nesting).
+
+> **An empty error `{}` in the error handler is NOT this.** That line used to appear here, and it was
+> wrong: n8n nests the error at `$json.execution.error`, so reading `$json.error` yielded `{}` on
+> *every* failure and the handler's fallback labelled all of them `llm_schema_error`. If you see an
+> empty error object, suspect the extraction path — not the model. See
+> `10_error-handler/CLAUDE.md` § Absence is not a diagnosis.
 
 ---
 

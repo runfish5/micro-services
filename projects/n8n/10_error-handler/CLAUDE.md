@@ -15,16 +15,60 @@ Set as n8n's Error Workflow (Settings > Error Workflow) to catch all workflow fa
 
 ## Error Classification
 
+**Structured signal first, text second.** `error.httpCode` is carried by every `NodeApiError` and
+is unambiguous; substring matching is not, and getting this backwards cost months (below). Text
+matching remains the fallback for `NodeOperationError`, which carries no code.
+
 | Type | Severity | Retryable | Trigger |
 |------|----------|-----------|---------|
-| `auth_error` | critical | No | 401, 403, credential issues |
-| `rate_limit` | high | Yes | 429, quota exceeded |
-| `network_error` | high | Yes | Timeout, connection refused |
-| `llm_schema_error` | high | Yes | LLM output didn't match schema |
+| `handler_blind` | critical | No | **This workflow** could not find the error in the trigger payload |
+| `auth_error` | critical | No | `401`/`403`, credential issues |
+| `rate_limit` | high | Yes | `429`, quota exceeded |
+| `config_error` | high | No | `404` — a wrong id, never a transient |
+| `network_error` | high | Yes | `5xx`/`522`/`408`/`ECONN*`, timeout, *timed out*, task runner not matched |
+| `llm_schema_error` | high | Yes | "doesn't fit required format", "output parser", "failed to parse" |
+| `validation_error` | medium | No | `400`, missing required fields |
 | `parse_error` | medium | No | Invalid JSON, syntax errors |
-| `validation_error` | medium | No | Missing required fields |
 | `resource_error` | critical | No | Out of memory/disk |
 | `unknown` | medium | No | Unclassified errors |
+
+Non-retryable rows are written with `status: needs_review`, not `pending_retry` — the resolver
+selects on **both** `status === 'pending_retry'` and `is_retryable === true`, and `status` used to
+be hardcoded for every row regardless of type.
+
+### Absence is not a diagnosis
+
+The extraction fallback used to be the sentence *"LLM output did not match required schema"*, and
+the `llm_schema_error` branch matched that exact string — one n8n **never emits**. The handler
+invented a symptom and then diagnosed it. Combined with reading `$json.error` (n8n nests it at
+`$json.execution.error`), extraction found nothing on *every* failure, so **100% of rows were
+labelled `llm_schema_error`, retryable** — for months. Everything downstream agreed, because
+everything downstream reads this one field.
+
+Three rules earned by that, all load-bearing:
+
+1. **A missing value may become `unknown`; it may never become a specific cause.** If the handler
+   cannot see the error, that *is* the incident → `handler_blind`, which names the payload keys it
+   did find, so the next n8n upgrade that moves the shape says so on day one.
+2. **`llm_schema_error` must stay above `parse_error` and `validation_error`.** *"doesn't fit
+   required format"* contains `required`, and *"failed to parse"* contains `parse` — either branch
+   swallows it, and the type silently goes back to being unreachable.
+3. **Non-retryable is what makes a defect visible.** `upkeep-digest` only promotes an
+   already-non-retryable signature, so a wrong `is_retryable` hides a bug rather than merely
+   mislabelling it.
+
+Verified against the 285-failure retained corpus on 2026-08-12: `llm_schema_error` **0**,
+`network_error` 108, `rate_limit` 68, `config_error` 53, `validation_error` 29, `unknown` 24,
+`parse_error` 2 — across 36 distinct fingerprints, where the old code produced one signature
+per node.
+
+### Telegram alerts strip Markdown
+
+Every interpolated value passes through `.replace(/[_*\[\]`~]/g,'')`. n8n's Telegram node defaults
+to legacy Markdown, where `_ * [` and `` ` `` open an entity and **one** unbalanced character fails
+the whole `sendMessage` — which is how the runner-proof branch lost 22 alerts during the outage it
+exists for. This became load-bearing the moment `error_message` started carrying real error text
+instead of one fixed, punctuation-free sentence; workflow names alone (`04_inbox-…`) would break it.
 
 ## LLM Cost Estimation
 

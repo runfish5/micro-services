@@ -83,11 +83,16 @@ A failure-alerting **safety net exists** (in-n8n runner-proof + email alerts, pl
 
 | Finding | State |
 |---|---|
-| `Prepare & Classify Error` read `$json.error`; the Error Trigger nests it at `$json.execution.error` | **Fixed in repo, not deployed.** Every failure was logged as `llm_schema_error`/retryable with a fabricated message — the whole taxonomy was dead and the resolver retried things retry cannot fix |
-| `🚨 Runner-Proof Alert` 400s on workflow names containing `_` (unterminated Markdown entity) | **Fixed in repo, not deployed.** Failed 21× on 8–9 Aug, during the exact outage it exists for |
-| **14 of 21 active workflows have no `errorWorkflow` bound** | **Open.** The handler saw 107 of 285 failures in the retained window — ~62% of failures are never logged at all |
+| `Prepare & Classify Error` read `$json.error`; the Error Trigger nests it at `$json.execution.error` | **Fixed and deployed 2026-08-12.** Every failure was logged as `llm_schema_error`/retryable with a fabricated message — the whole taxonomy was dead and the resolver retried things retry cannot fix. Now also classifies on `httpCode` first, and an unreadable payload becomes `handler_blind`, never a guess |
+| `🚨 Runner-Proof Alert` 400s on workflow names containing `_` (unterminated Markdown entity) | **Fixed and deployed 2026-08-12**, and extended to `CODE RED Alert`, `Send Auto-Retry Alert` and `Format Telegram Alert`, which had the same hole. This turned urgent the moment `error_message` began carrying real error text instead of one fixed, punctuation-free sentence |
+| `expense-trend-report` pointed at a **stale 28-char `Billing_Ledger` twin** | **Fixed 2026-08-12** (operator, in the UI). Had 404'd daily since before the retained window — 53 failures on 49 of 56 days, every one reported as `llm_schema_error`. First green run due 13:00 UTC 13 Aug |
+| `resolver` read a **stale 25-char `FailedItems` twin** — a different document from the one `007` writes to | **Fixed and deployed 2026-08-12.** Still `active: false`, so switching it on would previously have read a sheet nothing writes to |
+| Only `007_error-handler.n8n` itself has no `errorWorkflow` bound | **Open, and correct as far as it goes** — self-binding would loop. But it failed 44× in the retained window and none of it was logged. If that matters, bind it to a second, minimal handler rather than to itself |
 
-The binding gap is the one to fix first: **an unbound workflow produces no `FailedItems` row**, so it is invisible to the error handler, the 8-hour resolver, and the UPKEEP briefing section alike. Bound today: `menu-handler`, `daily briefing`, `commitments`, `04_inbox-attachment-organizer`, `visit-log`, `visits-prune`. Everything else is not.
+Binding is otherwise **closed**: 21 of 22 active workflows now carry an `errorWorkflow`. Worth
+keeping that way — **an unbound workflow produces no `FailedItems` row**, so it is invisible to the
+error handler, the 8-hour resolver and the UPKEEP briefing section alike. The historical coverage
+figure (the handler saw 107 of 285 retained failures) reflects the *old* binding state, not today's.
 
 ## Open thread — `/visits` command (read before touching the daily briefing)
 
@@ -239,6 +244,12 @@ Blue sticky notes behind Execute Workflow nodes serve as quick-restore reference
 **Folder structure convention**: `/{RootFolder}/{Year}/{MM_Month}/{Category}/` with MM_Month format (01_January, 02_February) for sorted display.
 
 **State the grain of every output table**: the grain is what exactly one row represents — "one row per X, keyed by Y". Declare it in the project's docs before writing rows. Source documents are evidence, not rows: several can describe one event, one can describe several. Grain is almost never "one row per input item", so `.first()` and blind `append` both produce the wrong row count while the run reports success. Definition and worked example: `projects/n8n/04_inbox-attachment-organizer/README.md` (FAQ).
+
+**Absence is not a diagnosis**: when a value is missing, the honest output is `unknown` — never a specific, plausible cause. A fallback that guesses converts a silent gap into a confident wrong answer, and confident wrong answers do not get investigated. Two sightings in this repo, both expensive: a MIME label routed SVG into a raster decoder because *a label is a category, not a capability* (see the `03` thread above); and `010-error-handler` defaulted an unreadable error to the sentence *"LLM output did not match required schema"*, whose own classifier then matched that sentence — mislabelling **100% of failures** as an LLM problem for months, and hiding a workflow that had failed daily since before the retained window. The tell is the same both times: a fallback that is more specific than the evidence supporting it. Worked example: `projects/n8n/10_error-handler/CLAUDE.md` § Absence is not a diagnosis.
+
+**One instrument, one lie**: alerting redundancy is not alerting independence. Four mechanisms watched the failure above — the error handler, the 8-hour resolver, the upkeep digest, the external heartbeat — and all four agreed, because all four read the same classifier. Before trusting agreement between monitors, check whether they share an upstream. A field that every consumer reads is worth more verification than any of them.
+
+**Sheets are referenced by id, and ids drift**: two Drive files can carry the same name. This lab has two `Billing_Ledger` and two `FailedItems` documents; a workflow left on the stale twin fails with a `404` that reads like a data problem, and one had done so daily for months. When a Sheets node 404s, compare its document id **length and value** against a workflow known to work rather than trusting the cached name shown in the UI.
 
 **Incident retry mechanism**: For workflows that retry failed executions, ALWAYS use the n8n API retry endpoint (`POST /api/v1/executions/{id}/retry`), NOT Execute Workflow nodes. API retry preserves original trigger data (Gmail messages, webhooks, etc.) while Execute Workflow starts fresh with no context. See `projects/n8n/04_inbox-attachment-organizer/config/8-hour-incident-resolver-docs.md` for rationale
 
