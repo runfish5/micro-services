@@ -126,16 +126,23 @@ actually *do*, not what the label says the input *is*.
 Commit `0478064`. Full history: `10_error-handler/docs/upkeep-tasks-spec.md` — this bug is what
 that mechanism was built to catch, and it is now catchable if it ever regresses.
 
-## Open thread — `06_exact-recall-across-collections` points at a dead workflow ID
+## Fixed — dead converter workflow ID (2026-08-12)
 
-Its `Execute Workflow1` node targets `GtcLjBMusAUB0h30` (cached name "Any-file2json converter"),
-which **404s on the live instance**. As committed, that RAG pipeline's extraction step cannot
-resolve. The live converter is `any-file2json-converter`; take its id from the instance rather than
-from another committed file.
+`GtcLjBMusAUB0h30` 404s on the live instance. It was referenced by **two** committed files, not
+one as previously recorded here: `06_exact-recall-across-collections` *and*
+`02_smart-table-fill/smart-folder2table`. Both now point at the live converter and no tracked JSON
+references the dead id.
 
-Verified 2026-08-12: the dead id is referenced **only** by `06` and by the inactive `My workflow
-8 / 10 / 12` scratch copies. All three live callers resolve correctly, so nothing running is broken
-by it.
+Nothing running was ever broken by it — the live `smart-folder2table` already pointed at the right
+workflow, so only the committed copy had drifted. The remaining references are in the inactive
+`My workflow 8 / 10 / 12` scratch copies.
+
+**Unresolved convention question this exposed.** The repo is inconsistent about subworkflow ids:
+`inbox-attachment-organizer` and `gdrive-recursion` commit **real** ids, while `daily-briefing` and
+`deal-finder` use `YOUR_*_WORKFLOW_ID` placeholders. Workflow ids are not on the SECURITY list and
+are not secrets, so both are defensible — but pick one. Real ids make a committed workflow
+importable and verifiable against the instance; placeholders make it portable to someone else's.
+These two were fixed to real ids, matching the file that already references this same converter.
 
 **Also live: `anything converter`** — an active, uncalled, full 30-node duplicate of the real
 converter. It carries the SVG fix too, but two active copies of one subworkflow is a trap worth
