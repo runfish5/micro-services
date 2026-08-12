@@ -204,6 +204,22 @@
       ],
       "id": "a1b2c3d4-0001-0001-0001-000000000011",
       "name": "Sticky Note - Rates"
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ After importing — edit Config\n\nThis workflow ships with **placeholders**. It will import, activate and run on\nschedule while doing nothing but fail — a placeholder is a perfectly valid\nstring, so Google simply answers *\"Requested entity was not found\"* forever.\n\nIn the **Config** node set:\n\n- `SHEET_ID` → the Billing_Ledger document id (the one project 04 writes to)\n- `CHAT_ID` → your Telegram chat id\n\n`SHEET_NAME` is already correct (`Sheet1`).\n\nReal values belong **only on the instance** — never commit them, this repo is\npublic. See the security rules at the top of the root `CLAUDE.md`.\n\n_Skipping this cost 54 silent failures, 17 Jun – 12 Aug 2026._",
+        "height": 420,
+        "width": 420,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        -160
+      ],
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Sticky - Setup"
     }
   ],
   "connections": {
