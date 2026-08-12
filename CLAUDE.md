@@ -107,47 +107,39 @@ exist on the live bot, despite what that project's README implies. The only live
 command surface is `menu-handler` (`/help`, the agent registry, free-text AI routing). Either
 import the ops-center or stop advertising its commands.
 
-## Open thread — SVG kills `03_any-file2json-converter` (open, reproducible)
+## Fixed — SVG in `03_any-file2json-converter` (2026-08-12, repo + live)
 
-**The bug:** the Switch routes `image/*` to branch 0 → `conversion` (GraphicsMagick / `editImage`),
-which has **no SVG decode delegate**. Any `image/svg+xml` input dies there with:
+`image/svg+xml` killed the converter 8 times over six weeks: the Switch sent `image/*` to
+`conversion` (GraphicsMagick), which has no SVG decode delegate. **Rule 0 now excludes `svg` and
+rule 5 accepts it**, so an SVG lands in `Extract Document Text` → `Text-to-Structured` like any
+other markup. No new outputs, so no connection moved and the `Return node` shape is unchanged —
+`04_inbox-attachment-organizer`, `02_smart-table-fill/smart-folder2table` and
+`06_exact-recall-across-collections` all still work against it. A green sticky on the Switch
+records why the odd-looking condition is there; do not tidy it out.
 
-```
-Command failed: gm identify: No decode delegate for this image format (/tmp/gmXXXXXX).
-gm identify: Request did not return an image.
-```
+**The lesson outlives the bug, and it is the reason this took six weeks to find: a MIME label is a
+category, not a capability.** The graceful `unresolved` fallback never fired because
+`image/svg+xml` is not an *unknown* type — it is perfectly known, matched `image/*`, and was routed
+**confidently** into a decoder that could not read it. When adding a route, ask what the branch can
+actually *do*, not what the label says the input *is*.
 
-**Why the fallback does not save it:** route 8 catches *unknown* MIME types. `image/svg+xml` is
-perfectly **known** — it matches `image/*` and is routed confidently into a raster decoder. The
-graceful `status: "unresolved"` path is never reached. The general lesson, worth remembering
-elsewhere in this repo: **a MIME label is a category, not a capability.**
+Commit `0478064`. Full history: `10_error-handler/docs/upkeep-tasks-spec.md` — this bug is what
+that mechanism was built to catch, and it is now catchable if it ever regresses.
 
-**Evidence (live instance, 27 Jul 2026).** Eight failed executions, two bursts (10:35–10:46 and
-14:04–14:19), all identical — `mimeType: image/svg+xml`, `fileName: "inline"`, 7.99 kB, an inline
-logo from someone's email signature:
+## Open thread — `06_exact-recall-across-collections` points at a dead workflow ID
 
-```
-5194  5200  5215  5222  5256  5262  5268  5285
-```
+Its `Execute Workflow1` node targets `GtcLjBMusAUB0h30` (cached name "Any-file2json converter"),
+which **404s on the live instance**. As committed, that RAG pipeline's extraction step cannot
+resolve. The live converter is `any-file2json-converter`; take its id from the instance rather than
+from another committed file.
 
-This is **8 of the converter's 10 failures** in the retained window (27 Jun – 11 Aug 2026; 87 runs,
-77 success). The other two are infrastructure, not this workflow: a task-runner 60s timeout at
-`Modify File & Input` (exec 5939) and a model-API `503` at `Image-to-text` (exec 4422).
+Verified 2026-08-12: the dead id is referenced **only** by `06` and by the inactive `My workflow
+8 / 10 / 12` scratch copies. All three live callers resolve correctly, so nothing running is broken
+by it.
 
-**Suggested fix — route it, don't rasterise.** An SVG *is* text (XML), so the smaller change is to
-exclude `image/svg+xml` from the `image/*` rule and send it down the text path, where it lands in
-`Text-to-Structured` like any other markup. Adding a rasterisation step to `conversion` is the bigger,
-heavier alternative. Either way, keep the `Return node` output shape unchanged — three callers depend
-on it (see below). Note that `content_class` already has a `style_element` value for exactly this kind
-of decorative signature asset, so the intended behaviour is likely "classify and move on", not "extract".
-
-**While you are in there — `06_exact-recall-across-collections` points at a dead workflow ID.** Its
-`Execute Workflow1` node targets `GtcLjBMusAUB0h30` (cached name "Any-file2json converter"), which
-**404s on the live instance**. The live converter is a different ID. As committed, that RAG pipeline's
-extraction step cannot resolve. Verify before assuming all three callers work.
-
-**Callers to re-test after any change:** `04_inbox-attachment-organizer`,
-`02_smart-table-fill/smart-folder2table`, `06_exact-recall-across-collections`.
+**Also live: `anything converter`** — an active, uncalled, full 30-node duplicate of the real
+converter. It carries the SVG fix too, but two active copies of one subworkflow is a trap worth
+deleting.
 
 ## Code Patterns
 

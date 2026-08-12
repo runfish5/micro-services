@@ -174,6 +174,15 @@
                       "type": "string",
                       "operation": "startsWith"
                     }
+                  },
+                  {
+                    "id": "svg-not-raster",
+                    "leftValue": "={{ $binary.values()[0].mimeType }}",
+                    "rightValue": "svg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -288,9 +297,18 @@
                       "operation": "equals",
                       "name": "filter.operator.equals"
                     }
+                  },
+                  {
+                    "id": "svg-is-text",
+                    "leftValue": "={{ $binary.values()[0].mimeType }}",
+                    "rightValue": "svg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "or"
               }
             },
             {
@@ -772,6 +790,22 @@
         368
       ],
       "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Why SVG goes down the TEXT path\n\nAn SVG is XML. `conversion` is GraphicsMagick, which has **no decode\ndelegate** for it and dies with *\"No decode delegate for this image format\"*.\n\nThe fallback never caught this: `image/svg+xml` is not an *unknown* type —\nit is known, matches `image/*`, and was confidently routed into a raster\ndecoder. **A MIME label is a category, not a capability.**\n\nSo rule 0 excludes `svg` and rule 5 accepts it, landing it in\n`Extract Document Text` → `Text-to-Structured` like any other markup.\nNo new outputs, so every downstream connection is unchanged — three\ncallers depend on the `Return node` shape.\n\n_8 of this workflow's 10 failures, 27 Jul 2026: an inline logo from an\nemail signature._",
+        "height": 380,
+        "width": 440,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1032,
+        820
+      ],
+      "id": "d1000000-0000-4000-8000-000000000001",
+      "name": "Sticky - SVG routing"
     }
   ],
   "connections": {
