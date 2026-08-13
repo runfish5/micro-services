@@ -17,6 +17,15 @@ Resolves folder paths to Google Drive IDs. n8n requires IDs, not paths.
 
 ## signup-intake.n8n.json
 
+> **Live, and now fed by the app rather than the website.** ⚠️ Its **live webhook path is
+> `promptpotter-waitlist`**, not the `signup-intake` this committed copy declares — check
+> [`CLAUDE.md`](CLAUDE.md) before probing it, because the obvious probe reports a false "not
+> registered". The marketing site's waitlist form is parked (signing in *is* signing up); **Door 1's
+> sender is now the PromptPotter app**, which POSTs every new account here on first `/auth/me`.
+> **Every signup now gets a CRM row automatically** — the old "tap to add" gate is gone. The
+> confirmation-email branch is **disabled on the instance**; that, and the auto-CRM change, are
+> explained in [`CLAUDE.md`](CLAUDE.md).
+
 Generic signup / waitlist **intake door**. Two ways in (a webhook for senders
 that have a site, and an n8n-hosted form for those that don't) → checks the CRM
 (`Entries`) to see if the person is already known → logs them to a separate
@@ -38,14 +47,19 @@ asset rendered by the website: *Render Email* (HTTP Request) POSTs `first_name` 
 `use_case` to a confirmation-email endpoint and gets back `{ subject, html, text }`,
 which Gmail sends to the signup's address. This keeps the intake door generic; the
 email's design, copy and images all live in `promptpotter-web` (single source of
-truth — `src/lib/waitlist-email.ts` + `src/pages/api/waitlist-email.ts`). Set
-*Render Email*'s URL (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`) and bind the **Gmail
-OAuth** credential on import.
+truth — `src/lib/account-open-email.ts` + `src/pages/api/account-open-email.ts`).
+Set *Render Email*'s URL (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`) and bind the
+**Gmail OAuth** credential on import.
+
+⚠️ That endpoint was renamed from `waitlist-email` and now sends an **approval**
+notice — "your account is open" — so re-enabling this branch as-is would tell a
+brand-new, not-yet-approved signup that they are in. See `CLAUDE.md` § Flow C.
 
 **Import note:** the committed JSON ships with placeholders. A gitignored
 `signup-intake.local.n8n.json` sits alongside it with the real sheet IDs, chat ID
 and bot credential already bound (and the live webhook path) — import that one to
 skip the re-typing; bind the Google Sheets credential once after import.
 
-**Sender:** `promptpotter-web` `/api/waitlist` posts here. It also fires a future
-`signup-intake` path for an eventual rename cutover — see that repo.
+**Sender:** the PromptPotter app, on the first `/auth/me` of a new account
+(`N8N_SIGNUP_WEBHOOK_URL`). The old sender, `promptpotter-web` `/api/waitlist`,
+now sits in that repo's `internal/parked-waitlist/`.

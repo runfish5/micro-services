@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Waitlist Webhook** — for senders that *have* a site (e.g. the promptpotter-web `/api/waitlist` function POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
+        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Waitlist Webhook** — for senders that *have* a site (a serverless function on your site POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
         "height": 420,
         "width": 460,
         "color": 4
@@ -64,7 +64,7 @@
     },
     {
       "parameters": {
-        "content": "## Bind on import\n\nThe JSON ships with placeholders. Two SEPARATE spreadsheets are used:\n\n• **CRM Lookup** + **Add to CRM (Entries)** → your CRM doc (`YOUR_ENTRIES_SPREADSHEET_ID`), `Entries` tab.\n• **Append to Signups / Lookup Signup / Mark Promoted / Mark Dismissed** → the Signups doc (`YOUR_SIGNUPS_SPREADSHEET_ID`).\n\nAfter importing:\n1. On each Google Sheets node bind the *Google Sheets OAuth* credential + re-pick the correct document (per above).\n2. In the Signups doc, the tab is `Sheet1` — give it headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`.\n3. **Render Email** (HTTP Request) — set its URL to your confirmation-email endpoint (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`).\n4. **Gmail node** (*Send Confirmation Email*) — bind the Gmail OAuth credential.\n5. **Telegram nodes** — bind the bot credential, set `YOUR_CHAT_ID`.\n6. **Activate**, then copy the Webhook **Production URL** into the sender's `N8N_WAITLIST_WEBHOOK_URL`, and grab the **Form Trigger** URL to share/bookmark.",
+        "content": "## Bind on import\n\nThe JSON ships with placeholders. Two SEPARATE spreadsheets are used:\n\n• **CRM Lookup** + **Add to CRM (Entries)** → your CRM doc (`YOUR_ENTRIES_SPREADSHEET_ID`), `Entries` tab.\n• **Append to Signups / Lookup Signup / Mark Promoted / Mark Dismissed** → the Signups doc (`YOUR_SIGNUPS_SPREADSHEET_ID`).\n\nAfter importing:\n1. On each Google Sheets node bind the *Google Sheets OAuth* credential + re-pick the correct document (per above).\n2. In the Signups doc, the tab is `Sheet1` — give it headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`.\n3. **Render Email** (HTTP Request) — set its URL to your confirmation-email endpoint (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`).\n4. **Gmail node** (*Send Confirmation Email*) — bind the Gmail OAuth credential.\n5. **Telegram nodes** — bind the bot credential, set `YOUR_CHAT_ID`.\n6. **Activate**, then copy the Webhook **Production URL** into your sender's own config, and grab the **Form Trigger** URL to share/bookmark.",
         "height": 420,
         "width": 460,
         "color": 3
@@ -383,7 +383,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID",
-        "text": "=🆕 *New signup*\n\n*Name:* {{ $json.first_name }} {{ $json.surname }}\n*Email:* `{{ $json.email }}`\n*Source:* {{ $json.source }}\n*Use case:* {{ $json.use_case || '—' }}\n\n🔎 Already in CRM: *{{ $json.known_in_crm === 'yes' ? 'YES' : 'no' }}*{{ $json.known_in_crm === 'yes' ? `\\n\\n📇 In CRM as *${$('CRM Lookup').first().json.status || 'contact'}*${$('CRM Lookup').first().json.groups ? ' · ' + $('CRM Lookup').first().json.groups : ''}\\n🗒 Last topic: ${$('CRM Lookup').first().json.last_topic || '—'}\\n📅 Since: ${($('CRM Lookup').first().json.contact_created_at || '').toString().slice(0, 10) || '—'}` : '' }}",
+        "text": "=🆕 *New signup* — added to CRM\n\n*Name:* {{ $json.first_name }} {{ $json.surname }}\n*Email:* `{{ $json.email }}`\n*Source:* {{ $json.source }}\n*Use case:* {{ $json.use_case || '—' }}\n\n🔎 Already in CRM: *{{ $json.known_in_crm === 'yes' ? 'YES' : 'no' }}*{{ $json.known_in_crm === 'yes' ? `\\n\\n📇 In CRM as *${$('CRM Lookup').first().json.status || 'contact'}*${$('CRM Lookup').first().json.groups ? ' · ' + $('CRM Lookup').first().json.groups : ''}\\n🗒 Last topic: ${$('CRM Lookup').first().json.last_topic || '—'}\\n📅 Since: ${($('CRM Lookup').first().json.contact_created_at || '').toString().slice(0, 10) || '—'}` : '' }}",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
@@ -395,7 +395,7 @@
               "row": {
                 "buttons": [
                   {
-                    "text": "✅ Add to CRM",
+                    "text": "✅ Keep",
                     "additionalFields": {
                       "callback_data": "=addcrm:{{ $json.email }}"
                     }
@@ -583,9 +583,9 @@
             "first_name": "={{ $json.first_name }}",
             "surname": "={{ $json.surname }}",
             "status": "lead",
-            "groups": "website-waitlist",
+            "groups": "signup",
             "association": "={{ $json.source }}",
-            "last_topic": "Waitlist signup",
+            "last_topic": "={{ 'Signup · ' + $json.source }}",
             "notes": "={{ $json.use_case }}",
             "contact_created_at": "={{ $now.toISO() }}",
             "contact_updated_at": "={{ $now.toISO() }}"
@@ -815,7 +815,7 @@
     },
     {
       "parameters": {
-        "content": "## Confirmation email\n\nThe branded confirmation email is **not** built in this workflow — its HTML/copy lives on the website (single source of truth, alongside the brand images) and is rendered by an endpoint: `…/api/waitlist-email`.\n\n*Render Email* (HTTP Request) POSTs `first_name` + `use_case` and gets back `{ subject, html, text }`; *Send Confirmation Email* (Gmail) sends it to the signup's address. Runs on a **parallel branch** to the Telegram alert — *Render Email* uses an error output and Gmail is *continue on error*, so a render/bounce failure never blocks your operator notification.\n\n⚠ Set the endpoint URL on *Render Email* + bind the **Gmail OAuth** credential on import.",
+        "content": "## Confirmation email\n\nThe branded confirmation email is **not** built in this workflow — its HTML/copy lives on the website (single source of truth, alongside the brand images) and is rendered by an endpoint: `…/api/account-open-email`.\n\n*Render Email* (HTTP Request) POSTs `first_name` + `use_case` and gets back `{ subject, html, text }`; *Send Confirmation Email* (Gmail) sends it to the signup's address. Runs on a **parallel branch** to the Telegram alert — *Render Email* uses an error output and Gmail is *continue on error*, so a render/bounce failure never blocks your operator notification.\n\n⚠ Set the endpoint URL on *Render Email* + bind the **Gmail OAuth** credential on import.",
         "height": 300,
         "width": 320,
         "color": 4
@@ -922,6 +922,11 @@
       "main": [
         [
           {
+            "node": "Add to CRM (Entries)",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Notify (Telegram)",
             "type": "main",
             "index": 0
@@ -975,17 +980,6 @@
       ]
     },
     "Lookup Signup": {
-      "main": [
-        [
-          {
-            "node": "Add to CRM (Entries)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Add to CRM (Entries)": {
       "main": [
         [
           {

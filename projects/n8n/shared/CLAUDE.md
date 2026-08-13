@@ -12,6 +12,110 @@ description. Read this before editing the JSON. See the root `CLAUDE.md` for rep
 A generic **intake door** for inbound people (waitlist / signups). Two ways in, one pipeline, a
 human-in-the-loop promotion gate into a CRM, plus a branded confirmation email.
 
+### Status — LIVE, and the committed path is not the live one (2026-08-13)
+
+Live as `Signup Intake → CRM triage`, id `G766da6yCLuQS50T`, **active**, error-workflow bound.
+It has been active all along.
+
+⚠️ **The live webhook path is `promptpotter-waitlist`; this committed copy says `signup-intake`.**
+That drift produced a wrong diagnosis on 2026-08-13: a probe of the committed path answered *"the
+requested webhook is not registered"* and was read as "never activated". Both halves of the probe
+were wrong — the wrong **path**, and a **GET** against a `POST`-only webhook, which returns that same
+message even when the workflow is running. **Never conclude a webhook is dead from that string; read
+`active` off the API.**
+
+The drift is deliberate for now: the deployed marketing site still posts to the legacy path until the
+parked build ships. Rename the live path *after* that deploy, not before.
+
+Consequences of the corrected reading:
+
+- The site's authoritative call (`N8N_WAITLIST_WEBHOOK_URL` → the legacy path) **always worked**. A
+  capture failure would have returned a 502 to the submitter, not a silent drop.
+- The site's *second* call, to `/webhook/signup-intake`, has **always 404'd** — that path exists in no
+  workflow — and `waitlist.ts` swallowed it by design. It only ever duplicated the first call.
+- **Executions prove less than they appear to.** One is retained (2026-05-29, status `waiting`) and
+  n8n prunes the rest, so an empty list means an empty *window*, not an empty history. The `Signups`
+  sheet's single row is the durable evidence that at most one submission ever landed.
+
+**Door 1's sender is now the PromptPotter app**, not the website: on the first `/auth/me` of a new
+account it POSTs `{email, name, use_case, signup_source: 'promptpotter-app'}` here, from
+`presentation/admin_bot.py::forward_new_account_to_crm`, gated on `N8N_SIGNUP_WEBHOOK_URL` — which
+must carry the **live** path. The app also sends its own Telegram notice on a separate outbound
+channel, deliberately: that one fires even when this webhook is unset.
+
+### The confirmation email is DISABLED on the live workflow (2026-08-13)
+
+`Render Email` and `Send Confirmation Email` are both `disabled: true` on the instance. They stay
+enabled in this committed template, which is generic and correct for an importer who has a real
+confirmation renderer.
+
+Two reasons, and the first answers "why did my test signup never get a mail":
+
+1. `Render Email` pointed at `https://promptpotter.dev/api/waitlist-email` — a **dead host** (`.com`
+   is canonical) on a route since renamed. It could never have rendered anything.
+2. The endpoint that replaced it sends an **approval** notice ("your account is open"). Repointing
+   the URL alone would mail that to every brand-new, unentitled signup.
+
+So do not "fix the URL". Either write a signup-confirmation renderer and point at that, or move the
+call to the moment `/allow` is granted — then re-enable both nodes.
+
+### Every signup joins the CRM — the gate was removed on purpose (2026-08-13)
+
+`Append to Signups` now fans out to **three** branches: `Add to CRM (Entries)`, `Notify (Telegram)`
+and `Render Email`. The CRM row is written for everyone, automatically.
+
+This **reverses** the "Signups is the unjudged inbox, Entries is the gated clean list — do not
+collapse them" rule stated below, by operator decision: a contact record that exists only after
+someone taps a button is a contact record that depends on somebody being at their phone, and an
+untapped signup simply never existed. Curation moved *after* the write instead of gating it.
+
+It needed no expression changes. `Add to CRM (Entries)` reads `$json.email / first_name / surname /
+source / use_case`, which is exactly `Triage`'s output shape and therefore exactly what
+`Append to Signups` emits — the node was already fed a compatible item from `Lookup Signup`.
+
+⚠️ **It DID need a rewire, and the first attempt shipped broken — the lesson generalises.**
+`Add to CRM (Entries)` was **shared** by both flows, so its downstream (`Flag Promoted` →
+`Mark Promoted` → `Confirm Added`) belonged to the button path. Feeding it from Flow A made a fresh
+signup fall through into that tail and die on `Flag Promoted`, which reads
+`$('Parse Callback')` — a node only the Telegram callback executes. Execution 6354, `status=error`,
+*after* the CRM row and the Telegram alert had already been written: **the visible half succeeded,
+so nothing looked wrong from the outside.**
+
+The fix removed work rather than adding a node: the CRM row now exists before any tap, so the tap no
+longer needs to write it. `Lookup Signup` goes straight to `Flag Promoted`, and
+`Add to CRM (Entries)` is **terminal** — it is Flow A's alone.
+
+**Reusing a node across two flows silently reuses its downstream.** When wiring into an existing
+node, look at what it feeds before assuming it is a leaf.
+
+Two consequences to know:
+
+- **`groups` and `last_topic` are no longer hardcoded to the waitlist.** They are `signup` and
+  `={{ 'Signup · ' + $json.source }}`, so an app account is not filed as `website-waitlist`.
+  `association` still carries the exact source.
+- ⚠️ **Dismiss does not yet kick anyone out.** `Mark Dismissed` writes `status='dismissed'` to the
+  Signups sheet only; the `Entries` row stays. Deliberately deferred — the buttons are now a triage
+  *log*, not a CRM gate. If removing a contact needs to be real, that is a write to `Entries`, not a
+  fourth meaning for the existing branch.
+
+The JSON keeps its shape untouched — two doors, one pipeline, a human promotion gate — because that
+is the reusable part. No node, connection or expression changed. It still says "waitlist" throughout
+(`Waitlist Webhook`, `formTitle: Join the waitlist`, `groups=website-waitlist`), which is accurate to
+what it is; renaming that would mean mirroring a purely cosmetic diff into `.local` for a workflow
+nobody runs.
+
+Two **sticky notes** were corrected in both copies, and the distinction is worth stating: node names
+are cosmetics, stickies are documentation. They pointed at `…/api/waitlist-email` and told the
+importer to paste the webhook URL into `N8N_WAITLIST_WEBHOOK_URL` — a route and a variable that no
+longer exist anywhere. A parked workflow may keep its old vocabulary; it may not keep instructions
+that send a reader somewhere gone.
+
+⚠️ **Flow C cannot be revived as-is — the email it calls changed meaning.** That endpoint was
+renamed and its copy rewritten into an **approval** notice ("your account is open"), not a
+thank-you-for-signing-up. Wired as it stands, a brand-new and still *unentitled* signup would be
+told their account is open. Point `Render Email` at a signup-confirmation renderer, or move the call
+to the moment `/allow` is granted — do not just re-enable the branch.
+
 ### Two committed copies
 
 | File | Purpose | IDs |
@@ -32,9 +136,11 @@ from the local file by node name — and keep the email nodes verbatim from loca
 | **Signups** | `YOUR_SIGNUPS_SPREADSHEET_ID` | `Sheet1` | Inbox / staging log — *everyone* lands here automatically | `email, first_name, surname, use_case, source, signup_timestamp, known_in_crm, status` |
 | **CRM (Entries)** | `YOUR_ENTRIES_SPREADSHEET_ID` | `Entries` | Curated contact list — only written on a human tap | `email, first_name, surname, status, groups, association, last_topic, notes, contact_created_at, contact_updated_at` |
 
-The CRM is **read** on every signup (to flag `known_in_crm`) and **written** only when you tap
-**Add to CRM** in Telegram. This two-store split is the core design — Signups is the unjudged inbox,
-Entries is the gated clean list. Do not collapse them.
+The CRM is **read** on every signup (to flag `known_in_crm`) and, since 2026-08-13, **written on every
+signup too** — see § Every signup joins the CRM above, which supersedes the gated-write design this
+paragraph used to describe. The two stores still differ in *grain*, and that part holds: Signups is the
+append-only arrival log (one row per signup event, with a triage `status`), Entries is the contact list
+(one row per person, upserted on email). Do not collapse those.
 
 ### Signups `status` lifecycle
 
@@ -64,9 +170,10 @@ Waitlist Webhook (POST /webhook/signup-intake)   Hosted Signup Form (n8n-hosted 
                         └──────────────► Compose Confirmation → Send Confirmation Email  (Flow C, parallel)
 ```
 
-- **Door 1 — Waitlist Webhook**: for senders that have a site (e.g. `promptpotter-web` `/api/waitlist`
-  POSTs `{ email, name, use_case, signup_source }` and sets its own `source`). `responseMode: responseNode`
-  → `Respond OK` returns `{ok:true}` immediately, then the rest runs async.
+- **Door 1 — Waitlist Webhook**: for senders that have a site. Its one sender was `promptpotter-web`
+  `/api/waitlist`, which POSTed `{ email, name, use_case, signup_source }` and set its own `source`.
+  That route now sits in that repo's `internal/parked-waitlist/`, so **no site posts here today**.
+  `responseMode: responseNode` → `Respond OK` returns `{ok:true}` immediately, then the rest runs async.
 - **Door 2 — Hosted Signup Form**: a `formTrigger`-hosted public page (no website needed). Form field
   labels (`Email`, `Name`, `Use case`) **must** match the keys read in `Normalize (Form)`.
 - **`known_in_crm`** is derived in `Triage` purely from whether `CRM Lookup` returned a row. It is
@@ -101,7 +208,7 @@ Telegram Trigger (callback_query)
 Parse Callback (code) — splits callback_data "action:email" → { action, email, message_id, chat_id, original_text }
    ▼
 Action? (switch: addcrm | dismiss)
-   ├─ addcrm ─► Lookup Signup (re-read Signups by email) ─► Add to CRM (Entries) ─► Flag Promoted ─► Mark Promoted (Signups status='promoted') ─► Confirm Added (editMessageText + "✅ ADDED TO CRM")
+   ├─ addcrm ─► Lookup Signup (re-read Signups by email) ─► Flag Promoted ─► Mark Promoted (Signups status='promoted') ─► Confirm Added (editMessageText + "✅ ADDED TO CRM")
    └─ dismiss ─► Mark Dismissed (Signups status='dismissed') ─► Confirm Dismissed (editMessageText + "🗑 DISMISSED")
 ```
 
@@ -124,27 +231,32 @@ Action? (switch: addcrm | dismiss)
   failure never blocks the operator notification.
 - **The branded email is NOT in this repo.** Its HTML/copy/design tokens live in **`promptpotter-web`**
   (the website), the single source of truth, alongside the brand images:
-  - `promptpotter-web/src/lib/waitlist-email.ts` — `renderWaitlistEmail({firstName, useCase, year})`
+  - `promptpotter-web/src/lib/account-open-email.ts` — `renderAccountOpenEmail({firstName, useCase, year})`
     → `{ subject, html, text }`. All the logic (HTML-escaping `use_case`, the "there" greeting fallback,
-    subject, plain-text alt, year) lives here.
-  - `promptpotter-web/src/pages/api/waitlist-email.ts` — thin Astro/Vercel serverless route
+    subject, plain-text alt, year) lives here. **Renamed from `waitlist-email.ts` on 2026-08-13**, and
+    its copy now announces an approved account rather than a place in a queue — see the ⚠️ above.
+  - `promptpotter-web/src/pages/api/account-open-email.ts` — thin Astro/Vercel serverless route
     (`prerender = false`, GET + POST) that calls the lib and returns the JSON.
 - `Render Email` POSTs `{ first_name, use_case }` (from `Triage`) to that endpoint and gets back
   `{ subject, html, text }`. `Send Confirmation Email` then uses `sendTo = {{ $('Triage').item.json.email }}`,
   `subject = {{ $json.subject }}`, `message = {{ $json.html }}`. **No brand HTML, copy, colors, image URLs,
-  or `app.promptpotter.dev` references remain in the workflow** — the public template is fully generic.
+  or `app.promptpotter.com` references remain in the workflow** — the public template is fully generic.
 - **Endpoint URL is a bound placeholder**, exactly like the sheet IDs: committed file =
-  `YOUR_CONFIRMATION_EMAIL_ENDPOINT`; `.local` = `https://promptpotter.dev/api/waitlist-email`. The live
-  workflow only works once `promptpotter-web` is deployed with the route.
+  `YOUR_CONFIRMATION_EMAIL_ENDPOINT`; `.local` = `https://www.promptpotter.com/api/account-open-email`.
+  The live workflow only works once `promptpotter-web` is deployed with the route. The `.local` copy
+  previously named `promptpotter.dev/api/waitlist-email` and was wrong twice over — the route was
+  renamed and `.com` is the canonical domain — so an import would have 404'd on both counts.
 - Requires the **Gmail OAuth** credential bound on import.
 
-**Design facts (now maintained in `promptpotter-web/src/lib/waitlist-email.ts`, not here):** mobile-first;
+**Design facts (now maintained in `promptpotter-web/src/lib/account-open-email.ts`, not here):** mobile-first;
 bright warm paper `#F7F0DE` (matched to the hero image family; the site `--paper #F5F1EA` nudged warmer);
 cobalt `#090C9B`; ember wordmark header banner; **no dark content card**; structure = wordmark → eyebrow +
 heading + thank-you line → "thank you" hero image → two teaser cards whose images **alternate sides**
-(`/solutions` "built like a template, model-agnostic, timeless"; `/docs` "open engine, hosted when you
-want it") → optional `use_case` → closing line (account at **app.promptpotter.dev** when invites open
-~**June**) → footer. Images served from `promptpotter-web/public/email/`: `wordmark.jpg` (cropped ~70px),
+(`/product` "built like a template, model-agnostic, timeless"; `/docs` "open engine, hosted when you
+want it") → optional `use_case` → reply-to-a-human line → footer. Both domains come from
+`src/data/instance.ts` (`site_url`, `app_url`) rather than being written into the template — the old
+hardcoded "invites open ~**June**" promise is gone, and so is the `.dev` host. Images served from
+`promptpotter-web/public/email/`: `wordmark.jpg` (cropped ~70px),
 `thankyou.jpg` (heart-sign wizard), `card-solutions.png` (jar), `card-howitworks.png` (wizard). To change
 copy/layout/images, edit the website lib + `public/email/` — never this repo.
 
@@ -158,8 +270,10 @@ copy/layout/images, edit the website lib + `public/email/` — never this repo.
 - **Telegram Bot** → `Notify (Telegram)`, `Telegram Trigger`, `Confirm Added`, `Confirm Dismissed`.
   Set `YOUR_CHAT_ID` on `Notify (Telegram)`.
 - **Gmail OAuth** → `Send Confirmation Email`.
-- After activating, copy the Webhook **Production URL** into the sender's `N8N_WAITLIST_WEBHOOK_URL`,
-  and grab the **Form Trigger** URL to share/bookmark.
+- After activating, copy the Webhook **Production URL** into the sender's own config, and grab the
+  **Form Trigger** URL to share/bookmark. The variable this used to name, `N8N_WAITLIST_WEBHOOK_URL`,
+  no longer exists — `promptpotter-web` dropped it from its `astro.config.mjs` env schema when the
+  form was parked, so a revival introduces the variable rather than reusing one.
 
 ### Removed / do not reintroduce (unless explicitly asked)
 
