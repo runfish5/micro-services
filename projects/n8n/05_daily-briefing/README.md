@@ -8,7 +8,8 @@ Sends a Telegram message with:
 - Today's Google Calendar events (time + title)
 - Standing commitments and what is due (via the plugin seam — see below)
 - Current prices for tracked products (via price-checker subworkflow)
-- Who visited the website in the last 24 h, and who joined the waitlist
+- Who visited the website in the last 24 h, and who signed up (there has been exactly one signup so
+  far, so that section has yet to render)
 - Inline buttons for on-demand actions: Expenses, Learning Notes, Deal Finder, Help
 
 Button taps route through the steward's menu-handler (project 10).
@@ -39,7 +40,7 @@ last two sections of the message:
 | Node | Reads | Renders |
 |------|-------|---------|
 | `Get Visits` | `Visits` tab — written by [15_site-visits](../15_site-visits/) | a summary: visitor/view/click totals, top pages, countries, and the 3 most engaged visitors |
-| `Get Signups` | `Sheet1` — written by [shared/signup-intake](../shared/) | one line per new signup: name and use case |
+| `Get Signups` | `Sheet1` — written by [shared/signup-intake](../shared/) (active; exactly one row so far) | one line per new signup: name and use case |
 
 Both sections are filtered to the last 24 hours and **render nothing when empty**, so a
 quiet day produces exactly the old calendar + price message.

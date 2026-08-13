@@ -19,12 +19,23 @@ Manual Trigger   ┘
 | Calendar | Google Calendar | — |
 | Prices | `price-checker` subworkflow | `12_steward` |
 | Site | `Visits` tab | `15_site-visits` |
-| Waitlist | `Sheet1` (Signups) | `shared/signup-intake` |
+| Signups | `Sheet1` (Signups) | `shared/signup-intake` — active, but only 1 row has ever been written |
 
 Keep it that way. **Logic that produces data belongs in the owning project; this workflow only
 formats.** The moment the briefing starts computing something nobody else can see, that thing
 becomes invisible to every other surface — the steward, the ops center, a future `/commitments`
 command — and it can only ever be looked at once a day at 7 AM.
+
+**The Signups section has never rendered, and that is data, not a defect (2026-08-13).**
+`shared/signup-intake` writes `Sheet1` and has been **active** all along — one row has ever been
+written, the operator's own 2026-05-29 test. The section renders only when non-empty (rule 4 below),
+so its silence has been accurate every morning.
+
+What changed is the sender: no longer the marketing site's waitlist form (parked) but the
+**PromptPotter app**, which posts every new account to that workflow; signups now also land in the
+CRM automatically. **Do not read a silent section as a broken one here** — it is the one section
+whose emptiness has always been the truth, which is exactly why a real outage in it would be
+invisible. If intake is ever abandoned, delete `Get Signups` and `signupSection` together.
 
 ## The plugin contract
 

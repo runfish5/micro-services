@@ -313,7 +313,7 @@ Staged, so the seam is proven before anything working is moved onto it.
 | 3 | Agent assignment: tap dispatches through the classifier, agent writes back `done`/`failed` | The interesting one |
 | 4 | Reconciler audits claimed-done against `Billing_Ledger` | Low — read-only until it resurrects a row |
 | 5 | Move the site digest into `15_site-visits/workflows/visits-digest.json`; `SELF_IPS` moves with it | Real. Behaviour must be identical; diff the rendered message before and after |
-| 6 | Signups and prices become plugins | Low |
+| 6 | Signups and prices become plugins. Note the Signups section has never rendered (one signup, ever) — port it, but do not read its silence as proof the port worked | Low |
 
 Stage 1 stands on its own even if nothing after it happens: it ships the nagging list, and it
 proves the contract against a plugin with no legacy behaviour to preserve.

@@ -177,7 +177,7 @@ projects/n8n/
 ├── 14_db-janitor/                   - Scheduled DB cleanup reporter (stub)
 ├── 15_site-visits/                  - Website visit telemetry intake (beacon → Visits sheet)
 ├── 16_commitments-ledger/           - Our own record of what we signed up for; reconciles against 04's Billing_Ledger
-└── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (standalone intake door)
+└── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (intake door — ACTIVE, live path is `promptpotter-waitlist`)
 ```
 
 Projects 02, 03, and 04 have their own `CLAUDE.md` files with detailed architecture documentation.

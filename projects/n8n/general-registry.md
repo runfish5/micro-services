@@ -50,7 +50,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | telegram-command-interface | `13_n8n-ops-center/telegram-command-interface.n8n.json` |
 | - | db-janitor | `14_db-janitor/workflows/db-janitor.json` |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` (one workflow: generate 06:30 + digest + tap) |
-| - | signup-intake | `shared/signup-intake.n8n.json` (`signup-intake.local.n8n.json` is the local variant) |
+| `G766da6yCLuQS50T` | Signup Intake → CRM triage | `shared/signup-intake.n8n.json` (`.local` variant alongside) — **active**; live webhook path is `promptpotter-waitlist`, NOT the committed `signup-intake`. Sender = the PromptPotter app; auto-writes the CRM row; email branch disabled |
 
 ### Subworkflows
 
