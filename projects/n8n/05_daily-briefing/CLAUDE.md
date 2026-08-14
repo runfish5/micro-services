@@ -27,15 +27,18 @@ becomes invisible to every other surface — the steward, the ops center, a futu
 command — and it can only ever be looked at once a day at 7 AM.
 
 **The Signups section has never rendered, and that is data, not a defect (2026-08-13).**
-`shared/signup-intake` writes `Sheet1` and has been **active** all along — one row has ever been
-written, the operator's own 2026-05-29 test. The section renders only when non-empty (rule 4 below),
-so its silence has been accurate every morning.
+`shared/signup-intake` writes `Sheet1` and has been **active** all along.
 
 What changed is the sender: no longer the marketing site's waitlist form (parked) but the
 **PromptPotter app**, which posts every new account to that workflow; signups now also land in the
-CRM automatically. **Do not read a silent section as a broken one here** — it is the one section
-whose emptiness has always been the truth, which is exactly why a real outage in it would be
-invisible. If intake is ever abandoned, delete `Get Signups` and `signupSection` together.
+CRM automatically. The section reports the running free-tier total on every run (rule 4 below), so
+a silent one is now a broken one — which is the point of always printing it. If intake is ever
+abandoned, delete `Get Signups` and `signupSection` together.
+
+⚠️ **The total counts SHEET ROWS, and the app's account count is the real number.** They agree only
+while every account has reached this workflow; accounts created before the app's CRM forward existed
+are missing from the sheet and invisible here. The app carries its own `account_count` on each
+signup POST — believe that one when they disagree.
 
 ## The plugin contract
 
@@ -75,8 +78,11 @@ The precedent is split, and both sides are correct:
 - **SITE always renders**, even at zero visitors. A missing section is indistinguishable from a
   broken pipeline, and that ambiguity cost real confusion the first morning it shipped — no
   visitors looked like no feature.
-- **WAITLIST renders only when non-empty.** It reports arrivals; silence is a normal day, not a
-  claim about system health.
+- **SIGNUPS always renders** — it did not always, and the flip is the clearest worked example of
+  the test below. It used to only announce arrivals, so silence was a normal day. Then signing up
+  started GRANTING access on the operator's shared provider key, and the section stopped answering
+  "did anyone arrive?" and started answering "how many people can spend my money?" — a question you
+  would otherwise go and check. Same section, same code, different meaning of silence.
 
 The test is what silence *means*. If the section answers a question you would otherwise go and
 check ("did anything need paying?"), silence is an answer and must be printed — a one-liner is

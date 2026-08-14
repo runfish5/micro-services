@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Waitlist Webhook** — for senders that *have* a site (a serverless function on your site POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
+        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Signup Webhook** — for senders that *have* a site (a serverless function on your site POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
         "height": 420,
         "width": 460,
         "color": 4
@@ -85,7 +85,7 @@
         "options": {}
       },
       "id": "a1b2c3d4-0001-4001-8001-000000000001",
-      "name": "Waitlist Webhook",
+      "name": "Signup Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -136,6 +136,12 @@
               "name": "source",
               "value": "={{ ($json.body.signup_source || 'web').toString().trim() }}",
               "type": "string"
+            },
+            {
+              "id": "w-count",
+              "name": "account_count",
+              "value": "={{ Number($json.body.account_count) || 0 }}",
+              "type": "number"
             }
           ]
         },
@@ -152,7 +158,7 @@
     },
     {
       "parameters": {
-        "formTitle": "Join the waitlist",
+        "formTitle": "Get free access",
         "formDescription": "Leave your details and we'll be in touch.",
         "formFields": {
           "values": [
@@ -228,7 +234,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Unify whichever door fired into one canonical signup shape.\nconst j = $json;\nconst name = (j.name || '').toString().trim();\nconst parts = name.split(/\\s+/).filter(Boolean);\nreturn [{\n  json: {\n    email: (j.email || '').toString().trim().toLowerCase(),\n    first_name: parts[0] || '',\n    surname: parts.slice(1).join(' '),\n    use_case: j.use_case || '',\n    source: j.source || 'web',\n    signup_timestamp: $now.toISO()\n  }\n}];"
+        "jsCode": "// Unify whichever door fired into one canonical signup shape.\nconst j = $json;\nconst name = (j.name || '').toString().trim();\nconst parts = name.split(/\\s+/).filter(Boolean);\nreturn [{\n  json: {\n    email: (j.email || '').toString().trim().toLowerCase(),\n    first_name: parts[0] || '',\n    surname: parts.slice(1).join(' '),\n    use_case: j.use_case || '',\n    source: j.source || 'web',\n    account_count: Number(j.account_count) || 0,\n    signup_timestamp: $now.toISO()\n  }\n}];"
       },
       "id": "a1b2c3d4-0006-4006-8006-000000000006",
       "name": "Normalize",
@@ -383,7 +389,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID",
-        "text": "=🆕 *New signup* — added to CRM\n\n*Name:* {{ $json.first_name }} {{ $json.surname }}\n*Email:* `{{ $json.email }}`\n*Source:* {{ $json.source }}\n*Use case:* {{ $json.use_case || '—' }}\n\n🔎 Already in CRM: *{{ $json.known_in_crm === 'yes' ? 'YES' : 'no' }}*{{ $json.known_in_crm === 'yes' ? `\\n\\n📇 In CRM as *${$('CRM Lookup').first().json.status || 'contact'}*${$('CRM Lookup').first().json.groups ? ' · ' + $('CRM Lookup').first().json.groups : ''}\\n🗒 Last topic: ${$('CRM Lookup').first().json.last_topic || '—'}\\n📅 Since: ${($('CRM Lookup').first().json.contact_created_at || '').toString().slice(0, 10) || '—'}` : '' }}",
+        "text": "=🆕 *New signup* — added to CRM\n\n*Name:* {{ $json.first_name }} {{ $json.surname }}\n*Email:* `{{ $json.email }}`\n*Source:* {{ $json.source }}\n*Free tier:* {{ $('Normalize').first().json.account_count || '?' }} accounts\n*Use case:* {{ $json.use_case || '—' }}\n\n🔎 Already in CRM: *{{ $json.known_in_crm === 'yes' ? 'YES' : 'no' }}*{{ $json.known_in_crm === 'yes' ? `\\n\\n📇 In CRM as *${$('CRM Lookup').first().json.status || 'contact'}*${$('CRM Lookup').first().json.groups ? ' · ' + $('CRM Lookup').first().json.groups : ''}\\n🗒 Last topic: ${$('CRM Lookup').first().json.last_topic || '—'}\\n📅 Since: ${($('CRM Lookup').first().json.contact_created_at || '').toString().slice(0, 10) || '—'}` : '' }}",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
@@ -782,7 +788,8 @@
         1500,
         200
       ],
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "disabled": true
     },
     {
       "parameters": {
@@ -811,11 +818,12 @@
           "id": "CREDENTIAL_ID_GMAIL",
           "name": "Gmail OAuth"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
-        "content": "## Confirmation email\n\nThe branded confirmation email is **not** built in this workflow — its HTML/copy lives on the website (single source of truth, alongside the brand images) and is rendered by an endpoint: `…/api/account-open-email`.\n\n*Render Email* (HTTP Request) POSTs `first_name` + `use_case` and gets back `{ subject, html, text }`; *Send Confirmation Email* (Gmail) sends it to the signup's address. Runs on a **parallel branch** to the Telegram alert — *Render Email* uses an error output and Gmail is *continue on error*, so a render/bounce failure never blocks your operator notification.\n\n⚠ Set the endpoint URL on *Render Email* + bind the **Gmail OAuth** credential on import.",
+        "content": "## Confirmation email\n\nThe branded confirmation email is **not** built in this workflow — its HTML/copy lives on the website (single source of truth, alongside the brand images) and is rendered by an endpoint: `…/api/account-open-email`.\n\n*Render Email* (HTTP Request) POSTs `first_name` + `use_case` and gets back `{ subject, html, text }`; *Send Confirmation Email* (Gmail) sends it to the signup's address. Runs on a **parallel branch** to the Telegram alert — *Render Email* uses an error output and Gmail is *continue on error*, so a render/bounce failure never blocks your operator notification.\n\n⚠ Both nodes ship **disabled**. Before enabling: deploy the endpoint and confirm it answers, then bind the **Gmail OAuth** credential. Neither has been exercised, and failure here is silent by design — the run still succeeds, the mail just never arrives.",
         "height": 300,
         "width": 320,
         "color": 4
@@ -830,7 +838,7 @@
     }
   ],
   "connections": {
-    "Waitlist Webhook": {
+    "Signup Webhook": {
       "main": [
         [
           {

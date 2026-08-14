@@ -56,8 +56,11 @@ Two reasons, and the first answers "why did my test signup never get a mail":
 2. The endpoint that replaced it sends an **approval** notice ("your account is open"). Repointing
    the URL alone would mail that to every brand-new, unentitled signup.
 
-So do not "fix the URL". Either write a signup-confirmation renderer and point at that, or move the
-call to the moment `/allow` is granted — then re-enable both nodes.
+**Reason 2 dissolved on 2026-08-14 and reason 1 has a live URL now.** Signing up grants access, so
+"your account is open" is simply *true* for a brand-new signup — there is no unentitled state left for
+it to lie about — and `.local` already points at `https://promptpotter.com/api/account-open-email`.
+Re-enabling both nodes is now a one-line change rather than a renderer to write. It is left DISABLED
+because turning it on starts mailing real people, which is the operator's call, not a cleanup.
 
 ### Every signup joins the CRM — the gate was removed on purpose (2026-08-13)
 
@@ -99,10 +102,29 @@ Two consequences to know:
   fourth meaning for the existing branch.
 
 The JSON keeps its shape untouched — two doors, one pipeline, a human promotion gate — because that
-is the reusable part. No node, connection or expression changed. It still says "waitlist" throughout
-(`Waitlist Webhook`, `formTitle: Join the waitlist`, `groups=website-waitlist`), which is accurate to
-what it is; renaming that would mean mirroring a purely cosmetic diff into `.local` for a workflow
-nobody runs.
+is the reusable part. No node, connection or expression changed.
+
+### It stopped being a waitlist (2026-08-14)
+
+Signing up at the app now **grants access immediately**, bounded by a per-account lifetime spend
+ceiling instead of by the operator's approval. So the vocabulary was renamed where a human reads it:
+`Waitlist Webhook` → `Signup Webhook`, `formTitle: Join the waitlist` → `Get free access`. The earlier
+note here argued the opposite — that renaming was a purely cosmetic diff not worth mirroring into
+`.local` — and it was right while the thing WAS a waitlist. What changed is not the taste, it is the
+referent: the name now describes a class of user that no longer exists.
+
+**The waitlist is PARKED, not removed.** Both doors, the promotion buttons and the whole pipeline
+stand exactly as they were; only copy moved. Reviving it is re-editing two strings, not rebuilding a
+flow.
+
+⚠️ **The live webhook PATH is untouched and must stay that way.** `.local` still reads
+`promptpotter-waitlist`; the box's `N8N_SIGNUP_WEBHOOK_URL` carries it, and renaming the path 404s
+every signup POST the moment it is imported. The node's *name* is cosmetic, its *path* is a binding.
+
+**`account_count` rides the app's POST** — `Normalize (Web)` picks it off `$json.body`, `Normalize`
+carries it through both doors (Door 2 has none, so `0`), and `Notify (Telegram)` renders it as
+`*Free tier:* N accounts`. It is deliberately NOT assigned in `Triage`, so it never reaches
+`Append to Signups` — that node is `autoMapInputData` and a new key there means a new Sheet column.
 
 Two **sticky notes** were corrected in both copies, and the distinction is worth stating: node names
 are cosmetics, stickies are documentation. They pointed at `…/api/waitlist-email` and told the
@@ -110,11 +132,10 @@ importer to paste the webhook URL into `N8N_WAITLIST_WEBHOOK_URL` — a route an
 longer exist anywhere. A parked workflow may keep its old vocabulary; it may not keep instructions
 that send a reader somewhere gone.
 
-⚠️ **Flow C cannot be revived as-is — the email it calls changed meaning.** That endpoint was
-renamed and its copy rewritten into an **approval** notice ("your account is open"), not a
-thank-you-for-signing-up. Wired as it stands, a brand-new and still *unentitled* signup would be
-told their account is open. Point `Render Email` at a signup-confirmation renderer, or move the call
-to the moment `/allow` is granted — do not just re-enable the branch.
+**Flow C can now be revived as-is** — see the 2026-08-14 note above. The email it calls says "your
+account is open", which stopped being a lie the moment signing up became the grant. It stays
+`disabled: true` on the instance until the operator decides to start mailing people, not because the
+copy is wrong.
 
 ### Two committed copies
 
@@ -153,7 +174,7 @@ only states. (An earlier `re-engaged` / "Update CRM" state was prototyped and **
 ### Flow A — fresh signup (two trigger doors → one pipeline)
 
 ```
-Waitlist Webhook (POST /webhook/signup-intake)   Hosted Signup Form (n8n-hosted page)
+Signup Webhook (POST /webhook/signup-intake)     Hosted Signup Form (n8n-hosted page)
         │  → Respond OK ({ok:true}, async)               │
         ▼                                                 ▼
    Normalize (Web)                                  Normalize (Form)
@@ -170,9 +191,10 @@ Waitlist Webhook (POST /webhook/signup-intake)   Hosted Signup Form (n8n-hosted 
                         └──────────────► Compose Confirmation → Send Confirmation Email  (Flow C, parallel)
 ```
 
-- **Door 1 — Waitlist Webhook**: for senders that have a site. Its one sender was `promptpotter-web`
+- **Door 1 — Signup Webhook**: for senders that have a site. Its original sender was `promptpotter-web`
   `/api/waitlist`, which POSTed `{ email, name, use_case, signup_source }` and set its own `source`.
-  That route now sits in that repo's `internal/parked-waitlist/`, so **no site posts here today**.
+  That route now sits in that repo's `internal/parked-waitlist/`, so **no site posts here today** —
+  the PromptPotter app does, with an extra `account_count` (see below).
   `responseMode: responseNode` → `Respond OK` returns `{ok:true}` immediately, then the rest runs async.
 - **Door 2 — Hosted Signup Form**: a `formTrigger`-hosted public page (no website needed). Form field
   labels (`Email`, `Name`, `Use case`) **must** match the keys read in `Normalize (Form)`.
@@ -242,10 +264,14 @@ Action? (switch: addcrm | dismiss)
   `subject = {{ $json.subject }}`, `message = {{ $json.html }}`. **No brand HTML, copy, colors, image URLs,
   or `app.promptpotter.com` references remain in the workflow** — the public template is fully generic.
 - **Endpoint URL is a bound placeholder**, exactly like the sheet IDs: committed file =
-  `YOUR_CONFIRMATION_EMAIL_ENDPOINT`; `.local` = `https://www.promptpotter.com/api/account-open-email`.
-  The live workflow only works once `promptpotter-web` is deployed with the route. The `.local` copy
-  previously named `promptpotter.dev/api/waitlist-email` and was wrong twice over — the route was
-  renamed and `.com` is the canonical domain — so an import would have 404'd on both counts.
+  `YOUR_CONFIRMATION_EMAIL_ENDPOINT`; `.local` = `https://promptpotter.com/api/account-open-email`.
+  The live workflow only works once `promptpotter-web` is deployed with the route — and as of
+  2026-08-14 it is **not**: the newest Vercel build predates the rename, so the apex still answers
+  the retired `/api/waitlist-email` and 404s the new one. Deploy before enabling the two nodes.
+  The `.local` copy previously named `promptpotter.dev/api/waitlist-email` and was wrong twice over
+  — the route was renamed and `.com` is the canonical domain — so an import would have 404'd on both
+  counts. **Apex, not `www`:** `promptpotter.com` serves the route directly and `www.` 307s to it,
+  so naming `www` buys a redirect hop on every send for nothing.
 - Requires the **Gmail OAuth** credential bound on import.
 
 **Design facts (now maintained in `promptpotter-web/src/lib/account-open-email.ts`, not here):** mobile-first;
