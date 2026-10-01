@@ -105,7 +105,7 @@ What exists now, and what each part is for:
 
 | Part | State |
 |---|---|
-| The guard: a small service next to Postgres (`projects/n8n/14_db-janitor`, bash + psql, **not an n8n workflow**). Every 2 min one Postgres function measures the volume and the bytes each workflow stored; over the limit → alert, unpublish, stop its runs; ≥85% → everything with a trigger is unpublished. Also reports "n8n is not ready" | **Built and tested locally in its image 2026-10-01. Not deployed: the Railway service does not exist yet.** Update this line when it runs in `observe`, then `enforce` |
+| The guard: a small service next to Postgres (`projects/n8n/14_db-janitor`, bash + psql, **not an n8n workflow**). Every 2 min one Postgres function measures the volume and the bytes each workflow stored; over the limit → alert, unpublish, stop its runs; ≥85% → everything with a trigger is unpublished. Also reports "n8n is not ready" | **Running on Railway as service `db-guard` in `observe` since 2026-10-01 (first check: 212.3 MB, 42.5% before calibration). No Telegram variables yet, so alerts only reach its deploy log.** Update this line when it goes to `enforce` |
 | Heartbeat: readiness check, HTTP status judged before the body, guard-alive check | **Pushed 2026-10-01.** The guard-alive check stays off until the repository variables `GUARD_STATUS_URL` and `HEARTBEAT_GUARD_CHECK=required` are set |
 | `inbox-backfill` stores nothing on failed runs either | **Repo + live 2026-10-01** |
 | Pruning and run-time limit as Railway variables | **Open** — set by hand; values in `projects/n8n/docs/infra-ops.md` |

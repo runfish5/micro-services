@@ -191,6 +191,8 @@ until sql_file "$SQL_DIR/guard.sql" >/dev/null 2>"$STATE_DIR/err"; do
   sleep 10 & wait $!
 done
 log "guard installed, mode=$MODE, every ${INTERVAL}s"
+# One message per start: it proves the alert channel works, and a restart never goes unseen.
+tell "[db-guard] started" "DB guard started in mode $MODE. It checks the database every ${INTERVAL} seconds."
 
 while true; do
   tick
