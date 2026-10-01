@@ -13,7 +13,7 @@ Triggers (Nodes 1-2)
 Schema Check & Creation (Nodes 3-10)
   - Fetch data headers → Check schema exists → Create if needed
 Data Extraction (Nodes 11-14)
-  - Build JSON schema → Call rate-limited subworkflow → Merge outputs → Write
+  - Build JSON schema → Extract Data from String (one LLM call per batch) → Merge outputs → Write
 ```
 
 ### Data Flow
@@ -35,8 +35,8 @@ Trigger → String Input (config)
                               Build Output Schema
                               (sources data from upstream)
                                         ↓
-                              Call llm-extract-rate-limited
-                              (subworkflow with rate limiting)
+                              Extract Data from String
+                              (one LLM call per schema batch, no pause)
                                         ↓
                               Merge Outputs
                                         ↓
@@ -77,10 +77,11 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
                          └→ Create and Write Schema Sheet (Sheets batchUpdate API)
                               └→ Build Output Schema (uses Generate Schema with LLM data)
                           │
-                          └→ Call llm-extract-rate-limited (subworkflow)
-                          │     - Handles rate limiting for Groq free tier
-                          │     - Batches schema fields per llm_rate_limit
-                          │     - Waits llm_rate_delay seconds between batches
+                          └→ Extract Data from String (LLM chain, one call per batch)
+                          │     ├─ LLM Processor
+                          │     └─ Dynamic Output Parser
+                          │     - No rate limiting here. After a 429 the error handler's
+                          │       recovery path takes over (see llm-extract-rate-limited below)
                           │
                           └→ Merge Outputs
                                │
@@ -105,12 +106,13 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 - **Output**: JSON array with ColumnName, Type, Description, Classes
 - **Purpose**: Intelligently infer schema from column names
 
-### 2. Data Extraction (via subworkflow)
-- **Subworkflow**: llm-extract-rate-limited
-- **Model**: Groq LLM (configurable)
-- **Input**: Raw text + dynamic JSON schema + rate limiting config
+### 2. Data Extraction
+- **Node**: Extract Data from String (LLM Processor + Dynamic Output Parser)
+- **Model**: LLM (configurable)
+- **Input**: Raw text + dynamic JSON schema, one call per schema batch
 - **Output**: Structured data matching schema + confidence scores
-- **Purpose**: Extract values from unstructured text with rate limiting for Groq free tier
+- **Purpose**: Extract values from unstructured text. Rate limits are handled after the fact by the
+  error handler, not here (see llm-extract-rate-limited)
 
 ## Node Details
 
@@ -127,11 +129,12 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 | 9 | Schema LLM | lmChat | Language model for schema |
 | 10 | Schema Output Parser | outputParser | Parse schema JSON |
 | 11 | Create and Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 12 | Build Output Schema | code | Build JSON schema with depth-based field filtering via DEPTH_MAP + effective batch size (batch_size - 3 for confidence); row_id from match_column → match_value → email; `row_key` groups one row's batches; rows with empty text are skipped |
+| 12 | Build Output Schema | code | Build JSON schema with depth-based field filtering via DEPTH_MAP; at most `batch_size` fields per LLM call, split evenly; the match column, the text column and every `known_values` key are never sent to the LLM; row_id from match_column → match_value → email; `row_key` groups one row's batches. A row with nothing left to extract (or empty text) becomes one `direct` item |
+| 12b | If LLM Needed | if | `direct` items skip the LLM and go straight to Merge Outputs |
 | 13 | Extract Data from String | chainLlm | LLM extraction, one item per row × column batch. `retryOnFail` (2 tries), then `onError: continueRegularOutput` so a failed batch becomes `{ error }` at the same index |
 | 14 | LLM Processor | lmChat | Extraction model |
 | 15 | Dynamic Output Parser | outputParser | Schema from `$json.schema`, autoFix on |
-| 16 | Merge Outputs | code | Merge batch outputs per `row_key`; failed batches → `extraction_error` |
+| 16 | Merge Outputs | code | Merge batch outputs per `row_key`; failed batches → `extraction_error`; `known_values` win over LLM values; empty values are dropped |
 | 17 | Write Extracted Row | googleSheets | Mode A write (active) |
 | 18 | CRM Write via Apps Script | httpRequest | Mode B: write data + create folder via doPost (**disabled**; URL placeholder `YOUR_APPS_SCRIPT_ID`) |
 | 19 | CRM Prep Email Store Input | set | Mode B: prepare data for contact-memory-update (**disabled**) |
@@ -143,8 +146,9 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 - Schema sheet name `Description_hig7f6` has suffix for disambiguation
 - First run creates schema; subsequent runs skip creation
 - Edit schema sheet to customize extraction (types, descriptions, enum values)
-- `batch_size` controls how many fields per LLM call (batching within subworkflow)
-- **Rate limiting**: Configure `llm_rate_limit` (requests before pause) and `llm_rate_delay` (seconds to wait) for Groq free tier
+- `batch_size` = data fields per LLM call (default 10). 13 fields at 10 become 7 + 6, not 10 + 3
+- **Every call repeats the prompt and the whole text.** Batches are sent at the same time, so the number of calls, not the field count, is what hits a tokens-per-minute limit. Keep calls few
+- **Rate limiting** is not done in this flow. See llm-extract-rate-limited below
 - **Apps Script handles both writing and folder creation** - no triggers needed (CRM mode)
 
 ### Update-or-Append Logic (Merge Outputs + Write Extracted Row)
@@ -154,9 +158,15 @@ The Merge Outputs node prepares clean data for Write Extracted Row:
 1. **Dynamic match column**: Sets `merged[matchColumn]` from the `match_column` config
 2. **Write Extracted Row compatibility**: Always copies match value to `merged.email` (Write Extracted Row hardcoded to match on "email" column)
 3. **Overwrite prevention**: Only sets `merged[textColumn]` if `textColumn !== matchColumn` to prevent the text body from overwriting the match value
-4. **Clean output**: Confidence/observability fields are logged but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write Extracted Row.
+4. **Clean output**: The LLM reports only `confidence.overall`; it is logged in the execution but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write Extracted Row.
 
-5. **Append instead of match**: Deletes `email` when `match_same_row` is false or the email is empty. Write Extracted Row appends any item without the key; an empty string would match, and overwrite, the first row with a blank email.
+5. **Empty never erases**: an empty value (`""`, `[]`, `null`) means *not in this text*, so it is dropped and the cell keeps its value. Both writers (Write Extracted Row and the Apps Script) write empty strings, so before this every blank LLM answer wiped a filled cell.
+
+6. **Class fields may be empty**: every enum also allows `""`. Without it the schema rejects an honest *not stated*, the chain retries, and the retry picks an option at random. Seen on 2026-10-01: first answer `status: ""`, rejected, second answer a guessed `Time to reach out`.
+
+7. **Known values win**: `known_values` from the caller are applied after the LLM output. A known value of `null` means *leave this column alone*: it is neither extracted nor written.
+
+8. **Append instead of match**: Deletes `email` when `match_same_row` is false or the email is empty. Write Extracted Row appends any item without the key; an empty string would match, and overwrite, the first row with a blank email.
 
 Write Extracted Row always uses `appendOrUpdate` on `email`. The operation is fixed, not an expression: the editor drops an expression-driven operation's sheet and columns on import (see [troubleshooting](../troubleshooting.md#could-not-get-parameter-after-import-google-sheets)). The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
 
@@ -169,7 +179,8 @@ When called as a subworkflow, callers can override these fields (defaults apply 
 | `spreadsheet_id` | *(caller must provide)* | Google Sheets document ID |
 | `data_sheet_name` | `Sheet1` | Sheet tab name |
 | `schema_sheet_name` | `Description_hig7f6` | Schema definition sheet |
-| `batch_size` | `7` | Fields per LLM batch |
+| `batch_size` | `10` | Data fields per LLM call |
+| `known_values` | `{}` | Facts the caller already has, e.g. `{ last_topic: subject, last_contacted: date }`. Written as given, never sent to the LLM; `null` = leave that column alone. Object or JSON string |
 | `match_column` | `email` | Which column to match on |
 | `match_value` | `$json[$json.match_column]` | Value to match; auto-resolved from `match_column` field name |
 | `match_same_row` | `true` | `false` = append-only mode |
@@ -179,44 +190,70 @@ When called as a subworkflow, callers can override these fields (defaults apply 
 
 Build Output Schema uses a hardcoded `DEPTH_MAP` to filter fields by the upstream classifier's `extract_depth` value:
 
-| Depth | Fields | Batches (batch_size=7) |
+| Depth | Fields | LLM calls (batch_size=10, organizer's known_values) |
 |-------|--------|----------------------|
-| 1 (shallow) | first_name, surname, email, last_topic, last_being_contacted, last_contacted | 2 (4+2) |
-| 2 (medium) | depth 1 + more_emails, status, association, groups, goal_contact_frequency, current_job, works_at | 4 (4+4+4+1) |
-| 3 (deep) | all fields (~18) | 5 (4+4+4+4+2) |
+| 1 (shallow) | email, last_topic, last_being_contacted, last_contacted | 0: all known or the match value |
+| 2 (medium) | depth 1 + first_name, surname, more_emails, status, association, groups, goal_contact_frequency, current_job, works_at | 1 (9 fields) |
+| 3 (deep) | all fields (~18) | 2 |
 
-Each batch reserves 3 slots for the confidence sub-properties (overall, low_confidence_fields, reasoning), so effective data fields per batch = `batch_size - 3`. Fields not in DEPTH_MAP default to depth 3.
+Depth 1 is automated mail (notifications, receipts, alerts): by the classifier's own definition it holds no personal details, so names moved to depth 2. Before, depth 1 cost 2 calls that returned only the subject and email the caller already had. Fields not in DEPTH_MAP default to depth 3.
 
 ---
 
 ## Subworkflows
 
-### llm-extract-rate-limited
+### llm-extract-rate-limited (building block, spec, not built yet)
 
-**File:** `workflows/subworkflows/llm-extract-rate-limited.json`
+A paced version of **Extract Data from String**: `llm_rate_limit` calls, then a pause of
+`llm_rate_delay` seconds, repeated. Two uses:
 
-**Purpose:** Wraps LLM extraction with rate limiting to avoid Groq free tier limits.
+1. **Standalone and tutorial copies, on by default.** Someone who downloads smart-table-fill on a
+   free LLM tier has no error handler behind it. For them the slow, safe path is the right default.
+   That clutter is unavoidable there, and it belongs in the repo.
+2. **Recovery on a full lab.** Here the normal path stays fast, and the error handler reaches for
+   this block only after a rate-limit failure was logged.
 
-#### Flow
+On this instance it is not needed in the normal path. If a copy exists there, it stays deactivated.
+
+**Status:** documented in January (commit 323e778), but the JSON was never committed and is not on
+the instance. The pacing that does exist is smart-folder2table's `rate_limit_wait_seconds`, driven by
+the error handler's auto-retry registry.
+
+**File (planned):** `workflows/subworkflows/llm-extract-rate-limited.json`.
+
+#### Where it sits
+
+```
+smart-table-fill (fast: all batches at once)
+       ↓ rate_limit error (429)
+010-error-handler → Prepare & Classify Error (error_type = rate_limit)
+       ↓ workflow in AUTO_RETRY_REGISTRY
+Wait (retry_after_seconds from the error, default 60s)
+       ↓
+llm-extract-rate-limited (slow: llm_rate_limit calls, then wait llm_rate_delay, repeat)
+```
+
+Same pattern as the existing smart-folder2table entry in the registry ("start fast, adapt on error",
+see `10_error-handler/workflows/mainflow.md` § Auto-Retry Registry). The normal path stays fast;
+only a failed run pays for the waiting.
+
+#### Planned flow
+
 ```
 When Executed by Another Workflow
   ↓
 Set Config (capture rate limit params)
   ↓
-Prepare Schemas (split schemas to individual items)
+Prepare Schemas (one item per schema batch)
   ↓
-Split in Batches (batch by llm_rate_limit)
+Loop Over Batches (llm_rate_limit per round)
   ↓
-Extract Data from String (LLM chain)
-  ├─ LLM Processor (Groq)
-  └─ Dynamic Output Parser
+Extract Data from String (LLM chain + Dynamic Output Parser)
   ↓
-Wait (llm_rate_delay seconds)
-  ↓
-Loop back to Split in Batches (until all batches processed)
+Wait (llm_rate_delay seconds) → back to Loop Over Batches
 ```
 
-#### Inputs
+#### Planned inputs
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
@@ -225,31 +262,15 @@ Loop back to Split in Batches (until all batches processed)
 | contact_name | string | '' | Contact context for extraction |
 | contact_email | string | '' | Contact context for extraction |
 | subject | string | '' | Email subject context |
-| llm_rate_limit | number | 5 | Requests before rate limit pause |
-| llm_rate_delay | number | 60 | Seconds to wait between batches |
+| llm_rate_limit | number | 5 | Calls per round before pausing |
+| llm_rate_delay | number | 60 | Seconds to wait between rounds |
 
-#### Node Details
+#### Open before building
 
-| # | Node | Type | Purpose |
-|---|------|------|---------|
-| 1 | Manual Trigger | trigger | Testing entry |
-| 2 | When Executed by Another Workflow | trigger | Subworkflow entry |
-| 3 | Set Config | set | Capture rate limit config |
-| 4 | Prepare Schemas | code | Split schemas to items |
-| 5 | Split in Batches | splitInBatches | Batch by llm_rate_limit |
-| 6 | Extract Data from String | chainLlm | LLM extraction |
-| 7 | LLM Processor | lmChatGroq | Extraction model |
-| 8 | Dynamic Output Parser | outputParser | Parse extracted JSON |
-| 9 | Wait | wait | Rate limit delay |
-
-#### Rate Limiting Behavior
-
-The subworkflow implements a batch + wait pattern:
-1. Processes `llm_rate_limit` schemas per batch (default: 5)
-2. Waits `llm_rate_delay` seconds after each batch (default: 60)
-3. Loops until all schemas are processed
-
-This prevents hitting Groq's free tier rate limits (varies by model; use 5 req/min as safe default for batch processing).
+- The inbox organizer needs **API retry** to keep its Gmail trigger data, so a re-run cannot start
+  at smart-table-fill alone. The handler has to know which caller to resume.
+- First lower what one email costs (fewer batches, shorter prompt). A recovery path that runs often
+  is a sign the normal path is too expensive.
 
 ---
 

@@ -18,7 +18,7 @@
     },
     {
       "parameters": {
-        "content": "## Smart Table Fill\n\nFills the empty columns of a Google Sheet from free text. You only name the columns: an LLM works out what each one means, and then extracts the values.\n\n### How it works\n1. Reads the rows of your sheet (or items sent by a parent workflow) and takes the text in `Text_to_interpret`.\n2. On the first run, an LLM describes every column header and saves the result as a schema tab (`Description_hig7f6`). Later runs reuse it, so you can edit types, descriptions and allowed values there.\n3. Turns the schema into a strict JSON structure. An LLM extracts the fields from each row's text, in batches for wide tables.\n4. Writes the values back into the row with the same `email`, or appends a new row.\n5. If a row fails, it is still written, with the reason in `extraction_error`. The other rows continue.\n\n### Setup steps\n- [ ] Create a sheet with headers in row 1, including `email` and `Text_to_interpret`. Add `extraction_error` to see failures\n- [ ] Connect Google Sheets OAuth2 on the Sheets nodes and an LLM credential on both model nodes\n- [ ] In **Get Rows in Sheet**, pick your spreadsheet and tab\n- [ ] Fill `email` and `Text_to_interpret` in a few rows, then click **Test workflow**\n\n### Customization\n- Change defaults in **String Input**, such as `match_same_row` (false = append), `batch_size`, `text_column` or `schema_sheet_name`\n- Call it from another workflow with `spreadsheet_id`, `data_sheet_name` and the text\n- An optional email-CRM branch ships disabled (bottom right)\n\n[Setup guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide.md) · [Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/README.md) · A whole Drive folder? [smart-folder2table](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/smart-folder2table.json)",
+        "content": "## Smart Table Fill\n\nFills the empty columns of a Google Sheet from free text. You only name the columns: an LLM works out what each one means, and then extracts the values.\n\n### How it works\n1. Reads the rows of your sheet (or items sent by a parent workflow) and takes the text in `Text_to_interpret`.\n2. On the first run, an LLM describes every column header and saves the result as a schema tab (`Description_hig7f6`). Later runs reuse it, so you can edit types, descriptions and allowed values there.\n3. Turns the schema into a strict JSON structure. An LLM extracts the fields from each row's text, up to 10 per call. Values a parent workflow already knows are written as they are.\n4. Writes the values back into the row with the same `email`, or appends a new row.\n5. If a row fails, it is still written, with the reason in `extraction_error`. The other rows continue.\n\n### Setup steps\n- [ ] Create a sheet with headers in row 1, including `email` and `Text_to_interpret`. Add `extraction_error` to see failures\n- [ ] Connect Google Sheets OAuth2 on the Sheets nodes and an LLM credential on both model nodes\n- [ ] In **Get Rows in Sheet**, pick your spreadsheet and tab\n- [ ] Fill `email` and `Text_to_interpret` in a few rows, then click **Test workflow**\n\n### Customization\n- Change defaults in **String Input**, such as `match_same_row` (false = append), `batch_size`, `text_column` or `schema_sheet_name`\n- Call it from another workflow with `spreadsheet_id`, `data_sheet_name` and the text\n- An optional email-CRM branch ships disabled (bottom right)\n\n[Setup guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide.md) · [Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/README.md) · A whole Drive folder? [smart-folder2table](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/smart-folder2table.json)",
         "height": 848,
         "width": 472
       },
@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "content": "## Extract fields with an LLM\nOne call per row and batch of columns. Rows with empty text are skipped. Optional [confidence scores](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).",
+        "content": "## Extract fields with an LLM\nOne call per row and up to `batch_size` columns. Known values and empty texts skip the LLM. Optional [confidence scores](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).",
         "height": 856,
         "width": 352,
         "color": 7
@@ -385,7 +385,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn, matchSameRow;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n  matchSameRow = $('String Input').first().json.match_same_row !== false;\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n  matchSameRow = true;\n}\n\n// Group by row_id; index fallback handles pinned data (no Build Output Schema)\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  const originalItem = buildOutputItems[i]?.json || {};\n  const rowKey = originalItem.row_key || originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowKey]) {\n    rowGroups[rowKey] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowKey].items.push(item);\n}\n\nconst results = [];\nfor (const group of Object.values(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n  const errors = [];\n\n  for (const item of items) {\n    const output = item.json.output;\n    // A failed batch (onError: continue) arrives as { error }. Report it; never fill the gap with a guess\n    if (!output) errors.push(item.json.error || 'LLM returned no output for this batch of columns');\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n\n  // Written only if the sheet has an extraction_error column; empty on success clears an old error\n  merged.extraction_error = errors.join(' | ').slice(0, 500);\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Write Extracted Row always matches on `email`. Without that field it appends a new row;\n  // an empty string would instead match, and overwrite, the first row whose email is blank\n  if (!matchSameRow || !merged.email) delete merged.email;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
+        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn, matchSameRow;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n  matchSameRow = $('String Input').first().json.match_same_row !== false;\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n  matchSameRow = true;\n}\n\n// LLM outputs line up, by index, with the Build Output Schema items that went to the LLM.\n// `direct` items skipped the LLM and carry their own context.\nconst llmItems = buildOutputItems.filter(b => !b.json.direct);\nconst rowGroups = {};\nlet llmIndex = 0;\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  // index fallback handles pinned data (no Build Output Schema)\n  const originalItem = item.json.direct ? item.json : (llmItems[llmIndex++]?.json || {});\n  const rowKey = originalItem.row_key || originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowKey]) {\n    rowGroups[rowKey] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core, known: originalItem.known_values || {} };\n  }\n  rowGroups[rowKey].items.push(item);\n}\n\nconst results = [];\nfor (const group of Object.values(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n  const errors = [];\n\n  for (const item of items) {\n    if (item.json.direct) continue;\n    const output = item.json.output;\n    // A failed batch (onError: continue) arrives as { error }. Report it; never fill the gap with a guess\n    if (!output) errors.push(item.json.error || 'LLM returned no output for this batch of columns');\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n  // Caller-supplied facts beat anything the LLM produced\n  Object.assign(merged, group.known);\n  // Empty means \"not in this text\", never \"erase it\": the cell keeps its value.\n  // A known value of null means the same: leave this column alone.\n  for (const [k, v] of Object.entries(merged)) {\n    if (v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) delete merged[k];\n  }\n\n  // Written only if the sheet has an extraction_error column; empty on success clears an old error\n  merged.extraction_error = errors.join(' | ').slice(0, 500);\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Write Extracted Row always matches on `email`. Without that field it appends a new row;\n  // an empty string would instead match, and overwrite, the first row whose email is blank\n  if (!matchSameRow || !merged.email) delete merged.email;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -398,7 +398,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Outputs N_rows × M_batches items; each carries schema batch + row context for LLM\nconst inputRows = $('String Input').all();\nconst textColumn = $('String Input').first().json.text_column;\nconst matchColumn = $('String Input').first().json.match_column || 'email';\nconst batchSize = $('String Input').first().json.batch_size;\nconst extractDepth = $('String Input').first().json.extract_depth;\nconst schemaSheetName = $('String Input').first().json.schema_sheet_name || 'Description_hig7f6';\n\n// CRM field-to-depth mapping (fields not listed default to depth 3)\nconst DEPTH_MAP = {\n  'first_name': 1, 'surname': 1, 'email': 1,\n  'last_topic': 1, 'last_being_contacted': 1, 'last_contacted': 1,\n  'more_emails': 2, 'status': 2, 'association': 2, 'groups': 2,\n  'goal_contact_frequency': 2, 'current_job': 2, 'works_at': 2\n};\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('Generate Schema with LLM').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {}\n\n// Source 2: If schema exists in sheet, parse from fetched data\nif (schemaRows.length === 0) {\n  const sheetData = $('Try Fetch Schema Sheet').all();\n  if (sheetData.length > 0 && sheetData[0].json.ColumnName) {\n    schemaRows = sheetData.map(item => item.json);\n  }\n}\n\nconst schemaItems = schemaRows.map(row => ({ json: row }));\n\n// Exclude text_column - no point extracting input back into output\nconst filteredSchema = schemaItems.filter(item => item.json.ColumnName !== textColumn);\n\n// Filter fields by depth (depth 3 = all fields, no filtering)\nconst fieldsToExtract = extractDepth >= 3\n  ? filteredSchema\n  : filteredSchema.filter(item => (DEPTH_MAP[item.json.ColumnName] || 3) <= extractDepth);\n\n// Convert our simple types (str/int/list/class) to JSON Schema\nfunction buildSchemaFromBatch(batch) {\n  const properties = {};\n  const requiredFields = [];\n\n  for (const item of batch) {\n    const columnName = item.json.ColumnName;\n    const columnType = item.json.Type;\n    const columnDescr = item.json.Description;\n\n    if (columnName && columnType) {\n      if (columnType === 'class') {\n        const classValues = item.json.Classes\n          ? item.json.Classes.split(',').map(s => s.trim()).filter(Boolean)\n          : [];\n        if (classValues.length === 0) {\n          throw new Error(\n            `Schema error in schema sheet (${schemaSheetName}): column \"${columnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n            `Fix: add comma-separated values to the \"Classes\" column for \"${columnName}\".`\n          );\n        }\n        properties[columnName] = {\n          type: \"string\",\n          description: columnDescr,\n          enum: classValues\n        };\n      } else {\n        let jsonType = columnType;\n        if (columnType === 'str') jsonType = 'string';\n        else if (columnType === 'list') jsonType = 'array';\n        else if (columnType === 'date') jsonType = 'string';\n        else if (columnType === 'int') jsonType = 'integer';\n\n        properties[columnName] = {\n          type: jsonType,\n          description: columnDescr\n        };\n\n        if (jsonType === 'array') {\n          properties[columnName].items = { type: \"string\" };\n        }\n        // Note: no format:'date' — LLM may return empty strings for missing dates\n      }\n      requiredFields.push(columnName);\n    }\n  }\n\n  // LLM self-reports extraction confidence for observability\n  properties.confidence = {\n    type: \"object\",\n    description: \"Confidence scores for extraction quality\",\n    properties: {\n      overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n      low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n      reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n    },\n    required: [\"overall\"]\n  };\n  requiredFields.push(\"confidence\");\n\n  return { type: \"object\", properties, required: requiredFields };\n}\n\n// Reserve 3 slots for confidence sub-properties (overall, low_confidence_fields, reasoning)\nconst effectiveBatchSize = Math.max(1, batchSize - 3);\n\n// Build batches from depth-filtered fields\nconst results = [];\nfor (const [rowIndex, row] of inputRows.entries()) {\n  const rowId = row.json[matchColumn] || row.json.match_value || row.json.email;\n  const bodyCore = row.json.body_core || '';\n  // Nothing to read: skip, rather than ask the LLM to invent values for an empty text\n  if (!String(bodyCore).trim()) continue;\n\n  const batches = [];\n  for (let i = 0; i < fieldsToExtract.length; i += effectiveBatchSize) {\n    batches.push(fieldsToExtract.slice(i, i + effectiveBatchSize));\n  }\n\n  for (const batch of batches) {\n    const schema = buildSchemaFromBatch(batch);\n    results.push({\n      json: {\n        schema: schema,\n        body_core: bodyCore,\n        row_id: rowId,\n        // Groups the batches of one row in Merge Outputs, even when the row has no match value\n        row_key: rowId || `row_${rowIndex}`,\n        match_column: matchColumn,\n        contact_name: row.json.contact_name,\n        contact_email: row.json.contact_email,\n        subject: row.json.subject\n      }\n    });\n  }\n}\n\nreturn results;"
+        "jsCode": "// One item per row and batch of fields; each carries the schema batch + row context for the LLM.\n// A row with nothing left to extract becomes one `direct` item: no LLM call, Merge Outputs writes its known values.\nconst inputRows = $('String Input').all();\nconst cfg = $('String Input').first().json;\nconst textColumn = cfg.text_column;\nconst matchColumn = cfg.match_column || 'email';\nconst batchSize = Math.max(1, Number(cfg.batch_size) || 10);   // data fields per LLM call\nconst extractDepth = cfg.extract_depth;\nconst schemaSheetName = cfg.schema_sheet_name || 'Description_hig7f6';\n\n// CRM field-to-depth mapping (fields not listed default to depth 3).\n// Depth 1 = automated mail: nothing personal to read, so only fields a caller can pass as known_values.\nconst DEPTH_MAP = {\n  'email': 1, 'last_topic': 1, 'last_being_contacted': 1, 'last_contacted': 1,\n  'first_name': 2, 'surname': 2,\n  'more_emails': 2, 'status': 2, 'association': 2, 'groups': 2,\n  'goal_contact_frequency': 2, 'current_job': 2, 'works_at': 2\n};\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('Generate Schema with LLM').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {}\n\n// Source 2: If schema exists in sheet, parse from fetched data\nif (schemaRows.length === 0) {\n  const sheetData = $('Try Fetch Schema Sheet').all();\n  if (sheetData.length > 0 && sheetData[0].json.ColumnName) {\n    schemaRows = sheetData.map(item => item.json);\n  }\n}\n\n// Never ask the LLM for the input text or the match value: both are written back as they are\nconst filteredSchema = schemaRows.filter(r => r.ColumnName !== textColumn && r.ColumnName !== matchColumn);\n\n// Filter fields by depth (depth 3 = all fields, no filtering)\nconst depthFields = extractDepth >= 3\n  ? filteredSchema\n  : filteredSchema.filter(r => (DEPTH_MAP[r.ColumnName] || 3) <= extractDepth);\n\n// Convert our simple types (str/int/list/class) to JSON Schema\nfunction buildSchemaFromBatch(batch) {\n  const properties = {};\n  const requiredFields = [];\n\n  for (const row of batch) {\n    const columnName = row.ColumnName;\n    const columnType = row.Type;\n    const columnDescr = row.Description;\n\n    if (columnName && columnType) {\n      if (columnType === 'class') {\n        const classValues = row.Classes\n          ? row.Classes.split(',').map(s => s.trim()).filter(Boolean)\n          : [];\n        if (classValues.length === 0) {\n          throw new Error(\n            `Schema error in schema sheet (${schemaSheetName}): column \"${columnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n            `Fix: add comma-separated values to the \"Classes\" column for \"${columnName}\".`\n          );\n        }\n        // \"\" = not stated. Without it the schema rejects an honest answer and the retry guesses\n        properties[columnName] = { type: \"string\", description: columnDescr, enum: [...classValues, \"\"] };\n      } else {\n        let jsonType = columnType;\n        if (columnType === 'str') jsonType = 'string';\n        else if (columnType === 'list') jsonType = 'array';\n        else if (columnType === 'date') jsonType = 'string';\n        else if (columnType === 'int') jsonType = 'integer';\n\n        properties[columnName] = { type: jsonType, description: columnDescr };\n        if (jsonType === 'array') properties[columnName].items = { type: \"string\" };\n        // Note: no format:'date' — LLM may return empty strings for missing dates\n      }\n      requiredFields.push(columnName);\n    }\n  }\n\n  // One self-reported score for observability. Nothing else: it would cost tokens and is not written.\n  properties.confidence = {\n    type: \"object\",\n    description: \"How sure you are about these values as a whole\",\n    properties: { overall: { type: \"integer\", minimum: 0, maximum: 100 } },\n    required: [\"overall\"]\n  };\n  requiredFields.push(\"confidence\");\n\n  return { type: \"object\", properties, required: requiredFields };\n}\n\nconst results = [];\nfor (const [rowIndex, row] of inputRows.entries()) {\n  const rowId = row.json[matchColumn] || row.json.match_value || row.json.email;\n  const bodyCore = row.json.body_core || '';\n  const known = row.json.known_values || {};\n  const context = {\n    body_core: bodyCore,\n    row_id: rowId,\n    // Groups the batches of one row in Merge Outputs, even when the row has no match value\n    row_key: rowId || `row_${rowIndex}`,\n    match_column: matchColumn,\n    known_values: known,\n    contact_name: row.json.contact_name,\n    contact_email: row.json.contact_email,\n    subject: row.json.subject\n  };\n\n  // Known values are facts from the caller: never sent to the LLM\n  const fields = depthFields.filter(r => !(r.ColumnName in known));\n  if (fields.length === 0) {\n    if (Object.keys(known).length) results.push({ json: { ...context, direct: true } });\n    continue;\n  }\n  // Nothing to read: skip, rather than ask the LLM to invent values for an empty text\n  if (!String(bodyCore).trim()) {\n    if (Object.keys(known).length) results.push({ json: { ...context, direct: true } });\n    continue;\n  }\n\n  // Fewest calls of at most batchSize fields, split evenly (13 fields at 10 = 7 + 6, not 10 + 3)\n  const calls = Math.ceil(fields.length / batchSize);\n  const per = Math.ceil(fields.length / calls);\n  for (let i = 0; i < fields.length; i += per) {\n    results.push({ json: { ...context, schema: buildSchemaFromBatch(fields.slice(i, i + per)) } });\n  }\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -464,7 +464,7 @@
             {
               "id": "6d14c865-91b0-44d0-9f6b-ee4371e769c5",
               "name": "batch_size",
-              "value": "={{ $json.batch_size || 7 }}",
+              "value": "={{ $json.batch_size || 10 }}",
               "type": "number"
             },
             {
@@ -502,6 +502,12 @@
               "name": "extract_depth",
               "value": "={{ $json.extract_depth || 3 }}",
               "type": "number"
+            },
+            {
+              "id": "ed473ce0-2034-53ff-b84c-0c92b0310647",
+              "name": "known_values",
+              "type": "object",
+              "value": "={{ (v => typeof v === 'string' ? (v.trim() ? JSON.parse(v) : {}) : (v || {}))($json.known_values) }}"
             }
           ]
         },
@@ -713,7 +719,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a precise data extraction specialist. Your task is to analyze the provided text and extract specific information into the exact JSON structure required.\n\n## SOURCE DATA:\n{{ ($json.contact_name || $json.contact_email || $json.subject) ? '<context>\\nContact: ' + ($json.contact_name || '') + '\\nEmail: ' + ($json.contact_email || '') + '\\nSubject: ' + ($json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $json.body_core }}\n</source_text>\n\n\n## CRITICAL INSTRUCTIONS:\n1. **ACCURACY FIRST**: Extract information exactly as stated in the source - do not estimate, round, or modify values\n2. **DEFAULT VALUES**: If information is not found, use an empty string \"\"\n3. **CLASSIFICATION CATEGORIES**: For \"enums\" use the most appropriate option or first option if unclear\n\n## CONFIDENCE SCORING:\nFor each extracted field, assess your confidence (0-100):\n- 90-100: Explicitly stated, unambiguous\n- 70-89: Clear but requires interpretation\n- 50-69: Ambiguous, multiple interpretations possible\n- 0-49: Missing, contradictory, or speculative\n\nInclude a \"confidence\" object in your response with:\n- \"overall\": weighted average of all field confidences (integer 0-100)\n- \"low_confidence_fields\": array of field names with confidence < 70\n- \"reasoning\": brief explanation of any uncertainty (max 100 chars)\n\n## QUALITY CHECK:\n- Double-check that all required fields are present\n- Be honest about uncertainty - do not inflate confidence scores\n\nStart here.",
+        "text": "=Extract the fields of the JSON schema below from the source text.\n\n{{ ($json.contact_name || $json.contact_email || $json.subject) ? '<context>\\nContact: ' + ($json.contact_name || '') + '\\nEmail: ' + ($json.contact_email || '') + '\\nSubject: ' + ($json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $json.body_core }}\n</source_text>\n\nRules:\n- Use only what the text states. Do not guess, round or reword values.\n- A field the text does not mention: empty string \"\" (empty list for lists).\n- Fields with fixed options: one of the options, or \"\" if the text does not say.\n- confidence.overall: 0-100 for the values as a whole. Missing or guessed values lower it.\n/no_think",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -748,7 +754,7 @@
     },
     {
       "parameters": {
-        "model": "openai/gpt-oss-120b",
+        "model": "qwen/qwen3.8-27b",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
@@ -845,6 +851,40 @@
           "name": "Google Sheets OAuth"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "722b1ba7-5240-5453-848d-3f0e82e9c339",
+              "leftValue": "={{ !$json.direct }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        112
+      ],
+      "id": "3ec59c8e-0acb-53d5-879b-3182a1bb8634",
+      "name": "If LLM Needed"
     }
   ],
   "connections": {
@@ -890,7 +930,7 @@
       "main": [
         [
           {
-            "node": "Extract Data from String",
+            "node": "If LLM Needed",
             "type": "main",
             "index": 0
           }
@@ -1052,6 +1092,24 @@
         [
           {
             "node": "Build Output Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If LLM Needed": {
+      "main": [
+        [
+          {
+            "node": "Extract Data from String",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Outputs",
             "type": "main",
             "index": 0
           }

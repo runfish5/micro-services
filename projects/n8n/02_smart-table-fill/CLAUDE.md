@@ -42,7 +42,8 @@ Manual runs take `spreadsheet_id` and `data_sheet_name` from the **Get Rows in S
 | `schema_sheet_name` | Schema definition sheet (`Description_hig7f6`) |
 | `body_core` | LLM-distilled core message (semantic extraction from email) |
 | `match_column` / `match_value` | Which row to update |
-| `batch_size` | Fields per LLM batch |
+| `batch_size` | Data fields per LLM call (default 10) |
+| `known_values` | Facts the caller already has; written as given, never sent to the LLM (`null` = leave column alone) |
 | `extract_depth` | Extraction depth 1-3 from classifier (default 3 = all fields) |
 
 ## Schema Sheet Structure

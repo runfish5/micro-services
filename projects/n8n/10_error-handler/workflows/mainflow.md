@@ -64,6 +64,11 @@ Workflows in the registry get immediate automatic retry on rate limit errors ins
 
 **To add a workflow:** Edit the `AUTO_RETRY_REGISTRY` array in the "Prepare & Classify Error" code node.
 
+**Planned entry: LLM extraction.** For smart-table-fill (and the organizer's contact step that calls it), the default
+remedy will be `llm-extract-rate-limited`: the same extraction, re-run in paced rounds (the same block
+standalone copies use by default). Spec, not built:
+`02_smart-table-fill/mainflow.md` § llm-extract-rate-limited.
+
 ## Execute Workflow Retry (No Sheet Storage)
 
 When a rate limit error occurs for smart-folder2table, the error handler restarts it via Execute Workflow instead of API retry. This passes the rate limit timing directly as a parameter.

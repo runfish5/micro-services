@@ -591,6 +591,12 @@
               "name": "extract_depth",
               "value": "={{ $('subject-classifier-LM').item.json.output.extract_depth }}",
               "type": "number"
+            },
+            {
+              "id": "known-values-from-email",
+              "name": "known_values",
+              "type": "object",
+              "value": "={{ (d => $('email-info-hub').item.json.direction === 'outbound' ? { last_topic: $('Gmail').item.json.subject, last_contacted: d, last_being_contacted: null } : { last_topic: $('Gmail').item.json.subject, last_being_contacted: d, last_contacted: null })(String($('Gmail').item.json.date || '').slice(0, 10) || null) }}"
             }
           ]
         },

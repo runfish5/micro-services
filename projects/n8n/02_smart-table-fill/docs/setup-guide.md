@@ -71,7 +71,7 @@ That is the only place you need to set them. **String Input** reads both from th
 |---|---|---|
 | `match_same_row` | `true` | `false` to append a new row per text instead of updating the matching row (the `email` column is then left empty) |
 | `text_column` | `Text_to_interpret` | use a different column as the input text |
-| `batch_size` | `7` | fewer columns per LLM call, if your model struggles with wide tables |
+| `batch_size` | `10` | fewer columns per LLM call if your model struggles with wide tables. Each call repeats the prompt and text, so more calls cost more tokens |
 | `schema_sheet_name` | `Description_hig7f6` | a different name for the schema tab |
 
 ---
