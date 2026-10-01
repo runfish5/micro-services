@@ -14,6 +14,17 @@ This repository is **PUBLIC**. Never commit:
 Use placeholder values (e.g., `CREDENTIAL_ID_TELEGRAM`, `YOUR_CHAT_ID_1`) in all committed files.
 Actual values belong in `.env` files (already gitignored) or in the n8n instance directly.
 
+## Git — don't commit or push by default
+
+**Never `git commit` or `git push` unless the operator says so. A commit ask is not a push ask.**
+
+- "Go ahead", "set it up" or "looks good" is neither a commit ask nor a push ask.
+- Asked to commit: commit exactly what was named. List anything unfinished and leave it out
+  unless told otherwise.
+- When something only takes effect after a push (Railway builds from GitHub, the heartbeat Action
+  runs the committed script), say so and stop. Do not push to make it work.
+- Never chain a push onto a commit.
+
 ## Home Lab Context
 
 This repository supports a **home lab automation setup**. Key infrastructure:
