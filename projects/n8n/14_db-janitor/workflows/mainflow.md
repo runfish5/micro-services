@@ -71,6 +71,11 @@ sends the HTTP status and says the workflow is probably still on.
 5. **Hard stop** after `hard` on two checks in a row: every workflow with a trigger, plus every
    workflow that wrote in the last hour.
 6. **Stuck runs**: `running` longer than `max_run_minutes`. Report only.
+7. **Leftover files**: files in `binary_data` whose run no longer exists and that are older than
+   `orphan_file_hours` are deleted, at most 500 per check, in every mode. n8n keeps the files of a
+   run (attachments, downloads) in that table and does not delete them when it removes the run.
+   This is the only thing the guard deletes in n8n's own tables; the log line shows
+   `swept_files` when it did.
 
 Each alert is written to `guard.event` with a window key (half hour, day, or the run id). A second
 alert with the same key is not sent. The switch-off is repeated on every check while the breach

@@ -126,7 +126,7 @@ tick() {
   fi
   if [ "$(jq -r '.skipped // empty' <<<"$out")" != "" ]; then log "skipped: $(jq -r .skipped <<<"$out")"; return 0; fi
 
-  log "$(jq -r '"ok mode=\(.mode) level=\(.level) pct=\(.pct) used_mb=\(.used_mb) actions=\(.actions | length)"' <<<"$out")"
+  log "$(jq -r '"ok mode=\(.mode) level=\(.level) pct=\(.pct) used_mb=\(.used_mb) actions=\(.actions | length)" + (if (.swept.rows // 0) > 0 then " swept_files=\(.swept.rows) swept_mb=\(.swept.bytes / 1048576 * 10 | round / 10)" else "" end) + (if .swept.error then " sweep_error=\(.swept.error)" else "" end)' <<<"$out")"
   jq -c --argjson now "$(date +%s)" \
     '{status: {ok: (.level != "hard"), checked_at: $now, tick_age_s: 0, mode, level, pct}}' <<<"$out" \
     > "$STATE_DIR/www/status.json.new" && mv "$STATE_DIR/www/status.json.new" "$STATE_DIR/www/status.json"

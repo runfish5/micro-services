@@ -10,5 +10,6 @@
   "allowances": [],
   "protected": [],
   "max_run_minutes": 120,
+  "orphan_file_hours": 1,
   "hard_stop_scope": []
 }

@@ -34,7 +34,7 @@ window. With SMTP variables set it is also an email; subjects start with `[db-gu
 | `disk at N%` | The volume passed `warn_pct`. Sent once per day. | Check what grew (`scripts/db-guard.sh preflight`) before it reaches the hard stop. |
 | `HARD STOP: disk at N%` | The volume was at or above `hard_pct` on two checks in a row. Every workflow with a trigger was switched off, except the error workflow. | Free space first (see the last section). Then switch workflows back on. |
 | `run does not end: <workflow>` | A run has been `running` longer than `max_run_minutes`. Report only. | Stop it in the Executions list. A run that cannot be stopped usually means the worker hung: restart the worker. |
-| `files stored that belong to no run` | Files appeared in `binary_data` whose run is not stored. Nobody to switch off, so no cause is named. | Run `scripts/db-guard.sh preflight` and look at `binary_orphans`. |
+| `files stored that belong to no run` | Files appeared in `binary_data` whose run is not stored. Nobody to switch off, so no cause is named. | Nothing to do if it stops: the guard deletes such files after `orphan_file_hours`. If it keeps coming, run `scripts/db-guard.sh preflight`, look at `binary_orphans`, and find the workflow that does not save its runs but handles large files. |
 | `the guard is blind` | The check itself failed. Nothing is watching the database. Sent at most every 30 minutes. | Read the error in the message. Run `scripts/db-guard.sh preflight`; if that fails too, Postgres is the problem. |
 | `could not switch off: <workflow>` | The n8n API refused the switch-off. The message carries the HTTP status. | Unpublish the workflow by hand. `401`/`403` means the API key is wrong or lacks the right. |
 | `n8n is not ready` / `n8n is ready again` | `/healthz/readiness` did not answer 200 on two checks in a row. | Check the Postgres service first, then primary and worker. |
@@ -101,6 +101,7 @@ The defaults are in `service/config.json`. Change them per instance with the ser
 | `warn_pct` / `hard_pct` | 70 / 85 | Volume levels, in percent of `volume_mb` |
 | `volume_mb` / `overhead_mb` | 500 / 0 | Size of the volume, and what the host counts beyond databases and write-ahead log |
 | `max_run_minutes` | 120 | A `running` run older than this is reported |
+| `orphan_file_hours` | 1 | Files whose run no longer exists are deleted once they are this old. `0` = never delete, only report |
 | `protected` | `[]` | Never switched off. Workflows with an Error Trigger are added automatically |
 | `hard_stop_scope` | `[]` | For drills: limit the hard stop to these workflow ids |
 

@@ -179,6 +179,36 @@ await c.query(`INSERT INTO execution_data ("executionId", "workflowData", data) 
 const t0 = Date.now(); t = await tick({ mode: 'enforce' }); const ms = Date.now() - t0;
 ok(`15 check over 4000 stored runs takes ${ms} ms`, ms < 500 && t.actions.length === 0, kinds(t));
 
+// 16 files whose run no longer exists are deleted, and only those
+await reset();
+const file = (sourceId, agoMin, type = 'execution') => c.query(
+  `INSERT INTO binary_data ("sourceType", "sourceId", data, "fileSize", "createdAt") VALUES ($1::text, $2::text, '\\x00', 1000, now() - make_interval(mins => $3::int))`,
+  [type, String(sourceId), agoMin]);
+const kept = await run('ORG', 'trigger', 0.01, 300);
+const marked = await run('ORG', 'trigger', 0.01, 300);
+await c.query(`UPDATE execution_entity SET "deletedAt" = now() WHERE id = $1`, [marked]);
+await file(999001, 300);            // run gone, old: delete
+await file(999002, 10);             // run gone, but young: keep for now
+await file(kept, 300);              // run exists: keep
+await file(marked, 300);            // run only marked as deleted: keep until n8n removes the row
+await file(999003, 300, 'chat');    // not a file of a run: never touched
+t = await tick({ mode: 'observe' });
+let left = (await q(`SELECT "sourceId" FROM binary_data ORDER BY 1`)).map(r => r.sourceId).join(',');
+ok('16 old files without a run are deleted, in observe mode too', t.swept.rows === 1 && t.swept.bytes == 1000 && left === [kept, marked, 999002, 999003].map(String).sort().join(','), JSON.stringify(t.swept) + ' ' + left);
+
+// 17 the clean-up can be switched off
+await reset();
+await file(999001, 300);
+t = await tick({ orphan_file_hours: 0 });
+ok('17 orphan_file_hours 0 deletes nothing', t.swept.rows === 0 && (await q('SELECT count(*)::int AS n FROM binary_data'))[0].n === 1, JSON.stringify(t.swept));
+
+// 18 a large backlog goes in pieces
+await reset();
+await c.query(`INSERT INTO binary_data ("sourceType", "sourceId", data, "fileSize", "createdAt") SELECT 'execution', (900000 + g)::text, '\\x00', 10, now() - interval '2 hours' FROM generate_series(1, 1200) g`);
+t = await tick({});
+const t2 = await tick({}); const t3 = await tick({});
+ok('18 1200 leftover files go in pieces of 500', t.swept.rows === 500 && t2.swept.rows === 500 && t3.swept.rows === 200, [t, t2, t3].map(x => x.swept.rows).join(','));
+
 await c.end();
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 process.exitCode = fails ? 1 : 0;

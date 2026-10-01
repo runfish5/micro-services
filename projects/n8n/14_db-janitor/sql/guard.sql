@@ -1,9 +1,12 @@
 -- Database growth guard: the rules, as one function that service/guard-loop.sh calls every 2 minutes.
 --
--- Lives in its own schema and only READS the tables of n8n (execution_entity, execution_data,
+-- Lives in its own schema and READS the tables of n8n (execution_entity, execution_data,
 -- binary_data, workflow_entity). It writes two tiny tables of its own: guard.state (one row)
 -- and guard.event (one row per alert, used to send each alert only once). guard.allowance holds
 -- the big jobs that were allowed by hand.
+--
+-- One exception to read-only: guard.sweep_files deletes files in binary_data whose run no longer
+-- exists. n8n leaves them behind when it removes a run, and nothing can reach them any more.
 --
 -- The function decides and describes; it never stops anything itself. The service sends the
 -- alerts and makes the API calls for the targets this function returns.
@@ -135,6 +138,38 @@ $guard$;
 
 -- One check. Always returns exactly one JSON document:
 --   { ok, skipped, mode, level, pct, used_mb, hard_ticks, actions: [...] }
+-- Deletes files that belong to no run. n8n keeps the files of a run (attachments, downloads) in
+-- binary_data and does not delete them when it removes the run, whether by its own clean-up of
+-- old runs or because the run was not to be saved. Without this, the table only ever grows.
+-- Only rows older than p_hours are touched, at most p_limit per call, so a check stays short.
+-- A run that is only marked as deleted still has its row in execution_entity: its files stay
+-- until n8n removes the row.
+CREATE OR REPLACE FUNCTION guard.sweep_files(p_hours numeric, p_limit integer DEFAULT 500)
+RETURNS jsonb
+LANGUAGE plpgsql AS $guard$
+DECLARE
+  v_rows  integer;
+  v_bytes bigint;
+BEGIN
+  IF coalesce(p_hours, 0) <= 0 THEN
+    RETURN jsonb_build_object('rows', 0, 'bytes', 0);
+  END IF;
+  WITH gone AS (
+    DELETE FROM binary_data
+    WHERE "fileId" IN (
+      SELECT bd."fileId"
+      FROM binary_data bd
+      WHERE bd."sourceType" = 'execution'
+        AND bd."createdAt" < now() - make_interval(secs => p_hours * 3600)
+        AND NOT EXISTS (SELECT 1 FROM execution_entity e WHERE e.id::text = bd."sourceId")
+      ORDER BY bd."createdAt"
+      LIMIT p_limit)
+    RETURNING "fileSize")
+  SELECT count(*), coalesce(sum("fileSize"), 0) INTO v_rows, v_bytes FROM gone;
+  RETURN jsonb_build_object('rows', v_rows, 'bytes', v_bytes);
+END
+$guard$;
+
 -- Each action: { kind, workflow_id, notify, enforce, targets: [{id, name, version_id, stop}], subject, text }
 --   notify  = send the alert (false when the same alert was already sent in its window)
 --   enforce = switch the targets off and stop their runs (only in mode "enforce")
@@ -170,6 +205,7 @@ DECLARE
   v_subject    text;
   v_name       text;
   v_half_hour  text := to_char(now(), 'YYYY-MM-DD HH24') || CASE WHEN extract(minute FROM now()) < 30 THEN ':00' ELSE ':30' END;
+  v_swept      jsonb := jsonb_build_object('rows', 0, 'bytes', 0);
   r            record;
 BEGIN
   -- Never queue behind a table rewrite or a migration: give up after 3 seconds instead.
@@ -345,7 +381,15 @@ BEGIN
     END IF;
   END IF;
 
-  -- 5. Remember this check. If even this small write fails, still return the verdict.
+  -- 5. Housekeeping, in every mode: delete files whose run no longer exists. It names no workflow
+  --    and switches nothing off. A failure here must not cost the verdict above.
+  BEGIN
+    v_swept := guard.sweep_files(coalesce((cfg ->> 'orphan_file_hours')::numeric, 1));
+  EXCEPTION WHEN OTHERS THEN
+    v_swept := jsonb_build_object('rows', 0, 'bytes', 0, 'error', SQLERRM);
+  END;
+
+  -- 6. Remember this check. If even this small write fails, still return the verdict.
   BEGIN
     UPDATE guard.state
     SET last_tick = now(), mode = v_mode, level = v_level, pct = v_pct,
@@ -357,7 +401,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'ok', true, 'skipped', NULL, 'mode', v_mode, 'level', v_level, 'pct', v_pct,
-    'used_mb', round(v_used / 1048576.0, 1), 'hard_ticks', v_hard_ticks,
+    'used_mb', round(v_used / 1048576.0, 1), 'hard_ticks', v_hard_ticks, 'swept', v_swept,
     'actions', (SELECT coalesce(jsonb_agg(a), '[]'::jsonb) FROM jsonb_array_elements(v_actions) a
                 WHERE (a ->> 'notify')::boolean OR (a ->> 'enforce')::boolean));
 END
