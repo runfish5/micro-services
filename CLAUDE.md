@@ -115,11 +115,11 @@ import the ops-center or stop advertising its commands.
 ## Fixed — SVG in `03_any-file2json-converter` (2026-08-12, repo + live)
 
 `image/svg+xml` killed the converter 8 times over six weeks: the Switch sent `image/*` to
-`conversion` (GraphicsMagick), which has no SVG decode delegate. **Rule 0 now excludes `svg` and
+`conversion` (GraphicsMagick; now named `Convert Image Format`), which has no SVG decode delegate. **Rule 0 now excludes `svg` and
 rule 5 accepts it**, so an SVG lands in `Extract Document Text` → `Text-to-Structured` like any
-other markup. No new outputs, so no connection moved and the `Return node` shape is unchanged —
+other markup. No new outputs, so no connection moved and the `Return node` (now `Return Result`) shape is unchanged —
 `04_inbox-attachment-organizer`, `02_smart-table-fill/smart-folder2table` and
-`06_exact-recall-across-collections` all still work against it. A green sticky on the Switch
+`06_exact-recall-across-collections` all still work against it. A note on the router node (`Route by File Type`, shown on the canvas)
 records why the odd-looking condition is there; do not tidy it out.
 
 **The lesson outlives the bug, and it is the reason this took six weeks to find: a MIME label is a
@@ -212,6 +212,8 @@ npm run wf:from-ts -- sdk-scratch/x.workflow.ts <workflow.json>   # TypeScript �
 - Full how-to, API notes, and round-trip verification: `projects/n8n/docs/workflow-as-code-sdk.md`.
 
 ### Sticky Note Conventions
+
+**Read `projects/n8n/docs/template-sticky-guidelines.md` before creating or annotating any workflow.** It holds n8n's official creator-portal rules: one yellow main sticky of 100–300 words with `### How it works` and `### Setup`, white section stickies under 50 words stretched over several nodes, red warnings over one node, and Title-Case verb-first node names. It also reconciles them with the house colors below.
 
 | Color | Code | Usage |
 |-------|------|-------|

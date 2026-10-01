@@ -99,6 +99,22 @@ colliding node names (`AI Classifier` → `AI Classifier1`) but expressions like
 
 ---
 
+## "Could not get parameter" After Import (Google Sheets)
+
+Error: `Could not get parameter "sheetName"` on a Google Sheets node that worked before export.
+
+**Cause**: the node's **operation** is an expression (e.g. `append` or `appendOrUpdate` chosen at runtime).
+When a workflow is imported or pasted, the editor cannot evaluate that expression, so it drops every
+parameter that depends on the operation (sheet, columns, options) and keeps the expression without
+its `=`. Found 2026-10-01 while testing smart-folder2table as a template.
+
+**Prevention**: never put an expression on a resource or operation field. Pick a fixed operation
+(`appendOrUpdate` covers both "new row" and "update this row"), or use two nodes.
+
+**Fix**: re-select the operation, sheet and columns in the node, then save.
+
+---
+
 ## Google OAuth "Client Authentication Failed"
 
 <img src="assets/trouble-shooting-oauth-client-auth-failed.png" width="500">

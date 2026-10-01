@@ -71,7 +71,7 @@ For calling Apps Script functions from n8n (n8n API writes don't trigger `onEdit
 
 > **Why a separate credential?** Built-in n8n credential types (Gmail OAuth2, Google Sheets OAuth2, Google Drive OAuth2) have **fixed scopes** — you can't add `script.scriptapp` to them. The generic **Google OAuth2 API** type lets you specify custom scopes. The scopes in the n8n credential must **exactly match** the `oauthScopes` in your `appsscript.json`.
 
-In the HTTP node (e.g., `[CRM] Write via Apps Script`), select this credential and paste the Apps Script deployment URL.
+In the HTTP node (e.g., `CRM Write via Apps Script`), select this credential and paste the Apps Script deployment URL.
 
 #### 403 Troubleshooting
 

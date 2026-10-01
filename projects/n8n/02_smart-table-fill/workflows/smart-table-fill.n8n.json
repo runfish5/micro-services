@@ -2,19 +2,258 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Smart Table Fill – Extract Structured Data\n\n### How it works\n1. Workflow is triggered by another workflow.\n2. It reads rows from the configured data sheet and loads column headers.\n3. If a schema sheet exists it uses it; otherwise it asks an LLM to generate a JSON schema for the columns and creates the schema sheet.\n4. The rows are batched and sent to an LLM that extracts the required fields from the text column according to the schema.\n5. LLM output is parsed, confidence scores are added, duplicate emails are merged, and each row's data is assembled.\n6. The final structured records are written back to the data sheet (append or update).\n\n### Setup\n- [ ] Connect your Google Sheets account in n8n credentials.\n- [ ] Set `spreadsheet_id` to the target spreadsheet.\n- [ ] Ensure the data sheet (default \"Sheet1\") contains a header row with a text column to interpret.\n- [ ] (Optional) Provide a custom `schema_sheet_name` or let the workflow generate one.\n- [ ] Add your Groq/OpenAI API key for the LLM nodes.\n- [ ] Adjust `batch_size` if you hit LLM context limits.\n- [ ] Call this workflow from another n8n workflow or test with the manual trigger.",
-        "height": 500,
-        "width": 500,
-        "color": 4
+        "content": "## Load or create the schema\nReuses the schema tab if it exists. Otherwise an LLM describes each column header and saves the result as a new tab you can edit.",
+        "height": 856,
+        "width": 704,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1150,
-        -380
+        -240,
+        -176
       ],
-      "id": "f7a8b9c0-d1e2-4f3a-5b6c-7d8e9f0a1b2c",
-      "name": "Sticky Note - Template Description"
+      "id": "8af2d064-98b9-4262-a2a7-9a9e5f929453",
+      "name": "Sticky Note - Schema"
+    },
+    {
+      "parameters": {
+        "content": "## Smart Table Fill\n\nFills the empty columns of a Google Sheet from free text. You only name the columns: an LLM works out what each one means, and then extracts the values.\n\n### How it works\n1. Reads the rows of your sheet (or items sent by a parent workflow) and takes the text in `Text_to_interpret`.\n2. On the first run, an LLM describes every column header and saves the result as a schema tab (`Description_hig7f6`). Later runs reuse it, so you can edit types, descriptions and allowed values there.\n3. Turns the schema into a strict JSON structure. An LLM extracts the fields from each row's text, in batches for wide tables.\n4. Writes the values back into the row with the same `email`, or appends a new row.\n5. If a row fails, it is still written, with the reason in `extraction_error`. The other rows continue.\n\n### Setup steps\n- [ ] Create a sheet with headers in row 1, including `email` and `Text_to_interpret`. Add `extraction_error` to see failures\n- [ ] Connect Google Sheets OAuth2 on the Sheets nodes and an LLM credential on both model nodes\n- [ ] In **Get Rows in Sheet**, pick your spreadsheet and tab\n- [ ] Fill `email` and `Text_to_interpret` in a few rows, then click **Test workflow**\n\n### Customization\n- Change defaults in **String Input**, such as `match_same_row` (false = append), `batch_size`, `text_column` or `schema_sheet_name`\n- Call it from another workflow with `spreadsheet_id`, `data_sheet_name` and the text\n- An optional email-CRM branch ships disabled (bottom right)\n\n[Setup guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide.md) · [Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/README.md) · A whole Drive folder? [smart-folder2table](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/smart-folder2table.json)",
+        "height": 848,
+        "width": 472
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        -176
+      ],
+      "id": "d86d58bd-c6ae-4739-b070-3a0b774ecad5",
+      "name": "Sticky Note - Overview"
+    },
+    {
+      "parameters": {
+        "content": "## Extract fields with an LLM\nOne call per row and batch of columns. Rows with empty text are skipped. Optional [confidence scores](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).",
+        "height": 856,
+        "width": 352,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -176
+      ],
+      "id": "e2badb10-ba30-4222-a502-8ffd3e79e27a",
+      "name": "Sticky Note - Extract"
+    },
+    {
+      "parameters": {
+        "content": "## Write rows to the sheet\nUpdates the row with the same `email`, or appends when `match_same_row` is false. Failed rows get `extraction_error`.",
+        "height": 672,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -176
+      ],
+      "id": "d6c0c363-5431-42af-b029-29f2797bb7bd",
+      "name": "Sticky Note - Write"
+    },
+    {
+      "parameters": {
+        "content": "## Email CRM (optional)\nShips disabled. Set `YOUR_APPS_SCRIPT_ID`,\nthen enable all three nodes.\n[Guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) · [Apps Script setup](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/apps-script-execution-api-setup.md)",
+        "height": 288,
+        "width": 800,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        512
+      ],
+      "id": "51bb0980-76c9-4745-bf5d-2b6ea98b46aa",
+      "name": "Sticky Note - CRM"
+    },
+    {
+      "parameters": {
+        "content": "## Choose rows\nManual runs read every row of your sheet. A parent workflow can send its own items instead.",
+        "height": 416,
+        "width": 432,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        -176
+      ],
+      "id": "0bf9e9fa-841f-49ba-807a-bab794910baf",
+      "name": "Sticky Note - Rows and Settings"
+    },
+    {
+      "parameters": {
+        "content": "@[youtube](OqA7aKWQ1q8)",
+        "height": 320,
+        "width": 432,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        352
+      ],
+      "id": "b4560994-10b5-4621-8848-6b31a0f37d00",
+      "name": "Sticky Note - Video"
+    },
+    {
+      "parameters": {
+        "content": "### Set this first\nPick your spreadsheet and data tab in **Get Rows in Sheet**. This node reads both from there and holds every other default.",
+        "height": 416,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -176
+      ],
+      "id": "81c4e8f6-bb39-4ba6-8778-4c933e494679",
+      "name": "Sticky Note - Set Sheet"
+    },
+    {
+      "parameters": {
+        "content": "### Point this at your workflow\nImport [contact-memory-update.json](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/subworkflows/contact-memory-update.json), then select it here.",
+        "height": 272,
+        "width": 240,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        512
+      ],
+      "id": "3fd301ee-f477-45b0-bb47-c3760343de83",
+      "name": "Sticky Note - CRM Workflow"
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\nA column has Type `class` but an empty `Classes` field.\n\n**Fix:** add comma-separated values in the schema tab, or change the Type to `str`.",
+        "height": 100,
+        "width": 150,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        488,
+        80
+      ],
+      "id": "744d90c0-b020-4fbf-83bd-dc3982285b93",
+      "name": "Sticky Note - Empty Class"
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\n- Put column names into row 1 of your data tab.\n- Or delete a broken `Description_hig7f6` tab and re-run.",
+        "height": 80,
+        "width": 150,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        336
+      ],
+      "id": "c8714ece-a178-4d3a-942f-6ce695d57d8d",
+      "name": "Sticky Note - Schema Stops"
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\nPassthrough of all fields from CRM Prep Email Store Input:\nemails_folder_id, folder_id, email_subject, body_core, contact_name, contact_email, direction, owner_name",
+        "height": 80,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1524,
+        608
+      ],
+      "id": "c4d6034c-8cda-4d9c-8c4e-dc4b29424e51",
+      "name": "Sticky Note - CRM Inputs"
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\nThe data tab name is wrong.\n\n**Fix:** pick the right tab in **Get Rows in Sheet**.",
+        "height": 80,
+        "width": 150,
+        "color": 3
+      },
+      "id": "d2d21535-bb23-48d3-804a-57e40cd90a10",
+      "name": "Sticky Note - Sheet Name Stops",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\nYour `Description_hig7f6` tab exists but is broken.\n\n**Fix:** delete that tab and re-run to regenerate it.",
+        "height": 80,
+        "width": 150,
+        "color": 3
+      },
+      "id": "2f1e148e-cd03-4f25-b599-fa1df1a8fab4",
+      "name": "Sticky Note - Schema Tab Stops",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\nHitting LLM rate limits (e.g. 5 requests/min on a free tier)? See [rate limits](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#rate-limit-errors-http-429).",
+        "height": 80,
+        "width": 150,
+        "color": 3
+      },
+      "id": "de8e8625-4ea4-4380-b563-4bfc51f5a69d",
+      "name": "Sticky Note - Rate Limit",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        488,
+        327
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### If it stops here\n\n403 after a GCP project change? See [troubleshooting](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#403-permission-errors-incl-gcp-project-migration).",
+        "height": 80,
+        "width": 150,
+        "color": 3
+      },
+      "id": "600b90ac-64ab-46a2-b64d-cc343341e8ce",
+      "name": "Sticky Note - Credential Recovery",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        608
+      ]
     },
     {
       "parameters": {
@@ -79,16 +318,15 @@
         640
       ],
       "id": "2ea13c04-35e2-496f-9173-8c2bda04f425",
-      "name": "[CRM] Prep Email Store Input"
+      "name": "CRM Prep Email Store Input",
+      "disabled": true
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "AP7QbVnt424dz8dD",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/AP7QbVnt424dz8dD",
-          "cachedResultName": "contact-memory-update"
+          "value": "YOUR_CONTACT_MEMORY_UPDATE_WORKFLOW_ID",
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -109,12 +347,13 @@
         640
       ],
       "id": "9d230dcb-4ab9-4180-876f-3440c768c8a8",
-      "name": "[CRM] Call contact-email-store"
+      "name": "CRM Call Contact Memory Update",
+      "disabled": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://script.googleapis.com/v1/scripts/AKfycbz1BgGEFC9SDuGHZkRPYzhmlDBp0gbbo1z6RgYNwTQdloW1csdXLYnjvll-NuwO3E7L:run",
+        "url": "https://script.googleapis.com/v1/scripts/YOUR_APPS_SCRIPT_ID:run",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleOAuth2Api",
         "sendBody": true,
@@ -129,7 +368,7 @@
         }
       },
       "id": "b965d28c-21b6-4e52-b23f-69ac98076c7d",
-      "name": "[CRM] Write via Apps Script",
+      "name": "CRM Write via Apps Script",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -141,11 +380,12 @@
           "id": "CREDENTIAL_ID_APPSCRIPT_OAUTH",
           "name": "Google AppScript OAuth"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
-        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n}\n\n// Group by row_id; index fallback handles pinned data (no Build Output Schema)\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  const originalItem = buildOutputItems[i]?.json || {};\n  const rowId = originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowId]) {\n    rowGroups[rowId] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowId].items.push(item);\n}\n\nconst results = [];\nfor (const [rowId, group] of Object.entries(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n\n  for (const item of items) {\n    const output = item.json.output;\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
+        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn, matchSameRow;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n  matchSameRow = $('String Input').first().json.match_same_row !== false;\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n  matchSameRow = true;\n}\n\n// Group by row_id; index fallback handles pinned data (no Build Output Schema)\nconst rowGroups = {};\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  const originalItem = buildOutputItems[i]?.json || {};\n  const rowKey = originalItem.row_key || originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowKey]) {\n    rowGroups[rowKey] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core };\n  }\n  rowGroups[rowKey].items.push(item);\n}\n\nconst results = [];\nfor (const group of Object.values(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n  const errors = [];\n\n  for (const item of items) {\n    const output = item.json.output;\n    // A failed batch (onError: continue) arrives as { error }. Report it; never fill the gap with a guess\n    if (!output) errors.push(item.json.error || 'LLM returned no output for this batch of columns');\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n\n  // Written only if the sheet has an extraction_error column; empty on success clears an old error\n  merged.extraction_error = errors.join(' | ').slice(0, 500);\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Write Extracted Row always matches on `email`. Without that field it appends a new row;\n  // an empty string would instead match, and overwrite, the first row whose email is blank\n  if (!matchSameRow || !merged.email) delete merged.email;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -158,7 +398,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Outputs N_rows × M_batches items; each carries schema batch + row context for LLM\nconst inputRows = $('String Input').all();\nconst textColumn = $('String Input').first().json.text_column;\nconst matchColumn = $('String Input').first().json.match_column || 'email';\nconst batchSize = $('String Input').first().json.batch_size;\nconst extractDepth = $('String Input').first().json.extract_depth;\nconst schemaSheetName = $('String Input').first().json.schema_sheet_name || 'Description_hig7f6';\n\n// CRM field-to-depth mapping (fields not listed default to depth 3)\nconst DEPTH_MAP = {\n  'first_name': 1, 'surname': 1, 'email': 1,\n  'last_topic': 1, 'last_being_contacted': 1, 'last_contacted': 1,\n  'more_emails': 2, 'status': 2, 'association': 2, 'groups': 2,\n  'goal_contact_frequency': 2, 'current_job': 2, 'works_at': 2\n};\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {}\n\n// Source 2: If schema exists in sheet, parse from fetched data\nif (schemaRows.length === 0) {\n  const sheetData = $('Try Fetch Schema Sheet').all();\n  if (sheetData.length > 0 && sheetData[0].json.ColumnName) {\n    schemaRows = sheetData.map(item => item.json);\n  }\n}\n\nconst schemaItems = schemaRows.map(row => ({ json: row }));\n\n// Exclude text_column - no point extracting input back into output\nconst filteredSchema = schemaItems.filter(item => item.json.ColumnName !== textColumn);\n\n// Filter fields by depth (depth 3 = all fields, no filtering)\nconst fieldsToExtract = extractDepth >= 3\n  ? filteredSchema\n  : filteredSchema.filter(item => (DEPTH_MAP[item.json.ColumnName] || 3) <= extractDepth);\n\n// Convert our simple types (str/int/list/class) to JSON Schema\nfunction buildSchemaFromBatch(batch) {\n  const properties = {};\n  const requiredFields = [];\n\n  for (const item of batch) {\n    const columnName = item.json.ColumnName;\n    const columnType = item.json.Type;\n    const columnDescr = item.json.Description;\n\n    if (columnName && columnType) {\n      if (columnType === 'class') {\n        const classValues = item.json.Classes\n          ? item.json.Classes.split(',').map(s => s.trim()).filter(Boolean)\n          : [];\n        if (classValues.length === 0) {\n          throw new Error(\n            `Schema error in schema sheet (${schemaSheetName}): column \"${columnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n            `Fix: add comma-separated values to the \"Classes\" column for \"${columnName}\".`\n          );\n        }\n        properties[columnName] = {\n          type: \"string\",\n          description: columnDescr,\n          enum: classValues\n        };\n      } else {\n        let jsonType = columnType;\n        if (columnType === 'str') jsonType = 'string';\n        else if (columnType === 'list') jsonType = 'array';\n        else if (columnType === 'date') jsonType = 'string';\n        else if (columnType === 'int') jsonType = 'integer';\n\n        properties[columnName] = {\n          type: jsonType,\n          description: columnDescr\n        };\n\n        if (jsonType === 'array') {\n          properties[columnName].items = { type: \"string\" };\n        }\n        // Note: no format:'date' — LLM may return empty strings for missing dates\n      }\n      requiredFields.push(columnName);\n    }\n  }\n\n  // LLM self-reports extraction confidence for observability\n  properties.confidence = {\n    type: \"object\",\n    description: \"Confidence scores for extraction quality\",\n    properties: {\n      overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n      low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n      reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n    },\n    required: [\"overall\"]\n  };\n  requiredFields.push(\"confidence\");\n\n  return { type: \"object\", properties, required: requiredFields };\n}\n\n// Reserve 3 slots for confidence sub-properties (overall, low_confidence_fields, reasoning)\nconst effectiveBatchSize = Math.max(1, batchSize - 3);\n\n// Build batches from depth-filtered fields\nconst results = [];\nfor (const row of inputRows) {\n  const rowId = row.json[matchColumn] || row.json.match_value || row.json.email;\n  const bodyCore = row.json.body_core || '';\n\n  const batches = [];\n  for (let i = 0; i < fieldsToExtract.length; i += effectiveBatchSize) {\n    batches.push(fieldsToExtract.slice(i, i + effectiveBatchSize));\n  }\n\n  for (const batch of batches) {\n    const schema = buildSchemaFromBatch(batch);\n    results.push({\n      json: {\n        schema: schema,\n        body_core: bodyCore,\n        row_id: rowId,\n        match_column: matchColumn,\n        contact_name: row.json.contact_name,\n        contact_email: row.json.contact_email,\n        subject: row.json.subject\n      }\n    });\n  }\n}\n\nreturn results;"
+        "jsCode": "// Outputs N_rows × M_batches items; each carries schema batch + row context for LLM\nconst inputRows = $('String Input').all();\nconst textColumn = $('String Input').first().json.text_column;\nconst matchColumn = $('String Input').first().json.match_column || 'email';\nconst batchSize = $('String Input').first().json.batch_size;\nconst extractDepth = $('String Input').first().json.extract_depth;\nconst schemaSheetName = $('String Input').first().json.schema_sheet_name || 'Description_hig7f6';\n\n// CRM field-to-depth mapping (fields not listed default to depth 3)\nconst DEPTH_MAP = {\n  'first_name': 1, 'surname': 1, 'email': 1,\n  'last_topic': 1, 'last_being_contacted': 1, 'last_contacted': 1,\n  'more_emails': 2, 'status': 2, 'association': 2, 'groups': 2,\n  'goal_contact_frequency': 2, 'current_job': 2, 'works_at': 2\n};\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('Generate Schema with LLM').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {}\n\n// Source 2: If schema exists in sheet, parse from fetched data\nif (schemaRows.length === 0) {\n  const sheetData = $('Try Fetch Schema Sheet').all();\n  if (sheetData.length > 0 && sheetData[0].json.ColumnName) {\n    schemaRows = sheetData.map(item => item.json);\n  }\n}\n\nconst schemaItems = schemaRows.map(row => ({ json: row }));\n\n// Exclude text_column - no point extracting input back into output\nconst filteredSchema = schemaItems.filter(item => item.json.ColumnName !== textColumn);\n\n// Filter fields by depth (depth 3 = all fields, no filtering)\nconst fieldsToExtract = extractDepth >= 3\n  ? filteredSchema\n  : filteredSchema.filter(item => (DEPTH_MAP[item.json.ColumnName] || 3) <= extractDepth);\n\n// Convert our simple types (str/int/list/class) to JSON Schema\nfunction buildSchemaFromBatch(batch) {\n  const properties = {};\n  const requiredFields = [];\n\n  for (const item of batch) {\n    const columnName = item.json.ColumnName;\n    const columnType = item.json.Type;\n    const columnDescr = item.json.Description;\n\n    if (columnName && columnType) {\n      if (columnType === 'class') {\n        const classValues = item.json.Classes\n          ? item.json.Classes.split(',').map(s => s.trim()).filter(Boolean)\n          : [];\n        if (classValues.length === 0) {\n          throw new Error(\n            `Schema error in schema sheet (${schemaSheetName}): column \"${columnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n            `Fix: add comma-separated values to the \"Classes\" column for \"${columnName}\".`\n          );\n        }\n        properties[columnName] = {\n          type: \"string\",\n          description: columnDescr,\n          enum: classValues\n        };\n      } else {\n        let jsonType = columnType;\n        if (columnType === 'str') jsonType = 'string';\n        else if (columnType === 'list') jsonType = 'array';\n        else if (columnType === 'date') jsonType = 'string';\n        else if (columnType === 'int') jsonType = 'integer';\n\n        properties[columnName] = {\n          type: jsonType,\n          description: columnDescr\n        };\n\n        if (jsonType === 'array') {\n          properties[columnName].items = { type: \"string\" };\n        }\n        // Note: no format:'date' — LLM may return empty strings for missing dates\n      }\n      requiredFields.push(columnName);\n    }\n  }\n\n  // LLM self-reports extraction confidence for observability\n  properties.confidence = {\n    type: \"object\",\n    description: \"Confidence scores for extraction quality\",\n    properties: {\n      overall: { type: \"integer\", minimum: 0, maximum: 100, description: \"Weighted average confidence (0-100)\" },\n      low_confidence_fields: { type: \"array\", items: { type: \"string\" }, description: \"Fields with confidence < 70\" },\n      reasoning: { type: \"string\", description: \"Brief explanation of uncertainty\" }\n    },\n    required: [\"overall\"]\n  };\n  requiredFields.push(\"confidence\");\n\n  return { type: \"object\", properties, required: requiredFields };\n}\n\n// Reserve 3 slots for confidence sub-properties (overall, low_confidence_fields, reasoning)\nconst effectiveBatchSize = Math.max(1, batchSize - 3);\n\n// Build batches from depth-filtered fields\nconst results = [];\nfor (const [rowIndex, row] of inputRows.entries()) {\n  const rowId = row.json[matchColumn] || row.json.match_value || row.json.email;\n  const bodyCore = row.json.body_core || '';\n  // Nothing to read: skip, rather than ask the LLM to invent values for an empty text\n  if (!String(bodyCore).trim()) continue;\n\n  const batches = [];\n  for (let i = 0; i < fieldsToExtract.length; i += effectiveBatchSize) {\n    batches.push(fieldsToExtract.slice(i, i + effectiveBatchSize));\n  }\n\n  for (const batch of batches) {\n    const schema = buildSchemaFromBatch(batch);\n    results.push({\n      json: {\n        schema: schema,\n        body_core: bodyCore,\n        row_id: rowId,\n        // Groups the batches of one row in Merge Outputs, even when the row has no match value\n        row_key: rowId || `row_${rowIndex}`,\n        match_column: matchColumn,\n        contact_name: row.json.contact_name,\n        contact_email: row.json.contact_email,\n        subject: row.json.subject\n      }\n    });\n  }\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -182,7 +422,7 @@
             {
               "id": "a1b2c3d4-1111-2222-3333-444455556666",
               "name": "spreadsheet_id",
-              "value": "={{ $json.spreadsheet_id || '' }}",
+              "value": "={{ $json.spreadsheet_id || (String(($('Get Rows in Sheet').params.documentId || {}).value || '').match(/[-\\w]{25,}/) || [''])[0] }}",
               "type": "string"
             },
             {
@@ -194,7 +434,7 @@
             {
               "id": "a1b2c3d4-5555-6666-7777-888899990000",
               "name": "data_sheet_name",
-              "value": "={{ $json.data_sheet_name || 'Sheet1' }}",
+              "value": "={{ $json.data_sheet_name || (p => p.cachedResultName || (p.mode === 'name' ? p.value : ''))($('Get Rows in Sheet').params.sheetName || {}) || 'Sheet1' }}",
               "type": "string"
             },
             {
@@ -218,7 +458,7 @@
             {
               "id": "match-value-generic",
               "name": "match_value",
-              "value": "={{ $json[$json.match_column] || $json.contact_email }}",
+              "value": "={{ $json[$json.match_column || 'email'] || $json.contact_email }}",
               "type": "string"
             },
             {
@@ -236,7 +476,7 @@
             {
               "id": "0eabb116-4199-4379-99c2-d93c7da8650e",
               "name": "email",
-              "value": "={{ $json.contact_email }}",
+              "value": "={{ $json.email || $json.contact_email }}",
               "type": "string"
             },
             {
@@ -279,7 +519,7 @@
     },
     {
       "parameters": {
-        "operation": "={{ $('String Input').first().json.match_same_row ? 'appendOrUpdate' : 'append' }}",
+        "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
           "value": "={{ $('String Input').first().json.spreadsheet_id }}",
@@ -331,7 +571,7 @@
           "name": "Google Sheets OAuth"
         }
       },
-      "disabled": true
+      "notes": "Matches on email: a known email updates its row, a new one is appended. Merge Outputs removes email when match_same_row is false or email is empty, so those rows are appended. Operation is fixed, not an expression, so the node survives import"
     },
     {
       "parameters": {
@@ -342,7 +582,7 @@
       },
       "id": "4bd29691-a7fa-450b-9af5-3a38a86ae810",
       "name": "Fetch Data Sheet Headers",
-      "notes": "folder2table combines this into Fetch Data & Schema Sheets",
+      "notes": "smart-folder2table fetches both sheets in one request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -372,7 +612,7 @@
       },
       "id": "6162e68b-1dc3-44bb-898d-c9140732a2eb",
       "name": "Try Fetch Schema Sheet",
-      "notes": "folder2table combines this into Fetch Data & Schema Sheets",
+      "notes": "smart-folder2table fetches both sheets in one request",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
@@ -412,7 +652,7 @@
         "options": {}
       },
       "id": "02de666e-fd0e-433a-8b04-3bed444b3027",
-      "name": "IF: Schema Exists?",
+      "name": "If Schema Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -428,7 +668,7 @@
         "batching": {}
       },
       "id": "9cc57e33-c200-4ebe-8397-cabe776f326c",
-      "name": "LLM: Generate Schema",
+      "name": "Generate Schema with LLM",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
@@ -485,9 +725,9 @@
       ],
       "id": "b94e8302-4526-4bc2-8161-abe8208d9494",
       "name": "Extract Data from String",
-      "alwaysOutputData": false,
       "retryOnFail": true,
-      "maxTries": 2
+      "maxTries": 2,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -542,17 +782,13 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "YOUR_TEST_SPREADSHEET_ID",
-          "mode": "list",
-          "cachedResultName": "Your Test Sheet",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_TEST_SPREADSHEET_ID/edit"
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_TEST_SPREADSHEET_ID/edit"
+          "value": "Sheet1",
+          "mode": "name"
         },
         "options": {}
       },
@@ -563,7 +799,7 @@
         128
       ],
       "id": "1d25ead0-0e4a-4426-bd11-7f78ea8d1ab2",
-      "name": "Get row(s) in sheet",
+      "name": "Get Rows in Sheet",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -586,96 +822,6 @@
     },
     {
       "parameters": {
-        "content": "## Schema Auto-Creation\nOn first run, if `Description_hig7f6` sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.\n\n---\nOptional:\nConfidence scoring via `confidence` field. See `../docs/observability-through-llm-confidence-estimate.md",
-        "height": 328,
-        "width": 420
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1136,
-        0
-      ],
-      "id": "09eabe66-e68d-4cf3-ac73-bb6fd82d4273",
-      "name": "Sticky Note - Schema Info"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\nYour `Description_hig7f6` sheet exists but has faulty syntax.\n\n**Fix:** Delete the sheet from Google Sheets and re-run to regenerate it.",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -16,
-        96
-      ],
-      "id": "3a251222-bbdc-4a3d-8cdc-47780f170ecf",
-      "name": "Sticky Note - Troubleshoot"
-    },
-    {
-      "parameters": {
-        "content": "## Mode B: Email-CRM Setup\n[apps-script-setup](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/apps-script-execution-api-setup.md) · [email-crm-guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/email-crm-guide.md) · [troubleshooting](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#apps-script-execution-api)",
-        "height": 220,
-        "width": 668
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1056,
-        560
-      ],
-      "id": "261acaf4-0f5b-4434-8bc6-c8c0b2f0fe68",
-      "name": "Sticky - CRM Setup"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\n403 after GCP project change?\nSee [troubleshooting](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md#403-permission-errors-incl-gcp-project-migration)",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1080,
-        608
-      ],
-      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "name": "Sticky - Credential Recovery"
-    },
-    {
-      "parameters": {
-        "content": "## Mode A: Smart Table Fill\nActive by default. Writes extracted data directly to Google Sheets.\n\nToggle `Operation` to `Append or Update Row` to auto-create new entries (vs `Update Row` = fails silently if not found)",
-        "height": 176,
-        "width": 424
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1296,
-        368
-      ],
-      "id": "780dbcf9-d414-4cbe-ba20-4230b689ed4f",
-      "name": "Sticky Note1"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\n- a. You must delete the \"Description_hig7f6\" google sheet sheet\n\n- b. You must put column names into Google Sheets 'Sheet1' first row.",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        208,
-        336
-      ],
-      "id": "a8ced62a-68d5-47ca-8df4-f5f089b7e3f9",
-      "name": "Sticky Note2"
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('String Input').first().json.spreadsheet_id }}:batchUpdate",
         "authentication": "predefinedCredentialType",
@@ -686,7 +832,7 @@
         "options": {}
       },
       "id": "8375961a-8d9c-4cfb-8f9e-4ea3cdae33f8",
-      "name": "Create & Write Schema Sheet",
+      "name": "Create and Write Schema Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -699,86 +845,25 @@
           "name": "Google Sheets OAuth"
         }
       }
-    },
-    {
-      "parameters": {
-        "content": "### If it stops here\n\nThe workflow expects your data in a sheet named \"Sheet1\" by default.\n\n**Fix:** Update `data_sheet_name` in the \"String Input\" node to match your actual sheet name.",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -256,
-        96
-      ],
-      "id": "89bfad2f-83d6-43b7-b01f-22eccaddd1db",
-      "name": "Sticky Note - Troubleshoot1"
-    },
-    {
-      "parameters": {
-        "content": "### String Input config\nSet these fields here:\n- `spreadsheet_id`: from URL `.../d/`**THIS_PART**`/edit`\n- `data_sheet_name`: `{{ $json.data_sheet_name || 'Sheet1' || 'Entries' }}`\n- `batch_size`: **7**",
-        "height": 170,
-        "width": 190,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -464,
-        96
-      ],
-      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "name": "Sticky - Spreadsheet ID"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\nRate Limit Errors? If you're hitting API rate limits (e.g., Groq free tier 5 requests/min), see:\n[troubleshooting.md](https://github.com/runfish5/micro-services/blob/main/projects/n8n/troubleshooting.md)",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        488,
-        327
-      ],
-      "id": "d109b025-adcc-44fe-966a-8dccdac5da90",
-      "name": "Sticky Note - Rate Limit Help"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\nA column has `Type: class` but the `Classes` field is empty.\n\n**Fix:** Open the schema sheet and add comma-separated class values for that column.\n\nOr change the `Type` from `class` to `str`.",
-        "height": 100,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        488,
-        80
-      ],
-      "id": "a1b2c3d4-empty-class-guard-stf",
-      "name": "Sticky Note - Empty Class Guard"
     }
   ],
   "connections": {
-    "[CRM] Prep Email Store Input": {
+    "CRM Prep Email Store Input": {
       "main": [
         [
           {
-            "node": "[CRM] Call contact-email-store",
+            "node": "CRM Call Contact Memory Update",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "[CRM] Write via Apps Script": {
+    "CRM Write via Apps Script": {
       "main": [
         [
           {
-            "node": "[CRM] Prep Email Store Input",
+            "node": "CRM Prep Email Store Input",
             "type": "main",
             "index": 0
           }
@@ -789,7 +874,7 @@
       "main": [
         [
           {
-            "node": "[CRM] Write via Apps Script",
+            "node": "CRM Write via Apps Script",
             "type": "main",
             "index": 0
           },
@@ -838,14 +923,14 @@
       "main": [
         [
           {
-            "node": "IF: Schema Exists?",
+            "node": "If Schema Exists",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF: Schema Exists?": {
+    "If Schema Exists": {
       "main": [
         [
           {
@@ -856,18 +941,18 @@
         ],
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "LLM: Generate Schema": {
+    "Generate Schema with LLM": {
       "main": [
         [
           {
-            "node": "Create & Write Schema Sheet",
+            "node": "Create and Write Schema Sheet",
             "type": "main",
             "index": 0
           }
@@ -878,7 +963,7 @@
       "ai_outputParser": [
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "ai_outputParser",
             "index": 0
           }
@@ -889,7 +974,7 @@
       "ai_languageModel": [
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "ai_languageModel",
             "index": 0
           }
@@ -933,14 +1018,14 @@
       "main": [
         [
           {
-            "node": "Get row(s) in sheet",
+            "node": "Get Rows in Sheet",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get row(s) in sheet": {
+    "Get Rows in Sheet": {
       "main": [
         [
           {
@@ -962,7 +1047,7 @@
         ]
       ]
     },
-    "Create & Write Schema Sheet": {
+    "Create and Write Schema Sheet": {
       "main": [
         [
           {

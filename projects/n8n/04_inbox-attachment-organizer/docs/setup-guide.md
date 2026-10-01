@@ -9,9 +9,9 @@
 > Moreover, no **Standard n8n cloud nodes only** — no self-hosted requirements.
 
 ### 1. Import Workflows
-Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](n8n.io) :
+Download and paste these workflow clipboard :clipboard: content directly into your [n8n-browser-window](https://n8n.io) :
 1. [inbox-attachment-organizer.json](../workflows/inbox-attachment-organizer.json) - Main workflow
-2. [any-file2json-converter.json](../workflows/subworkflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
+2. [any-file2json-converter.json](../../03_any-file2json-converter/workflows/any-file2json-converter.json) - Subworkflow: Converts attachments to text
 3. [gdrive-recursion.json](../../shared/gdrive-recursion.json) - Subworkflow: Self-recursive folder locator/creator
 4. [gmail-processor-datesize.json](../workflows/subworkflows/gmail-processor-datesize.json) - Batch processor for existing emails
 
@@ -22,7 +22,7 @@ Download and paste these workflow clipboard :clipboard: content directly into yo
 ### 2. Setup Credentials
 Only one authentication needed: **Google OAuth**
 
-Follow: [credentials-guide.md](config/credentials-guide.md)
+Follow: [credentials-guide.md](../../credentials-guide.md)
 
 ### 3. Create Gmail Labels
 

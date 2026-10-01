@@ -27,7 +27,7 @@
           "conditions": [
             {
               "id": "has-schema-condition",
-              "leftValue": "={{ $('Modify File & Input').first().json.extraction?.field_schemas?.length > 0 }}",
+              "leftValue": "={{ $('Split Files and Build Schema').first().json.extraction?.field_schemas?.length > 0 }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -40,7 +40,7 @@
         "options": {}
       },
       "id": "a1b2c3d4-has-schema-if",
-      "name": "Has Schema?",
+      "name": "If Schema Provided",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -56,7 +56,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=You are a Document Data Extractor. Given extracted text from a document, organize the information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Input Validator').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
+              "message": "=You are a Document Data Extractor. Given extracted text from a document, organize the information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Set Default Extraction').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
             }
           ]
         }
@@ -82,21 +82,21 @@
         800
       ],
       "id": "c3d4e5f6-text-language-model",
-      "name": "Groq Chat Model",
+      "name": "Text LLM",
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_GROQ",
-          "name": "Groq 260203"
+          "name": "Text LLM credential"
         }
       }
     },
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "={{ JSON.stringify($('Modify File & Input').first().json.output_schema) }}"
+        "inputSchema": "={{ JSON.stringify($('Split Files and Build Schema').first().json.output_schema) }}"
       },
       "id": "d4e5f6g7-text-output-schema",
-      "name": "Text Output Schema",
+      "name": "Text Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
         -192,
@@ -124,7 +124,7 @@
         "options": {}
       },
       "id": "3bcc35ca-5a3d-4f1a-9669-30a65862f297",
-      "name": "Aggregate",
+      "name": "Aggregate Rows",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
@@ -145,7 +145,7 @@
         "options": {}
       },
       "id": "21bdece4-27c7-4d06-979d-9e0e41c2adc6",
-      "name": "Summarize",
+      "name": "Join Rows into Text",
       "type": "n8n-nodes-base.summarize",
       "typeVersion": 1,
       "position": [
@@ -251,9 +251,18 @@
                       "operation": "equals",
                       "name": "filter.operator.equals"
                     }
+                  },
+                  {
+                    "id": "xlsx-openxml",
+                    "leftValue": "={{ $binary.values()[0].mimeType }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "or"
               }
             },
             {
@@ -305,6 +314,15 @@
                     "operator": {
                       "type": "string",
                       "operation": "contains"
+                    }
+                  },
+                  {
+                    "id": "plain-text-types",
+                    "leftValue": "={{ $binary.values()[0].mimeType }}",
+                    "rightValue": "^(text/(plain|markdown|html|xml)|application/xml)",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
                     }
                   }
                 ],
@@ -364,13 +382,15 @@
         }
       },
       "id": "aa494995-2e49-4f04-a519-e7f56eb34171",
-      "name": "Switch",
+      "name": "Route by File Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
         -992,
         400
-      ]
+      ],
+      "notes": "SVG is XML, so it is routed to text on purpose. The image converter cannot decode it.",
+      "notesInFlow": true
     },
     {
       "parameters": {
@@ -378,7 +398,7 @@
         "options": {}
       },
       "id": "2d60a23a-1abc-4e7b-8ed8-8da1593cfacf",
-      "name": "Extract from Excel",
+      "name": "Extract Excel Rows",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
@@ -397,12 +417,12 @@
         912
       ],
       "id": "13d15b17-7094-43b5-a3a6-c3bfa3ec2fb1",
-      "name": "Extract from CSV"
+      "name": "Extract CSV Rows"
     },
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\"mimeType\": \"...\", \"data\": \"...\", \"fileName\": \"...\"}\n  },\n  \"extraction\": {\n    \"type\": \"document_analysis\",\n    \"focus_fields\": [\"vendor_name\", \"invoice_number\"],\n    \"instructions\": \"Extract priority fields with these exact key names\"\n  }\n}"
+        "jsonExample": "{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"...\",\n      \"data\": \"...\",\n      \"fileName\": \"...\"\n    }\n  },\n  \"extraction\": {\n    \"type\": \"document_analysis\",\n    \"focus_fields\": [\n      \"vendor_name\",\n      \"invoice_number\"\n    ],\n    \"instructions\": \"Extract priority fields with these exact key names\"\n  }\n}"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -418,13 +438,13 @@
         "operation": "download",
         "fileId": {
           "__rl": true,
-          "value": "https://drive.google.com/file/d/1V4ZuvFi_c1X7jn6fGmRlZ6q_5CYTQ9G7/view?usp=drive_link",
+          "value": "https://drive.google.com/file/d/YOUR_TEST_FILE_ID/view",
           "mode": "url"
         },
         "options": {}
       },
       "id": "cb19ad57-5345-4bb1-8ba4-fb56ba5632c4",
-      "name": "Download File1",
+      "name": "Download Test File",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
@@ -436,28 +456,13 @@
     },
     {
       "parameters": {
-        "content": "## Any‑file to JSON converter\n\n### How it works\n1. Another workflow triggers this sub‑workflow and sends binary files and an optional `extraction` object.\n2. The Input Validator defaults `extraction`, then a code node flattens each attachment into its own item.\n3. A Switch node examines the MIME type of each file and routes it:\n   - Images → editImage → Gemini OCR prompt → structured JSON.\n   - PDFs → PDF text extractor.\n   - JSON files → direct JSON extraction.\n   - CSV/Excel → text extraction, aggregation, and summarization.\n4. Each branch normalises the extracted text, runs an optional LLM summarizer, and returns a JSON object with `content_class` and `class_confidence`.\n5. Unsupported types are caught by the Unresolved Handler and marked for manual review.\n\n### Setup\n- [ ] Connect a Google Gemini (PaLM) credential for the image‑to‑text model.\n- [ ] Ensure the calling workflow sends binary files with proper MIME types.\n- [ ] Verify the Output Schema node matches your desired JSON fields.\n- [ ] Test each file type (image, PDF, JSON, CSV, Excel) to confirm routing.\n- [ ] Adjust the Switch rules if you need to support additional MIME types.\n- [ ] Deploy the workflow and reference its ID in the parent workflow.",
-        "height": 796,
-        "width": 460
-      },
-      "id": "f3f9259a-b29f-4ad5-874a-ff91c74d795d",
-      "name": "Sticky Note3",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -2112,
-        368
-      ],
-      "typeVersion": 1
-    },
-    {
-      "parameters": {
         "promptType": "define",
         "text": "Extract all data from this document.",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
             {
-              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Input Validator').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
+              "message": "=You are a Document Data Extractor. Given a document image, extract all visible information into a structured JSON object.\n\n**Output Requirements:**\n- Respond with ONLY the JSON object. No explanations or other text.\n- If no readable content exists, respond with: {}\n\n**Classification (REQUIRED):**\nAlways include these two fields:\n- content_class: \"primary_document\" (text-heavy document needing storage: invoices, receipts, contracts, letters) | \"style_element\" (logos, signatures, banners, decorative images) | \"unclassified\" (doesn't fit either)\n- class_confidence: 0.0 to 1.0 (your confidence in the classification)\n\n{{ (() => { const e = $('Set Default Extraction').first().json.extraction || {}; let ctx = ''; if (e.type) ctx += `Document type: ${e.type}\\n`; if (e.focus_fields?.length) ctx += `Priority fields: ${e.focus_fields.join(', ')}\\n`; if (e.instructions) ctx += `Instructions: ${e.instructions}\\n`; return ctx ? '**Caller Context:**\\n' + ctx + '\\n' : ''; })() }}**Key Naming Rules:**\n1. Use `snake_case` in English\n2. Derive keys from visible labels (e.g., \"Invoice #:\" → `invoice_number`, \"Date:\" → `date`)\n3. For unlabeled data, create descriptive `snake_case` keys\n4. Prefix uncertain mappings with `uncertain_`\n5. Omit keys for missing information—never invent data"
             },
             {
               "type": "HumanMessagePromptTemplate",
@@ -467,7 +472,7 @@
         }
       },
       "id": "94b72956-776f-4410-8a9c-1b494eed1c67",
-      "name": "Image-to-text",
+      "name": "Image-to-Text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
         -688,
@@ -484,7 +489,7 @@
         }
       },
       "id": "52e8cb62-4f10-46a7-9736-d1f66109b0d2",
-      "name": "conversion",
+      "name": "Convert Image Format",
       "type": "n8n-nodes-base.editImage",
       "position": [
         -832,
@@ -503,7 +508,7 @@
         400
       ],
       "id": "29d01b4b-ec16-496e-9b9f-d551ae815bff",
-      "name": "Modify File & Input"
+      "name": "Split Files and Build Schema"
     },
     {
       "parameters": {
@@ -527,8 +532,8 @@
         400
       ],
       "id": "d444e35f-ccad-417d-a758-4649749c7fc9",
-      "name": "Input Validator",
-      "notes": "Pin test data here. See Testing sticky note for examples."
+      "name": "Set Default Extraction",
+      "notes": "Pin test data here. See the \"Test with pinned data\" sticky for examples."
     },
     {
       "parameters": {},
@@ -539,54 +544,8 @@
         608
       ],
       "id": "51196187-9710-4710-a4d2-938a24171d35",
-      "name": "Testing n8n sub-workflow",
+      "name": "Testing n8n Sub-Workflow",
       "disabled": true
-    },
-    {
-      "parameters": {
-        "content": "\n\n\n\nThis node requires an LLM API which accpets images. Google works nicely, leave this model if possible.",
-        "height": 96,
-        "width": 400
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -832,
-        288
-      ],
-      "id": "bab52de7-f2e4-4a6d-92cf-eac15d094a58",
-      "name": "Sticky Note15"
-    },
-    {
-      "parameters": {
-        "content": "## Any-file2json converter\n# · Image Understanding\nOCR, captioning, object detection, and structured extraction\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n```\n```\n# · pdf\n\n\n\n\n\n```\n```\n# · json\n\n\n```\n```\n# · csv / excel / etc.\n\n\n\n\n\n",
-        "height": 1384,
-        "width": 432,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -848,
-        -16
-      ],
-      "id": "f3ce7b26-f00a-402a-8ae0-9a00c77dfcb8",
-      "name": "Sticky Note"
-    },
-    {
-      "parameters": {
-        "content": "**Optional:** LLM confidence scoring via `class_confidence` field. See `docs/observability-through-llm-confidence-estimate.md`",
-        "height": 80,
-        "width": 300
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -336,
-        336
-      ],
-      "id": "b0c8696a-178c-4d7c-b0be-0c15b9e81a9d",
-      "name": "Confidence Note"
     },
     {
       "parameters": {
@@ -602,16 +561,16 @@
         576
       ],
       "id": "95d8a1ac-ede3-4c64-b6c6-cf2534192287",
-      "name": "Extract from JSON",
+      "name": "Extract JSON Content",
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "={{ JSON.stringify($('Modify File & Input').first().json.output_schema) }}"
+        "inputSchema": "={{ JSON.stringify($('Split Files and Build Schema').first().json.output_schema) }}"
       },
       "id": "eb1fbc57-1ab1-4776-934d-5a7a3124ee0c",
-      "name": "Output Schema",
+      "name": "Image Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
         -592,
@@ -625,7 +584,7 @@
         "options": {}
       },
       "id": "e23fb0ad-c743-4e0a-9cf4-fba0736730a7",
-      "name": "image-language-model",
+      "name": "Vision LLM",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "position": [
         -752,
@@ -634,8 +593,8 @@
       "typeVersion": 1,
       "credentials": {
         "googlePalmApi": {
-          "id": "4ZjiW5nwUXsnYHL9",
-          "name": "Google Gemini(PaLM)-260203"
+          "id": "CREDENTIAL_ID_GEMINI",
+          "name": "Vision LLM credential"
         }
       }
     },
@@ -646,44 +605,20 @@
             {
               "id": "uh-status",
               "name": "status",
-              "value": "unresolved",
+              "value": "unsupported",
               "type": "string"
             },
             {
-              "id": "uh-error-code",
-              "name": "error_code",
-              "value": "UNSUPPORTED_MIME_TYPE",
-              "type": "string"
-            },
-            {
-              "id": "uh-mime-type",
-              "name": "mimeType",
-              "value": "={{ $binary.data?.mimeType || 'unknown' }}",
-              "type": "string"
-            },
-            {
-              "id": "uh-file-name",
-              "name": "fileName",
-              "value": "={{ $binary.data?.fileName || 'unknown' }}",
-              "type": "string"
-            },
-            {
-              "id": "uh-file-size",
-              "name": "fileSize",
-              "value": "={{ $binary.data?.fileSize || 'unknown' }}",
-              "type": "string"
+              "id": "uh-error",
+              "name": "error",
+              "value": "={{ { code: 'UNSUPPORTED_MIME_TYPE', mimeType: $binary.data?.mimeType || Object.values($binary || {})[0]?.mimeType || 'unknown type', fileName: $binary.data?.fileName || Object.values($binary || {})[0]?.fileName || 'unknown file', message: 'No route for file type ' + ($binary.data?.mimeType || Object.values($binary || {})[0]?.mimeType || 'unknown type') } }}",
+              "type": "object"
             },
             {
               "id": "uh-original-item",
               "name": "originalItem",
               "value": "={{ $json }}",
               "type": "object"
-            },
-            {
-              "id": "uh-resolver-hint",
-              "name": "resolver_hint",
-              "value": "Unsupported file type. Route to resolver workflow for AI interpretation or human review.",
-              "type": "string"
             }
           ]
         },
@@ -693,10 +628,10 @@
       "typeVersion": 3.4,
       "position": [
         -992,
-        784
+        816
       ],
       "id": "49859284-724f-4d50-b952-27fbe38e9696",
-      "name": "Unresolved Handler"
+      "name": "Mark Unsupported File"
     },
     {
       "parameters": {
@@ -705,7 +640,7 @@
             {
               "id": "d783b0b2-3058-49db-a543-0a405c5d815e",
               "name": "data.text",
-              "value": "={{ typeof $json.text === 'string' ? $json.text : JSON.stringify($json.output || $json) }}",
+              "value": "={{ typeof $json.text === 'string' ? $json.text : $json.error ? `[${$json.status}] ${$json.error.message}` : JSON.stringify($json.output || $json) }}",
               "type": "string"
             },
             {
@@ -723,8 +658,14 @@
             {
               "id": "return-status",
               "name": "status",
-              "value": "={{ $json.status || 'resolved' }}",
+              "value": "={{ $json.status || 'ok' }}",
               "type": "string"
+            },
+            {
+              "id": "return-error",
+              "name": "error",
+              "value": "={{ $json.error ?? null }}",
+              "type": "object"
             }
           ]
         },
@@ -737,7 +678,7 @@
         416
       ],
       "id": "1c9206c0-5927-4c4a-a124-72c9726e3668",
-      "name": "Return node"
+      "name": "Return Result"
     },
     {
       "parameters": {
@@ -757,55 +698,121 @@
         1152
       ],
       "id": "d3b152ce-fb60-4814-a242-74b10eb6153b",
-      "name": "Fetch URL (Jina)"
+      "name": "Fetch URL as Text",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
-        "content": "## Testing\n\n\n\n\n\n\n\n\n\n\n\n\nPin data to **Input Validator** node:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\"}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  }\n}\n```",
-        "height": 504,
-        "width": 460,
-        "color": 7
+        "content": "## Any File to JSON Converter\n\nTurns any file a workflow receives into clean JSON: images, PDFs, spreadsheets, JSON, text documents and web pages. Call it from any workflow that handles attachments or Drive files, and get one predictable result per file.\n\n### How it works\n1. A parent workflow sends binary files, or a URL, plus an optional `extraction` object naming the fields it wants.\n2. Each file becomes its own item, and a JSON Schema is built from `extraction.field_schemas`.\n3. Files are routed by MIME type: images go to a vision LLM, everything else to native text extraction.\n4. If fields were requested, an LLM turns the text into JSON matching them.\n5. Every file returns `{status, error, data: {text, content_class, class_confidence}}`. `status` is `ok`, or `unsupported` when no route matches.\n6. A step that fails (corrupt PDF, unreachable URL) fails the run, so the parent's error workflow sees it. To keep going per file, set the parent's Execute Workflow node to continue on error.\n\n### Setup steps\n- [ ] Add a **vision-capable LLM** credential to **Vision LLM**\n- [ ] Add an **LLM** credential to **Text LLM** (a free tier works)\n- [ ] Save and **publish**: parents run the published version\n- [ ] In the parent, add an **Execute Workflow** node pointing at this workflow, passing `binary_files` and an optional `extraction`\n\n### Customization\n- Support a new MIME type in **Route by File Type**. Pick the branch by what it can decode, not by the label.\n- `class_confidence` (0-1) lets the parent auto-accept, review or flag each result. See [confidence scoring](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).\n\n[Node-by-node docs](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/mainflow.md) · Used by [smart-folder2table](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/smart-folder2table.json) and [inbox-attachment-organizer](https://github.com/runfish5/micro-services/blob/main/projects/n8n/04_inbox-attachment-organizer/README.md)",
+        "height": 784,
+        "width": 460
       },
-      "id": "676adb44-466e-4f7d-829a-2eb5996ab366",
-      "name": "Sticky Note4",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1632,
-        560
-      ],
-      "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "content": "## Use case",
-        "height": 188,
-        "width": 460,
-        "color": 7
-      },
-      "id": "48900309-8646-43ad-9567-c1237f5df371",
-      "name": "Sticky Note5",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1632,
-        368
-      ],
-      "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "content": "## Why SVG goes down the TEXT path\n\nAn SVG is XML. `conversion` is GraphicsMagick, which has **no decode\ndelegate** for it and dies with *\"No decode delegate for this image format\"*.\n\nThe fallback never caught this: `image/svg+xml` is not an *unknown* type —\nit is known, matches `image/*`, and was confidently routed into a raster\ndecoder. **A MIME label is a category, not a capability.**\n\nSo rule 0 excludes `svg` and rule 5 accepts it, landing it in\n`Extract Document Text` → `Text-to-Structured` like any other markup.\nNo new outputs, so every downstream connection is unchanged — three\ncallers depend on the `Return node` shape.\n\n_8 of this workflow's 10 failures, 27 Jul 2026: an inline logo from an\nemail signature._",
-        "height": 380,
-        "width": 440,
-        "color": 4
-      },
+      "id": "sticky-overview",
+      "name": "Overview",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1032,
-        820
-      ],
-      "id": "d1000000-0000-4000-8000-000000000001",
-      "name": "Sticky - SVG routing"
+        -2112,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Receive and split files\nDefaults `extraction`, gives each attachment its own item, and builds the JSON Schema.",
+        "height": 268,
+        "width": 640,
+        "color": 7
+      },
+      "id": "sticky-receive-and-split-files",
+      "name": "Receive and split files",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1632,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Test with pinned data\n\n\n\n\n\n\n\n\n\n\n\nEnable both nodes above and set a Drive file, or pin one of these on **Set Default Extraction**:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\"}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  }\n}\n```",
+        "height": 512,
+        "width": 464,
+        "color": 7
+      },
+      "id": "sticky-test-with-pinned-data",
+      "name": "Test with pinned data",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1632,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read images with a vision LLM\nNormalizes the image, then extracts every visible field plus a classification.",
+        "height": 336,
+        "width": 416,
+        "color": 7
+      },
+      "id": "sticky-read-images",
+      "name": "Read images",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Extract text by file type\nNative extractors for PDF, JSON, text, CSV and Excel. URLs are fetched as markdown.",
+        "height": 960,
+        "width": 368,
+        "color": 7
+      },
+      "id": "sticky-extract-text-by-type",
+      "name": "Extract text by type",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Structure text into your fields\nRuns only when the caller requested fields. Otherwise the raw text is returned.",
+        "height": 384,
+        "width": 336,
+        "color": 7
+      },
+      "id": "sticky-structure-text-into-fields",
+      "name": "Structure text into fields",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Return one result per file\nSame shape on every path. An unknown file type returns `status: unsupported`.",
+        "height": 272,
+        "width": 256,
+        "color": 7
+      },
+      "id": "sticky-return-one-result-per-file",
+      "name": "Return one result per file",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        272
+      ]
     }
   ],
   "connections": {
@@ -813,7 +820,7 @@
       "main": [
         [
           {
-            "node": "Has Schema?",
+            "node": "If Schema Provided",
             "type": "main",
             "index": 0
           }
@@ -824,40 +831,40 @@
       "main": [
         [
           {
-            "node": "Has Schema?",
+            "node": "If Schema Provided",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Aggregate": {
+    "Aggregate Rows": {
       "main": [
         [
           {
-            "node": "Summarize",
+            "node": "Join Rows into Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Summarize": {
+    "Join Rows into Text": {
       "main": [
         [
           {
-            "node": "Has Schema?",
+            "node": "If Schema Provided",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Route by File Type": {
       "main": [
         [
           {
-            "node": "conversion",
+            "node": "Convert Image Format",
             "type": "main",
             "index": 0
           }
@@ -871,21 +878,21 @@
         ],
         [
           {
-            "node": "Extract from JSON",
+            "node": "Extract JSON Content",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Extract from Excel",
+            "node": "Extract Excel Rows",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Extract from CSV",
+            "node": "Extract CSV Rows",
             "type": "main",
             "index": 0
           }
@@ -899,43 +906,43 @@
         ],
         [
           {
-            "node": "Extract from CSV",
+            "node": "Extract CSV Rows",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fetch URL (Jina)",
+            "node": "Fetch URL as Text",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Unresolved Handler",
+            "node": "Mark Unsupported File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract from Excel": {
+    "Extract Excel Rows": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "Aggregate Rows",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract from CSV": {
+    "Extract CSV Rows": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "Aggregate Rows",
             "type": "main",
             "index": 0
           }
@@ -946,135 +953,113 @@
       "main": [
         [
           {
-            "node": "Input Validator",
+            "node": "Set Default Extraction",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Download File1": {
+    "Download Test File": {
       "main": [
         [
           {
-            "node": "Input Validator",
+            "node": "Set Default Extraction",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Image-to-text": {
+    "Image-to-Text": {
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Return Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "conversion": {
+    "Convert Image Format": {
       "main": [
         [
           {
-            "node": "Image-to-text",
+            "node": "Image-to-Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Modify File & Input": {
+    "Split Files and Build Schema": {
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Route by File Type",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Input Validator": {
+    "Set Default Extraction": {
       "main": [
         [
           {
-            "node": "Modify File & Input",
+            "node": "Split Files and Build Schema",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Testing n8n sub-workflow": {
+    "Extract JSON Content": {
       "main": [
         [
           {
-            "node": "Download File1",
+            "node": "If Schema Provided",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract from JSON": {
-      "main": [
-        [
-          {
-            "node": "Has Schema?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Output Schema": {
+    "Image Output Parser": {
       "ai_outputParser": [
         [
           {
-            "node": "Image-to-text",
+            "node": "Image-to-Text",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "image-language-model": {
+    "Vision LLM": {
       "ai_languageModel": [
         [
           {
-            "node": "Image-to-text",
+            "node": "Image-to-Text",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Unresolved Handler": {
+    "Fetch URL as Text": {
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "If Schema Provided",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch URL (Jina)": {
-      "main": [
-        [
-          {
-            "node": "Has Schema?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Schema?": {
+    "If Schema Provided": {
       "main": [
         [
           {
@@ -1085,7 +1070,7 @@
         ],
         [
           {
-            "node": "Return node",
+            "node": "Return Result",
             "type": "main",
             "index": 0
           }
@@ -1096,14 +1081,14 @@
       "main": [
         [
           {
-            "node": "Return node",
+            "node": "Return Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Groq Chat Model": {
+    "Text LLM": {
       "ai_languageModel": [
         [
           {
@@ -1114,12 +1099,34 @@
         ]
       ]
     },
-    "Text Output Schema": {
+    "Text Output Parser": {
       "ai_outputParser": [
         [
           {
             "node": "Text-to-Structured",
             "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testing n8n Sub-Workflow": {
+      "main": [
+        [
+          {
+            "node": "Download Test File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Unsupported File": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
             "index": 0
           }
         ]

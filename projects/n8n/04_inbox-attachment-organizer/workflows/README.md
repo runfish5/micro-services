@@ -7,7 +7,7 @@
 
 ---
 
-### [any-file2json-converter](subworkflows/any-file2json-converter.json)
+### [any-file2json-converter](../../03_any-file2json-converter/workflows/any-file2json-converter.json)
 Converts PDFs/images/docs to text
 
 ```mermaid

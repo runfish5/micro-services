@@ -140,7 +140,7 @@ Just copy this full URL and paste it into the HTTP node. (Note: Google's docs me
 
 Create a **Google OAuth2 API** credential in n8n with the 3 required scopes — see [Credentials Guide: Apps Script](../../credentials-guide.md#google-apps-script-execution-api) for the field values.
 
-Then in the **[CRM] Write via Apps Script** HTTP node:
+Then in the **CRM Write via Apps Script** HTTP node:
 1. Paste the deployment URL from Step 4 (starts with `https://script.googleapis.com/v1/scripts/AKfycb...`)
 2. Under Credential, select the credential you just created
 3. Click **Save** and **Publish**
@@ -150,7 +150,7 @@ Then in the **[CRM] Write via Apps Script** HTTP node:
 - n8n OAuth credential configured
 - HTTP node URL ready
 
-**[Continue to Phase 5: Import & Configure Subworkflows](email-crm-guide.md#phase-5-import--configure-subworkflows)**
+**[Back to the guide: Phase 6, Connect to inbox-attachment-organizer](email-crm-guide.md#phase-6-connect-to-inbox-attachment-organizer)**
 
 ---
 

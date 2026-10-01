@@ -32,7 +32,7 @@ Give it any text and any table. The workflow reads your column headers, builds e
 | Feature | STF | F2T |
 |---------|:---:|:---:|
 | Auto-creates schema sheet on first run — no manual field mapping | ✅ | ✅ |
-| Update existing rows or append-only (`match_same_row`) | ✅ | ✅ |
+| Update existing rows or append-only (`match_same_row`) | ✅ | — (one row per file, updated in place on retry) |
 | Column batching — splits wide schemas across multiple LLM calls (`batch_size`) | ✅ | ✅ |
 | Resumability — skips already-processed files on retry | ❌ | ✅ |
 | File filtering — `file_include`, `file_exclude`, `file_limit` | ❌ | ✅ |

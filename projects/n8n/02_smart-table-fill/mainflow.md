@@ -1,4 +1,4 @@
-# Main Flow (17 Nodes)
+# Main Flow (20 Nodes)
 
 > Last verified: 2025-01-18
 
@@ -28,9 +28,9 @@ Trigger → String Input (config)
          ├─ YES ────────────────────────┐
          └─ NO                          │
               ↓                         │
-         LLM: Generate Schema           │
+         Generate Schema with LLM           │
               ↓                         │
-         Create & Write Schema ─────────┘
+         Create and Write Schema Sheet ─────────┘
                                         ↓
                               Build Output Schema
                               (sources data from upstream)
@@ -46,16 +46,16 @@ Trigger → String Input (config)
                                         │
                                         │ (or CRM mode)
                                         ↓
-                              [CRM] Write via Apps Script (HTTP POST)
+                              CRM Write via Apps Script (HTTP POST)
                                         ↓
-                              [CRM] Prep Email Store Input
+                              CRM Prep Email Store Input
                                         ↓
-                              [CRM] Call contact-email-store
+                              CRM Call Contact Memory Update
 ```
 
 ### Lineage Tree
 ```
-START: Manual Trigger / When Executed by Another Workflow
+START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
   │
   └→ String Input (config: spreadsheet_id, data_sheet_name, schema_sheet_name,
   │                body_core, contact_name, contact_email, subject,
@@ -65,17 +65,17 @@ START: Manual Trigger / When Executed by Another Workflow
             │
             └→ Try Fetch Schema Sheet (Description_hig7f6)
                  │
-                 └→ IF: Schema Exists?
+                 └→ If Schema Exists
                       │
                       ├─ TRUE:
                       │  └→ Build Output Schema (uses Try Fetch Schema Sheet data)
                       │
                       └─ FALSE:
-                         ├→ LLM: Generate Schema
+                         ├→ Generate Schema with LLM
                          │     ├─ Schema LLM (Groq)
                          │     └─ Schema Output Parser
-                         └→ Create & Write Schema Sheet (Sheets batchUpdate API)
-                              └→ Build Output Schema (uses LLM: Generate Schema data)
+                         └→ Create and Write Schema Sheet (Sheets batchUpdate API)
+                              └→ Build Output Schema (uses Generate Schema with LLM data)
                           │
                           └→ Call llm-extract-rate-limited (subworkflow)
                           │     - Handles rate limiting for Groq free tier
@@ -86,20 +86,20 @@ START: Manual Trigger / When Executed by Another Workflow
                                │
                                ├→ Write Extracted Row (disabled, standalone mode)
                                │
-                               └→ [CRM] Write via Apps Script (HTTP POST to doPost)
+                               └→ CRM Write via Apps Script (HTTP POST to doPost)
                                     │  - Writes all extracted fields to sheet
                                     │  - Creates folder + emails/ subfolder if needed
                                     │  - Returns folder_id, emails_folder_id
                                     │
-                                    └→ [CRM] Prep Email Store Input
+                                    └→ CRM Prep Email Store Input
                                          │
-                                         └→ [CRM] Call contact-email-store
+                                         └→ CRM Call Contact Memory Update
 ```
 
 ## AI Model Nodes
 
 ### 1. Schema Generation (first run only)
-- **Node**: LLM: Generate Schema
+- **Node**: Generate Schema with LLM
 - **Model**: Groq LLM (configurable)
 - **Input**: Column names from data sheet
 - **Output**: JSON array with ColumnName, Type, Description, Classes
@@ -117,22 +117,27 @@ START: Manual Trigger / When Executed by Another Workflow
 | # | Node | Type | Purpose |
 |---|------|------|---------|
 | 1 | Manual Trigger | trigger | Manual execution |
-| 2 | When Executed by Another Workflow | trigger | Subworkflow entry |
-| 3 | String Input | set | Configuration variables |
-| 4 | Fetch Data Sheet Headers | httpRequest | Get column names from data sheet |
-| 5 | Try Fetch Schema Sheet | googleSheets | Check if schema sheet exists |
-| 6 | IF: Schema Exists? | if | Branch on schema existence |
-| 7 | LLM: Generate Schema | chainLlm | Generate schema definitions |
-| 8 | Schema LLM | lmChatGroq | Language model for schema |
-| 9 | Schema Output Parser | outputParser | Parse schema JSON |
-| 10 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 11 | Build Output Schema | code | Build JSON schema with depth-based field filtering via DEPTH_MAP + effective batch size (batch_size - 3 for confidence); row_id from match_column → match_value → email |
-| 12 | Call llm-extract-rate-limited | executeWorkflow | Subworkflow for rate-limited LLM extraction |
-| 13 | Merge Outputs | code | Merge batch outputs + confidence data |
-| 14 | Write Extracted Row | googleSheets | Standalone mode write (disabled by default) |
-| 15 | [CRM] Write via Apps Script | httpRequest | Write data + create folder via doPost |
-| 16 | [CRM] Prep Email Store Input | set | Prepare data for email store subworkflow |
-| 17 | [CRM] Call contact-email-store | executeWorkflow | Store email metadata in contact memory |
+| 2 | Get Rows in Sheet | googleSheets | Manual runs: reads the data tab. **The one place the importer picks spreadsheet + tab**; String Input reads both via `$('Get Rows in Sheet').params` |
+| 3 | When Executed by Another Workflow | trigger | Subworkflow entry (passthrough) |
+| 4 | String Input | set | Configuration variables; caller values win, else Get Rows in Sheet params, else defaults |
+| 5 | Fetch Data Sheet Headers | httpRequest | Get column names from data sheet |
+| 6 | Try Fetch Schema Sheet | googleSheets | Check if schema sheet exists (`onError: continueRegularOutput`) |
+| 7 | If Schema Exists | if | Branch on schema existence |
+| 8 | Generate Schema with LLM | chainLlm | Generate schema definitions |
+| 9 | Schema LLM | lmChat | Language model for schema |
+| 10 | Schema Output Parser | outputParser | Parse schema JSON |
+| 11 | Create and Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
+| 12 | Build Output Schema | code | Build JSON schema with depth-based field filtering via DEPTH_MAP + effective batch size (batch_size - 3 for confidence); row_id from match_column → match_value → email; `row_key` groups one row's batches; rows with empty text are skipped |
+| 13 | Extract Data from String | chainLlm | LLM extraction, one item per row × column batch. `retryOnFail` (2 tries), then `onError: continueRegularOutput` so a failed batch becomes `{ error }` at the same index |
+| 14 | LLM Processor | lmChat | Extraction model |
+| 15 | Dynamic Output Parser | outputParser | Schema from `$json.schema`, autoFix on |
+| 16 | Merge Outputs | code | Merge batch outputs per `row_key`; failed batches → `extraction_error` |
+| 17 | Write Extracted Row | googleSheets | Mode A write (active) |
+| 18 | CRM Write via Apps Script | httpRequest | Mode B: write data + create folder via doPost (**disabled**; URL placeholder `YOUR_APPS_SCRIPT_ID`) |
+| 19 | CRM Prep Email Store Input | set | Mode B: prepare data for contact-memory-update (**disabled**) |
+| 20 | CRM Call Contact Memory Update | executeWorkflow | Mode B: store email metadata in contact memory (**disabled**; workflow id placeholder `YOUR_CONTACT_MEMORY_UPDATE_WORKFLOW_ID`) |
+
+**Per-row failures.** A row whose extraction fails is still written: the error text goes to `extraction_error` (written only if the sheet has that column; cleared on success). The run continues with the other rows. A disabled Mode B branch passes data through its disabled nodes and ends, so it does not affect Mode A.
 
 ## Notes
 - Schema sheet name `Description_hig7f6` has suffix for disambiguation
@@ -151,7 +156,9 @@ The Merge Outputs node prepares clean data for Write Extracted Row:
 3. **Overwrite prevention**: Only sets `merged[textColumn]` if `textColumn !== matchColumn` to prevent the text body from overwriting the match value
 4. **Clean output**: Confidence/observability fields are logged but deleted from `merged` before output. Internal fields (`_row_id`, `_meta`, `_match_same_row`, `_row_number`) are explicitly deleted before Write Extracted Row.
 
-Write Extracted Row reads `match_same_row` directly from String Input to decide `append` vs `appendOrUpdate`. The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
+5. **Append instead of match**: Deletes `email` when `match_same_row` is false or the email is empty. Write Extracted Row appends any item without the key; an empty string would match, and overwrite, the first row with a blank email.
+
+Write Extracted Row always uses `appendOrUpdate` on `email`. The operation is fixed, not an expression: the editor drops an expression-driven operation's sheet and columns on import (see [troubleshooting](../troubleshooting.md#could-not-get-parameter-after-import-google-sheets)). The `handlingExtraData: "ignoreIt"` option silently drops any fields that don't have matching column headers in the sheet.
 
 ### Caller-Overridable Config (String Input)
 
@@ -316,29 +323,31 @@ Manual Trigger ──────┬──→ Config (Set node with fallbacks)
                      │
 When Executed ───────┘   (receives config + rate_limit_wait_seconds from error handler)
      ↓
-Fetch Data & Schema Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
+Fetch Data and Schema Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
      ↓
-IF: Schema Exists? (inline check on raw response for schema sheet with data rows)
+If Schema Exists (inline check on raw response for schema sheet with data rows)
      ├─ TRUE → Ensure Headers
-     └─ FALSE → LLM: Generate Schema → Create & Write Schema Sheet → Ensure Headers
+     └─ FALSE → Generate Schema with LLM → Create and Write Schema Sheet → Ensure Headers
      ↓
-Ensure Headers (HTTP POST: add source_file/Text_to_interpret if missing)
+Ensure Headers (HTTP POST: add source_file/Text_to_interpret/extraction_status if missing)
      ↓
 List Drive Files (Google Drive: list files in folder)
      ↓
-Build Output Schema & Filter (Code: build extraction object + filter already-processed)
+Build Output Schema and Filter (Code: build extraction object + filter already-processed)
      ↓
 Loop Over Files (1 at a time)
      ↓
-Download File (Google Drive: download binary per item)
+Download File (Google Drive: download binary per item; 3 tries, error output → Prepare Write Data)
      ↓
-Convert File to Text (Execute Workflow: any-file2json-converter with extraction hints)
+Expand Batches (Code: split wide schemas into batch_size chunks)
+     ↓
+Convert File to Text (Execute Workflow: any-file2json-converter with extraction hints; errors continue)
      ↓
 Rate Limit Wait (dynamic: from Config, default 0s)
      ↓
-Prepare Write Data (Code: parse converter JSON output)
+Prepare Write Data (Code: parse converter JSON output, or build a failed row with extraction_status)
      ↓
-Write Extracted Row (Google Sheets: append row directly)
+Write Extracted Row (Google Sheets: append or update on source_file)
      ↓
 (loop back)
 ```
@@ -355,7 +364,6 @@ Write Extracted Row (Google Sheets: append row directly)
 | `file_exclude` | *(empty)* | Comma-separated filenames to skip (applied after include filter) |
 | `file_limit` | `null` | `null` = no limit; set to a number (e.g. `5`) to cap files processed |
 | `match_column` | `source_file` | For extraction row grouping |
-| `match_same_row` | `false` | `true` = update existing row, `false` = always append |
 | `batch_size` | `7` | Fields per LLM extraction call |
 | `schema_sheet_name` | `Description_hig7f6` | Schema sheet (auto-created on first run) |
 | `rate_limit_wait_seconds` | `0` | Delay between files (passed by error handler on retry) |
@@ -367,21 +375,21 @@ Write Extracted Row (Google Sheets: append row directly)
 | 1 | Manual Trigger | trigger | Manual execution |
 | 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
 | 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
-| 4 | Fetch Data & Schema Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
-| 5 | IF: Schema Exists? | if | Inline check on raw response for schema sheet with data rows |
-| 6 | LLM: Generate Schema | chainLlm | Generate schema definitions from column headers |
+| 4 | Fetch Data and Schema Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
+| 5 | If Schema Exists | if | Inline check on raw response for schema sheet with data rows |
+| 6 | Generate Schema with LLM | chainLlm | Generate schema definitions from column headers |
 | 7 | Schema LLM | lmChatGroq | Language model for schema generation |
 | 8 | Schema Output Parser | outputParser | Parse schema JSON array |
-| 9 | Create & Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
+| 9 | Create and Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
 | 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response; uses `colLetter()` helper to support columns past Z (AA, AB, …) |
 | 11 | List Drive Files | googleDrive | List all files in target folder |
-| 12 | Build Output Schema & Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
+| 12 | Build Output Schema and Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
 | 13 | Loop Over Files | splitInBatches | Process one file at a time |
 | 14 | Download File | googleDrive | Download file binary data |
 | 15 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
 | 16 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
 | 17 | Prepare Write Data | code | Parse converter JSON output for sheet write |
-| 18 | Write Extracted Row | googleSheets | Append row directly to data sheet |
+| 18 | Write Extracted Row | googleSheets | Append or update on `source_file`. The operation is fixed, not an expression: the editor drops an expression-driven operation's sheet and columns on import |
 
 #### Dynamic Rate Limiting (Start Fast, Adapt on Error)
 
@@ -425,16 +433,17 @@ File #6 onwards with 55s waits
 
 #### Resumability (Skip-on-Retry)
 
-1. Each Write Extracted Row appends a row with `source_file` = filename and `Text_to_interpret` = converter output
-2. On retry, `Fetch Data & Schema Sheets` reads both schema and data sheets in one call
-3. `Build Output Schema & Filter` checks the `source_file` column to get processed filenames
-4. Already-done files are skipped; only new/failed files are processed
+1. Each file gets exactly one row: `source_file` = filename, `Text_to_interpret` = converter output, `extraction_status` = `ok` / `ok: text only, no fields parsed` / `failed: <stage> - <detail>`. A failed download or conversion writes a failed row (user columns left empty) and the loop continues
+2. On retry, `Fetch Data and Schema Sheets` reads both schema and data sheets in one call
+3. `Build Output Schema and Filter` checks the `source_file` column to get processed filenames
+4. Rows whose `extraction_status` starts with `failed` do not count as done: the file is retried, and Write Extracted Row (always append-or-update on `source_file`) overwrites the failed row instead of duplicating it
+5. A sheet-write failure retries 3× then stops the run (systemic, not per-file); re-running resumes
 
 The `source_file` column is auto-created by the Ensure Headers logic. `Text_to_interpret` contains the raw converter output (JSON string with extracted fields).
 
 #### Schema-Aware Extraction
 
-The Build Output Schema & Filter node reads the schema (from sheet or freshly-generated LLM output) and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
+The Build Output Schema and Filter node reads the schema (from sheet or freshly-generated LLM output) and constructs an extraction object that hints the any-file2json-converter about priority fields. The converter uses this to dynamically build a JSON Schema that **enforces** user columns as required fields.
 
 **Extraction object format:**
 ```json
@@ -454,20 +463,18 @@ The Build Output Schema & Filter node reads the schema (from sheet or freshly-ge
 ```
 smart-folder2table v2                 any-file2json-converter
 ───────────────────                 ───────────────────────
-Build Output Schema & Filter
+Build Output Schema and Filter
   ↓ extraction: {
       focus_fields: [...],
       field_schemas: [...]
     }
-────────────────────────────────────→ Input Validator
+────────────────────────────────────→ Set Default Extraction
                                       ↓
-                                    Build Output Schema (Code node)
+                                    Split Files and Build Schema (Code node)
                                       ↓ builds JSON Schema from field_schemas
-                                    (File-rename)
-                                      ↓ preserves output_schema
-                                    Output Schema node
+                                    Image Output Parser
                                       ↓ uses dynamic schema expression
-                                    Image-to-text LLM
+                                    Image-to-Text LLM
                                       ↓ enforced schema!
 ────────────────────────────────────← returns data.text (JSON string)
 Prepare Write Data
@@ -476,7 +483,7 @@ Write Extracted Row
   ↓ appends directly (no smart-table-fill!)
 ```
 
-**field_schemas type mapping (converter's Build Output Schema):**
+**field_schemas type mapping (converter's Split Files and Build Schema):**
 | Schema Type | JSON Schema Type | Notes |
 |-------------|-----------------|-------|
 | `str` | `string` | Default |
@@ -535,10 +542,10 @@ The user's Google Sheet needs column headers for their data fields. Both `source
 #### Schema Auto-Creation (v2)
 
 On first run, if the schema sheet doesn't exist:
-1. `Fetch Data & Schema Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
-2. `IF: Schema Exists?` checks the raw response inline for a schema sheet with data rows (no intermediate parse node)
-3. `LLM: Generate Schema` generates schema from data sheet column headers (extracted inline from raw response)
-4. `Create & Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
+1. `Fetch Data and Schema Sheets` uses `spreadsheets.get` with `includeGridData=true` - returns all sheets that exist (no error if schema sheet is missing)
+2. `If Schema Exists` checks the raw response inline for a schema sheet with data rows (no intermediate parse node)
+3. `Generate Schema with LLM` generates schema from data sheet column headers (extracted inline from raw response)
+4. `Create and Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
 5. Flow continues to Ensure Headers → normal processing
 
 **Why spreadsheets.get instead of batchGet:** The `values:batchGet` API fails entirely if ANY range references a non-existent sheet. With `spreadsheets.get`, missing sheets simply aren't in the response - no error thrown. This enables graceful first-run handling without try/catch workarounds.
@@ -553,14 +560,14 @@ The schema generation uses the same LLM chain pattern as smart-table-fill (Groq 
 |-------|------------------|--------------------|-------|
 | Trigger | When Executed by Another Workflow | When Executed by Another Workflow | Both passthrough |
 | Config | String Input | Config | Different names by design |
-| Read sheets | Fetch Data Sheet Headers + Try Fetch Schema Sheet | Fetch Data & Schema Sheets | 1 call vs 2 |
-| Schema check | IF: Schema Exists? | IF: Schema Exists? | string exists vs boolean |
-| Schema gen | LLM: Generate Schema | LLM: Generate Schema | Identical |
+| Read sheets | Fetch Data Sheet Headers + Try Fetch Schema Sheet | Fetch Data and Schema Sheets | 1 call vs 2 |
+| Schema check | If Schema Exists | If Schema Exists | string exists vs boolean |
+| Schema gen | Generate Schema with LLM | Generate Schema with LLM | Identical |
 | Schema LLM | Schema LLM | Schema LLM | Identical |
 | Schema parser | Schema Output Parser | Schema Output Parser | Identical |
-| Schema write | Create & Write Schema Sheet | Create & Write Schema Sheet | Identical (refs differ) |
+| Schema write | Create and Write Schema Sheet | Create and Write Schema Sheet | Identical (refs differ) |
 | Header setup | — | Ensure Headers | folder2table-only |
-| Schema build | Build Output Schema | Build Output Schema & Filter (inline) | Different scope |
+| Schema build | Build Output Schema | Build Output Schema and Filter (inline) | Different scope |
 | Extraction | Extract Data from String | Convert File to Text (subworkflow) | LLM chain vs subworkflow |
 | Post-process | Merge Outputs | Prepare Write Data | Different merge needs |
-| Write | Write Extracted Row / [CRM] Apps Script | Write Extracted Row | Different targets |
+| Write | Write Extracted Row / CRM Write via Apps Script | Write Extracted Row | Different targets |

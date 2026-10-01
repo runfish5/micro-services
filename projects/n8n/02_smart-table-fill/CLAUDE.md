@@ -18,7 +18,7 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
 ## Where Information Lives
 
 ### Workflows
-- `workflows/smart-table-fill.n8n.json` - Main workflow (21 nodes)
+- `workflows/smart-table-fill.n8n.json` - Main workflow (20 nodes). Ships in Mode A (Write Extracted Row active, the three CRM nodes disabled). The inbox-attachment-organizer integration below needs Mode B (it expects `row_number` and folder ids back)
 - `workflows/subworkflows/record-search.json` - Contact lookup subworkflow
 
 ### Documentation
@@ -32,6 +32,8 @@ n8n workflow that extracts structured data from unstructured text using LLM and 
   - **Deploy as API Executable**: Apps Script editor → Deploy → New deployment → API Executable
 
 ## Key Configuration (String Input Node)
+
+Manual runs take `spreadsheet_id` and `data_sheet_name` from the **Get Rows in Sheet** node's parameters (`$('Get Rows in Sheet').params`), so the importer sets them in one place. A calling workflow overrides both by passing them.
 
 | Field | Purpose |
 |-------|---------|

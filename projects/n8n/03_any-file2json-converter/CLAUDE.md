@@ -10,17 +10,27 @@ Binary data + optional `extraction` object (see schema below).
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `status` | `resolved` \| `unresolved` | |
+| `status` | `ok` \| `unsupported` | |
+| `error` | object \| null | `{code, mimeType, fileName, message}` for unsupported files |
 | `data.text` | string | Extracted content |
 | `data.content_class` | string | `primary_document`, `style_element`, `unclassified`, `UNK` |
 | `data.class_confidence` | number \| `UNK` | 0.0-1.0 for images |
 
-Unsupported types return `status: "unresolved"` with `error_code: "UNSUPPORTED_MIME_TYPE"`.
+Unsupported types return `status: "unsupported"`, `error.code: "UNSUPPORTED_MIME_TYPE"`. That is not an error:
+no retry can change a file's type. For them `data.text` holds `[unsupported] No route for file type …`.
+
+A step that fails on a file (corrupt PDF, LLM schema miss, unreachable URL) **fails the run**, as it always
+has. The caller's Execute Workflow node then fails too, so its error workflow (`007` → FailedItems →
+resolver) records the failing node and n8n's message. A caller that wants to keep going per file sets
+its own Execute Workflow node to continue on error and handles `{error}`, as `smart-folder2table` does.
+Deliberately not done here: wiring every node's error output into one handler. It hid failures from
+callers that do not check `status` (`04` would have filed the error text as a document).
 
 ## Called By
 
 - `04_inbox-attachment-organizer`
-- `02_smart-table-fill/folder-processor.json`
+- `02_smart-table-fill/workflows/smart-folder2table.json`
+- `06_exact-recall-across-collections`
 
 ## Extraction Object
 

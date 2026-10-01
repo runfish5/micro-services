@@ -83,12 +83,6 @@
               "type": "string"
             },
             {
-              "id": "fp-match-same-row",
-              "name": "match_same_row",
-              "value": "={{ $json.match_same_row === true }}",
-              "type": "boolean"
-            },
-            {
               "id": "fp-match-column",
               "name": "match_column",
               "value": "={{ $json.match_column || 'source_file' }}",
@@ -105,6 +99,12 @@
               "name": "max_file_size_mb",
               "value": "={{ $json.max_file_size_mb || null }}",
               "type": "number"
+            },
+            {
+              "id": "9855f814-471d-48e1-995b-30b750756995",
+              "name": "fail_run_on_file_errors",
+              "value": "={{ $json.fail_run_on_file_errors ?? true }}",
+              "type": "boolean"
             }
           ]
         },
@@ -133,7 +133,13 @@
         -1152
       ],
       "id": "a1f9ce38-aa27-4425-afc8-f07bab9d9b26",
-      "name": "Fetch Data & Schema Sheets"
+      "name": "Fetch Data and Schema Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets account"
+        }
+      }
     },
     {
       "parameters": {
@@ -159,7 +165,7 @@
         "options": {}
       },
       "id": "9f8dfaa5-80d0-434e-982f-1c37ddcbf55a",
-      "name": "IF: Schema Exists?",
+      "name": "If Schema Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -170,12 +176,12 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data & Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; return row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; })() }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
+        "text": "=You are a database schema expert. Given these column names from a spreadsheet:\n{{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data and Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; return row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; })() }}\n\nGenerate a schema definition for each column. Output a JSON array where each item has:\n- ColumnName: the exact column name (preserve case)\n- Type: one of [str, int, date, list, class]\n- Description: brief description (10 words max) of what this field stores\n- Classes: if Type is \"class\", provide 2-4 comma-separated enum values; otherwise empty string\n\nType guidelines:\n- date: timestamps, birthdays, created_at, updated_at, any date field\n- int: IDs, counts, frequencies, ages, numeric identifiers\n- list: multiple values (emails, phones, jobs, tags, anything plural)\n- class: categorical/status fields (use Classes for enum values)\n- str: everything else (names, addresses, notes, single text values)\n\nIMPORTANT: Output ONLY the JSON array, no explanation.",
         "hasOutputParser": true,
         "batching": {}
       },
       "id": "048abaa1-73cc-4c24-83bc-8cb08f922369",
-      "name": "LLM: Generate Schema",
+      "name": "Generate Schema with LLM",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
@@ -195,7 +201,13 @@
       "position": [
         -1056,
         -736
-      ]
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq API"
+        }
+      }
     },
     {
       "parameters": {
@@ -223,13 +235,19 @@
         "options": {}
       },
       "id": "b88ebb72-d331-44a7-87e5-a98d3dcf3e42",
-      "name": "Create & Write Schema Sheet",
+      "name": "Create and Write Schema Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -768,
         -912
-      ]
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets account"
+        }
+      }
     },
     {
       "parameters": {
@@ -239,7 +257,7 @@
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data & Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const colLetter = (n) => { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + colLetter(headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
+        "jsonBody": "={{ (() => { const config = $('Config').first().json; const sheets = $('Fetch Data and Schema Sheets').first().json.sheets || []; const dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name); const row0 = dataSheet?.data?.[0]?.rowData?.[0]; const headers = row0 ? (row0.values || []).map(cell => { const uev = cell?.userEnteredValue; if (!uev) return ''; return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? ''; }) : []; const colLetter = (n) => { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }; const sheetName = config.data_sheet_name; const required = ['source_file', 'Text_to_interpret', 'extraction_status']; const missing = required.filter(h => !headers.includes(h)); const data = missing.map((h, i) => ({ range: sheetName + '!' + colLetter(headers.length + i) + '1', values: [[h]] })); return JSON.stringify({ valueInputOption: 'RAW', data }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -250,7 +268,13 @@
       ],
       "id": "085413c5-74c1-4604-9f5d-3753431e080e",
       "name": "Ensure Headers",
-      "notes": "folder2table-only; no equivalent in smart-table-fill"
+      "notes": "folder2table-only; no equivalent in smart-table-fill. Adds source_file, Text_to_interpret, extraction_status if missing",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets account"
+        }
+      }
     },
     {
       "parameters": {
@@ -273,11 +297,17 @@
         -1152
       ],
       "id": "fp-list-drive-files",
-      "name": "List Drive Files"
+      "name": "List Drive Files",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Fetch Data & Schema Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('LLM: Generate Schema').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\n// Validate: class columns must have Classes defined\nfor (const row of userColumns) {\n  if (row.Type === 'class') {\n    const vals = (row.Classes || '').split(',').map(s => s.trim()).filter(Boolean);\n    if (vals.length === 0) {\n      throw new Error(\n        `Schema error in schema sheet (${config.schema_sheet_name}): column \"${row.ColumnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n        `Fix: add comma-separated values to the \"Classes\" column for \"${row.ColumnName}\".`\n      );\n    }\n  }\n}\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files (resumability)\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim();\n  if (val) done.add(val.toLowerCase());\n}\n\nlet filtered = driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n});\n\n// Include filter: if not \"all\", only keep files in the list\nconst includeRaw = (config.file_include || 'all').trim();\nif (includeRaw.toLowerCase() !== 'all') {\n  const includeSet = new Set(\n    includeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    includeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Exclude filter: remove files in the list\nconst excludeRaw = (config.file_exclude || '').trim();\nif (excludeRaw) {\n  const excludeSet = new Set(\n    excludeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    !excludeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Limit: cap the number of files to process\nconst fileLimit = config.file_limit;\nif (fileLimit != null && fileLimit > 0) {\n  filtered = filtered.slice(0, fileLimit);\n}\n\n// Size filter: skip files exceeding max_file_size_mb\nconst maxSizeMB = config.max_file_size_mb;\nif (maxSizeMB != null && maxSizeMB > 0) {\n  const maxBytes = maxSizeMB * 1024 * 1024;\n  filtered = filtered.filter(f => {\n    const sizeBytes = parseInt(f.json.size || '0', 10);\n    return sizeBytes <= maxBytes;\n  });\n}\n\nreturn filtered.map(f => ({ json: { ...f.json, _extraction: extraction } }));"
+        "jsCode": "const config = $('Config').first().json;\nconst batchResponse = $('Fetch Data and Schema Sheets').first().json;\nconst sheets = batchResponse.sheets || [];\n\nconst extractValues = (rowData) => {\n  if (!rowData) return [];\n  return rowData.map(row =>\n    (row.values || []).map(cell => {\n      const uev = cell?.userEnteredValue;\n      if (!uev) return '';\n      return uev.stringValue ?? uev.numberValue ?? uev.boolValue ?? '';\n    })\n  );\n};\n\nconst schemaSheet = sheets.find(s => s.properties?.title === config.schema_sheet_name);\nconst schemaValues = schemaSheet ? extractValues(schemaSheet.data?.[0]?.rowData) : [];\nconst dataSheet = sheets.find(s => s.properties?.title === config.data_sheet_name);\nconst dataValues = dataSheet ? extractValues(dataSheet.data?.[0]?.rowData) : [];\n\n// Try to get schema from multiple sources\nlet schemaRows = [];\n\n// Source 1: If schema was just created via LLM, use that output\ntry {\n  const llmOutput = $('Generate Schema with LLM').first().json.output;\n  if (Array.isArray(llmOutput) && llmOutput.length > 0) {\n    schemaRows = llmOutput;\n  }\n} catch (e) {\n  // LLM path not taken, try sheet data\n}\n\n// Source 2: If schema exists in sheet, parse from raw response\nif (schemaRows.length === 0) {\n  const schemaHeaders = schemaValues[0] || [];\n  schemaRows = schemaValues.slice(1).map(row => {\n    const obj = {};\n    schemaHeaders.forEach((h, i) => obj[h] = row[i] || '');\n    return obj;\n  });\n}\n\n// Get data sheet info for filtering already-processed files\nconst dataHeaders = dataValues[0] || [];\nconst dataRows = dataValues.slice(1).map(row => {\n  const obj = {};\n  dataHeaders.forEach((h, i) => obj[h] = row[i] || '');\n  return obj;\n});\n\nconst driveFiles = $input.all();\n\n// Build extraction object from schema\nconst internalFields = ['source_file', 'text_to_interpret', 'extraction_status', 'row_number'];\nconst userColumns = schemaRows.filter(row => {\n  const name = (row.ColumnName || '').trim();\n  return name && !internalFields.includes(name.toLowerCase());\n});\n\n// Validate: class columns must have Classes defined\nfor (const row of userColumns) {\n  if (row.Type === 'class') {\n    const vals = (row.Classes || '').split(',').map(s => s.trim()).filter(Boolean);\n    if (vals.length === 0) {\n      throw new Error(\n        `Schema error in schema sheet (${config.schema_sheet_name}): column \"${row.ColumnName}\" has Type \"class\" but the \"Classes\" column is empty. ` +\n        `Fix: add comma-separated values to the \"Classes\" column for \"${row.ColumnName}\".`\n      );\n    }\n  }\n}\n\nlet extraction = {};\nif (userColumns.length > 0) {\n  const focus_fields = userColumns.map(r => r.ColumnName);\n  const field_schemas = userColumns.map(r => ({\n    name: r.ColumnName,\n    type: r.Type || 'str',\n    description: r.Description || '',\n    classes: r.Classes || ''\n  }));\n  \n  const instructionLines = userColumns.map(r => {\n    const name = r.ColumnName;\n    const type = r.Type || 'str';\n    const desc = r.Description || '';\n    const classes = r.Classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  \n  extraction = {\n    type: 'document_analysis',\n    focus_fields,\n    field_schemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  };\n}\n\n// Filter out already-processed files (resumability).\n// A row whose extraction_status starts with \"failed\" does not count as done:\n// that file is tried again, and Write Extracted Row updates its row in place.\nconst col = config.source_file_column;\nconst done = new Set();\nfor (const r of dataRows) {\n  const val = (r[col] || '').trim().toLowerCase();\n  if (!val) continue;\n  if (!String(r.extraction_status || '').toLowerCase().startsWith('failed')) done.add(val);\n}\n\nlet filtered = driveFiles.filter(f => {\n  const name = (f.json.name || '').trim().toLowerCase();\n  return name && !done.has(name);\n});\n\n// Include filter: if not \"all\", only keep files in the list\nconst includeRaw = (config.file_include || 'all').trim();\nif (includeRaw.toLowerCase() !== 'all') {\n  const includeSet = new Set(\n    includeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    includeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Exclude filter: remove files in the list\nconst excludeRaw = (config.file_exclude || '').trim();\nif (excludeRaw) {\n  const excludeSet = new Set(\n    excludeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)\n  );\n  filtered = filtered.filter(f =>\n    !excludeSet.has((f.json.name || '').trim().toLowerCase())\n  );\n}\n\n// Limit: cap the number of files to process\nconst fileLimit = config.file_limit;\nif (fileLimit != null && fileLimit > 0) {\n  filtered = filtered.slice(0, fileLimit);\n}\n\n// Size filter: skip files exceeding max_file_size_mb\nconst maxSizeMB = config.max_file_size_mb;\nif (maxSizeMB != null && maxSizeMB > 0) {\n  const maxBytes = maxSizeMB * 1024 * 1024;\n  filtered = filtered.filter(f => {\n    const sizeBytes = parseInt(f.json.size || '0', 10);\n    return sizeBytes <= maxBytes;\n  });\n}\n\nreturn filtered.map(f => ({ json: { ...f.json, _extraction: extraction } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -286,7 +316,7 @@
         -1152
       ],
       "id": "fp-prepare-and-filter",
-      "name": "Build Output Schema & Filter"
+      "name": "Build Output Schema and Filter"
     },
     {
       "parameters": {
@@ -318,11 +348,21 @@
         -1136
       ],
       "id": "fp-download-file",
-      "name": "Download File"
+      "name": "Download File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst config = $('Config').first().json;\nconst batchSize = config.batch_size || 10;\nconst extraction = $('Build Output Schema & Filter').first().json._extraction || {};\nconst fieldSchemas = extraction.field_schemas || [];\n\n// No batching needed — pass through unchanged\nif (fieldSchemas.length <= batchSize) {\n  return [{ json: { ...item.json, _extraction: extraction }, binary: item.binary }];\n}\n\n// Split field_schemas into batches, rebuild extraction per batch\nconst batches = [];\nfor (let i = 0; i < fieldSchemas.length; i += batchSize) {\n  const batchSchemas = fieldSchemas.slice(i, i + batchSize);\n  const instructionLines = batchSchemas.map(r => {\n    const name = r.name;\n    const type = r.type || 'str';\n    const desc = r.description || '';\n    const classes = r.classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  batches.push({\n    type: extraction.type || 'document_analysis',\n    focus_fields: batchSchemas.map(s => s.name),\n    field_schemas: batchSchemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  });\n}\n\nreturn batches.map(batch => ({\n  json: { ...item.json, _extraction: batch },\n  binary: item.binary\n}));"
+        "jsCode": "const item = $input.first();\nconst config = $('Config').first().json;\nconst batchSize = config.batch_size || 10;\nconst extraction = $('Build Output Schema and Filter').first().json._extraction || {};\nconst fieldSchemas = extraction.field_schemas || [];\n\n// No batching needed — pass through unchanged\nif (fieldSchemas.length <= batchSize) {\n  return [{ json: { ...item.json, _extraction: extraction }, binary: item.binary }];\n}\n\n// Split field_schemas into batches, rebuild extraction per batch\nconst batches = [];\nfor (let i = 0; i < fieldSchemas.length; i += batchSize) {\n  const batchSchemas = fieldSchemas.slice(i, i + batchSize);\n  const instructionLines = batchSchemas.map(r => {\n    const name = r.name;\n    const type = r.type || 'str';\n    const desc = r.description || '';\n    const classes = r.classes || '';\n    let line = `- ${name}`;\n    if (type === 'class' && classes) line += ` (enum: ${classes})`;\n    else if (type === 'list') line += ` (array)`;\n    else if (type === 'date') line += ` (date)`;\n    else if (type === 'int') line += ` (number)`;\n    if (desc) line += `: ${desc}`;\n    return line;\n  });\n  batches.push({\n    type: extraction.type || 'document_analysis',\n    focus_fields: batchSchemas.map(s => s.name),\n    field_schemas: batchSchemas,\n    instructions: `Extract ALL visible information from the document. Additionally, PRIORITIZE these fields (use these exact key names if the information is present):\\n${instructionLines.join('\\n')}\\n\\nInclude any other relevant information you observe (logos, text, context, etc.).`\n  });\n}\n\nreturn batches.map(batch => ({\n  json: { ...item.json, _extraction: batch },\n  binary: item.binary\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -349,7 +389,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const fileName = $('Download File').first().json.name || 'unknown';\nconst allOutputs = $input.all();\n\n// Merge all batch outputs into one object\nconst merged = {};\nlet lastRawText = '';\nfor (const output of allOutputs) {\n  const converterOutput = output.json;\n  const rawText = converterOutput?.data?.text || converterOutput?.text || '';\n  if (!rawText.trim()) continue;\n  lastRawText = rawText;\n\n  try {\n    let parsed = JSON.parse(rawText);\n    if (Array.isArray(parsed)) parsed = parsed[0] || {};\n    if (typeof parsed === 'object' && parsed !== null) {\n      Object.assign(merged, parsed);\n    }\n  } catch (e) {\n    if (allOutputs.length === 1) {\n      Object.assign(merged, { Text_to_interpret: rawText });\n    }\n  }\n}\n\nif (Object.keys(merged).length === 0 && !lastRawText.trim()) {\n  console.warn(`Skipped file \"${fileName}\": converter returned empty output`);\n  return [];\n}\n\nconst rowData = {\n  ...merged,\n  source_file: fileName,\n  Text_to_interpret: lastRawText,\n};\n\ndelete rowData.content_class;\ndelete rowData.class_confidence;\ndelete rowData.confidence;\n\nreturn [{ json: rowData }];"
+        "jsCode": "// One row per file, always. A file that fails still gets a row, so the loop\n// keeps going and the failure is visible in the sheet. The next run retries it.\nconst idx = $('Loop Over Files').context['currentRunIndex'] ?? 0;\nconst listed = $('Build Output Schema and Filter').all()[idx]?.json || {};\nlet fileName = listed.name;\nif (!fileName) {\n  try { fileName = $('Download File').first().json.name; } catch (e) {}\n}\nfileName = fileName || 'unknown';\n\nconst outputs = $input.all();\nconst errorText = (e) => typeof e === 'string' ? e : (e?.message || JSON.stringify(e));\nconst stage = $prevNode.name === 'Download File' ? 'download' : 'conversion';\n\nlet failure = '';\nconst errored = outputs.find(o => o.json?.error && !o.json?.status);\nconst unsupported = outputs.find(o => o.json?.status === 'unsupported');\nif (stage === 'download') {\n  // Only the Download File error output leads here directly.\n  failure = `failed: download - ${errored ? errorText(errored.json.error) : 'no error detail returned'}`;\n} else if (errored) {\n  // The converter failed on this file (or could not be called). n8n's own message follows.\n  failure = `failed: converter - ${errorText(errored.json.error)}`;\n} else if (unsupported) {\n  // Not retried and does not fail the run: retrying cannot change the file type.\n  failure = `skipped: unsupported file type (${unsupported.json.error?.mimeType || 'unknown type'})`;\n}\n\n// Merge all batch outputs into one object\nconst merged = {};\nlet lastRawText = '';\nlet parsedFields = false;\nif (!failure) {\n  for (const output of outputs) {\n    const converterOutput = output.json;\n    const rawText = converterOutput?.data?.text || converterOutput?.text || '';\n    if (!rawText.trim()) continue;\n    lastRawText = rawText;\n    try {\n      let parsed = JSON.parse(rawText);\n      if (Array.isArray(parsed)) parsed = parsed[0] || {};\n      if (typeof parsed === 'object' && parsed !== null) {\n        Object.assign(merged, parsed);\n        parsedFields = true;\n      }\n    } catch (e) {\n      // not JSON: the text itself is kept in Text_to_interpret below\n    }\n  }\n  if (!lastRawText.trim()) failure = 'failed: conversion - converter returned no text';\n}\n\nlet rowData;\nif (failure) {\n  // Leave the user's columns empty rather than guess at them.\n  rowData = { source_file: fileName, extraction_status: failure.slice(0, 500) };\n} else {\n  rowData = {\n    ...merged,\n    source_file: fileName,\n    Text_to_interpret: lastRawText,\n    extraction_status: parsedFields ? 'ok' : 'ok: text only, no fields parsed',\n  };\n  delete rowData.content_class;\n  delete rowData.class_confidence;\n  delete rowData.confidence;\n}\n\n\nreturn [{ json: rowData }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -362,7 +402,7 @@
     },
     {
       "parameters": {
-        "operation": "={{ $('Config').first().json.match_same_row ? 'appendOrUpdate' : 'append' }}",
+        "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
           "value": "={{ $('Config').first().json.spreadsheet_id }}",
@@ -408,84 +448,17 @@
       "position": [
         368,
         -848
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## Intelligent Document Extraction to Google Sheets\nProcesses all files in a Google Drive folder through any-file2json-converter and writes directly to sheet.\n\n### How it works\n1. Triggers manually or via another workflow to process documents stored in a specific Google Drive folder.\n2. Analyzes your Google Sheet to find or create an AI-powered extraction schema based on your existing column headers.\n3. Lists folder contents and filters out files that were already processed to prevent duplicates and enable resumability.\n4. Iterates through each file, downloading the content and passing it to a sub-workflow for AI-driven data extraction.\n5. Cleans and structures the extracted information before appending or updating rows in your target Google Sheet.\n\n### Setup\n- [ ] Connect **Google Drive** and **Google Sheets** credentials.\n- [ ] Create a Sheet with column headers for the data to extract (e.g., Date, Amount, Vendor).\n- [ ] Paste the **Folder ID** and **Spreadsheet ID** into the **Config** node.\n- [ ] Add an **OpenAI** or **Groq** API key in the **Schema LLM** node.\n- [ ] Ensure `any-file2json-converter` sub-workflow is active.\n- [ ] (Optional) Adjust `batch_size` / `rate_limit_wait_seconds` in **Config** to match your API limits.\n\nAlso supports: auto-schema creation, resumability, file filtering, column batching, adaptive rate limiting.\n[Setup guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide-folder2table.md)",
-        "height": 700,
-        "width": 472
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1968,
-        -1152
       ],
-      "id": "e54faa52-75e6-42ea-8958-334f5b54b833",
-      "name": "Sticky Note - Setup"
-    },
-    {
-      "parameters": {
-        "content": "### Schema Check & Creation\nOn first run, if schema sheet doesn't exist:\n1. Reads column headers from data sheet\n2. Uses LLM to generate Type, Description, Classes\n3. Creates schema sheet with intelligent defaults\n\nEdit the schema sheet to customize extraction behavior.",
-        "height": 272,
-        "width": 444,
-        "color": 7
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Sheets account"
+        }
       },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1072,
-        -944
-      ],
-      "id": "79281892-ef49-4f17-962f-ebc251e1b38f",
-      "name": "Sticky Note - Schema"
-    },
-    {
-      "parameters": {
-        "content": "### Loop: 1 file at a time\n\n\n\n\n\n\n\n\n\n\nDownload → Convert → Write → next file.\nIf file #6 fails, files 1-5 are already written.\nOn retry, resumability check skips those 5.",
-        "height": 232,
-        "width": 308,
-        "color": 7
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        32,
-        -1184
-      ],
-      "id": "fp-sticky-mode",
-      "name": "Sticky Note - Loop"
-    },
-    {
-      "parameters": {
-        "content": "### If stops here\n\nExecute Workflow inputs get cleared on re-import. Re-add the **extraction** input:\n```\n{{ $json._extraction || $('Build Output Schema & Filter').first().json._extraction || {} }}\n```",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -332,
-        -880
-      ],
-      "id": "fp-sticky-inputs",
-      "name": "Sticky Note - Inputs"
-    },
-    {
-      "parameters": {
-        "content": "### Dynamic Rate Limit\n\n**Start fast, adapt on error:**\n1. Manual run: rate_limit_wait_seconds = 0 (no delay)\n2. On 429 error: error handler extracts \"retry in Xs\"\n3. Error handler calls folder-processor via Execute Workflow\n   with rate_limit_wait_seconds = extracted timing\n4. Resumability: Already-processed files are skipped\n\n**Config reads from workflow input with fallbacks:**\nManual Trigger → Config uses defaults (0s wait)\nExecute Workflow → Config uses passed values",
-        "height": 80,
-        "width": 150
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -112,
-        -880
-      ],
-      "id": "fp-sticky-rate-limit",
-      "name": "Sticky Note - Rate Limit"
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "Matches on source_file: a new file is appended, a retried file updates its own row. Operation is fixed, not an expression, so the node survives import"
     },
     {
       "parameters": {
@@ -498,7 +471,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "extraction": "={{ $json._extraction || $('Build Output Schema & Filter').first().json._extraction || {} }}"
+            "extraction": "={{ $json._extraction || $('Build Output Schema and Filter').first().json._extraction || {} }}"
           },
           "matchingColumns": [],
           "schema": [],
@@ -517,37 +490,195 @@
       ],
       "id": "c73c8a27-0976-4471-a25f-a23add508009",
       "name": "Convert File to Text",
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "content": "🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
-        "height": 60,
-        "width": 220
+        "content": "## Extract data from a Drive folder into Google Sheets\n\nTurn a folder of invoices, receipts, CVs or scans into a table: one row per file, filled into the columns you already have.\n\n### How it works\n1. Reads your sheet's header row and, on first run, has an LLM draft a schema sheet describing each column.\n2. Lists the Drive folder and skips files already written successfully, so a rerun resumes where the last one stopped.\n3. Downloads each file and sends it to the any-file2json-converter sub-workflow (PDF, images, Office, CSV, JSON, text).\n4. Writes one row per file, matched to your column names.\n5. A file that fails still gets a row, with `extraction_status` giving the reason. After the last file the run fails with that list, so your error workflow sees it. The next run retries only those files.\n\n### Setup steps\n- [ ] Import and publish [any-file2json-converter](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json) first\n- [ ] Create a Google Sheet whose header row names the fields you want (e.g. Date, Amount, Vendor)\n- [ ] Connect Google Drive and Google Sheets OAuth2 credentials\n- [ ] Connect an LLM credential to **Schema LLM**\n- [ ] Set `folder_id` and `spreadsheet_id` in **Config**\n- [ ] Re-select your converter in **Convert File to Text**\n\n### Customization\n- Edit the schema sheet to change a column's type, description or allowed values.\n- `file_include`, `file_exclude`, `file_limit` and `max_file_size_mb` in **Config** narrow a run.\n- Hitting LLM rate limits? Raise `rate_limit_wait_seconds`. The rerun skips finished files.\n\n[Full setup guide](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide-folder2table.md) · [Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/README.md) · Text instead of files? [smart-table-fill](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/workflows/smart-table-fill.n8n.json)",
+        "height": 816,
+        "width": 472
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -324,
-        -876
+        -1968,
+        -1328
       ],
-      "id": "b2c3d4e5-source-link-convert-file",
-      "name": "Sticky Note - Subworkflow Source"
+      "id": "dce281e5-995a-590f-9a98-c5f6e5b06c79",
+      "name": "Sticky Note - Overview"
     },
     {
       "parameters": {
-        "content": "### If stops here\n\nA column has `Type: class` but the `Classes` field is empty.\n\n**Fix:** Open the schema sheet and add comma-separated class values for that column.\n\nOr change the `Type` from `class` to `str`.",
-        "height": 100,
-        "width": 150
+        "content": "## After import\nSet `folder_id`, `spreadsheet_id` and `data_sheet_name` (your tab's name) here. Every other field has a working default.",
+        "height": 304,
+        "width": 208,
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -104,
-        -1184
+        -1280,
+        -1328
       ],
-      "id": "b2c3d4e5-empty-class-guard-f2t",
-      "name": "Sticky Note - Empty Class Guard"
+      "id": "eabb921b-132c-58c3-ab50-50f97dd6c5b2",
+      "name": "Sticky Note - Config Warning"
+    },
+    {
+      "parameters": {
+        "content": "## Build the extraction schema\nReads your sheet headers. On first run an LLM writes a schema sheet (type, description, allowed values per column). Edit it to steer extraction.",
+        "height": 720,
+        "width": 464,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        -1328
+      ],
+      "id": "febc8e92-e657-5421-be02-9bfb46cc4ce7",
+      "name": "Sticky Note - Schema"
+    },
+    {
+      "parameters": {
+        "content": "## Pick files to process\nAdds missing helper columns, lists the folder and skips files already written successfully.",
+        "height": 304,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -1328
+      ],
+      "id": "25073747-63cf-56ed-8d85-4d7f55cf3a24",
+      "name": "Sticky Note - Pick Files"
+    },
+    {
+      "parameters": {
+        "content": "## Stops here?\nA `class` column has an empty `Classes` cell in the schema sheet. Add comma-separated values, or change its Type to `str`.",
+        "height": 304,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -1328
+      ],
+      "id": "b174ff11-c1f6-506c-ab04-f25f8dfbe6fe",
+      "name": "Sticky Note - Class Guard"
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\nextraction:\n`{{ $json._extraction || $('Build Output Schema and Filter').first().json._extraction || {} }}`",
+        "height": 80,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -332,
+        -880
+      ],
+      "id": "7fa8078a-d68c-596f-ae88-af8532666d64",
+      "name": "Sticky Note - Converter Inputs"
+    },
+    {
+      "parameters": {
+        "content": "## After import\nSelect **your** imported [converter](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json) here. If `extraction` is blank, restore it from the blue note.",
+        "height": 272,
+        "width": 240,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        -976
+      ],
+      "id": "8148375f-bc49-595f-a6fe-65835c82d2bb",
+      "name": "Sticky Note - Converter Warning"
+    },
+    {
+      "parameters": {
+        "content": "## Write one row per file\nParses the converter output into your columns. A failed file still gets a row with `extraction_status` ([what each value means](https://github.com/runfish5/micro-services/blob/main/projects/n8n/02_smart-table-fill/docs/setup-guide-folder2table.md#when-a-file-fails)).",
+        "height": 272,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -976
+      ],
+      "id": "fcd8364c-950f-5e9b-8b06-3d7f8c96e7b0",
+      "name": "Sticky Note - Write"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs once, after the last file. Failed files already have their row in the\n// sheet; this makes the run itself say so. Without it the execution ends green,\n// and an error workflow (FailedItems, resolver, alerts) never hears about it.\nconst rows = [];\nfor (let run = 0; ; run++) {\n  let items;\n  try { items = $('Prepare Write Data').all(0, run); } catch (e) { break; }\n  if (!items.length) break;\n  rows.push(...items.map(i => i.json));\n}\nconst failed = rows.filter(r => String(r.extraction_status || '').startsWith('failed'));\nconst summary = { files: rows.length, ok: rows.length - failed.length, failed: failed.length };\n\nif (failed.length && $('Config').first().json.fail_run_on_file_errors) {\n  const list = failed.slice(0, 5).map(r => `${r.source_file}: ${r.extraction_status}`).join(' | ');\n  const more = failed.length > 5 ? ` | and ${failed.length - 5} more` : '';\n  throw new Error(`${failed.length} of ${rows.length} files failed. Rerun to retry only those. ${list}${more}`);\n}\nreturn [{ json: summary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -1296
+      ],
+      "id": "b302e294-e5b5-4f16-8fa6-e09826d328d1",
+      "name": "Check for Failed Files"
+    },
+    {
+      "parameters": {
+        "content": "## Loop: 1 file at a time\nIf file #6 fails, files 1-5 are already written\nand a rerun skips them.\nAfter the last file, **Check for Failed Files**\nfails the run if any file failed.",
+        "height": 336,
+        "width": 640,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        96,
+        -1328
+      ],
+      "id": "51623458-34c4-4c1e-a50d-6a8c48026b7e",
+      "name": "Sticky Note - Report"
+    },
+    {
+      "parameters": {
+        "content": "## Rate limits\nRaise `rate_limit_wait_seconds`, or let an error workflow restart this run with a higher wait. [Example](https://github.com/runfish5/micro-services/blob/main/projects/n8n/10_error-handler/workflows/mainflow.md#execute-workflow-retry-no-sheet-storage)",
+        "height": 272,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -976
+      ],
+      "id": "c043ecf9-277e-4c5a-bf5e-f089f0dba165",
+      "name": "Sticky Note - Rate Limit"
+    },
+    {
+      "parameters": {
+        "content": "@[youtube](iwbcNdQrwjU)",
+        "height": 320,
+        "width": 472
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1968,
+        -480
+      ],
+      "id": "7f1558bc-3092-47cc-aa32-a4e69f698ced",
+      "name": "Sticky Note - Video"
     }
   ],
   "connections": {
@@ -577,25 +708,25 @@
       "main": [
         [
           {
-            "node": "Fetch Data & Schema Sheets",
+            "node": "Fetch Data and Schema Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Data & Schema Sheets": {
+    "Fetch Data and Schema Sheets": {
       "main": [
         [
           {
-            "node": "IF: Schema Exists?",
+            "node": "If Schema Exists",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF: Schema Exists?": {
+    "If Schema Exists": {
       "main": [
         [
           {
@@ -606,18 +737,18 @@
         ],
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "LLM: Generate Schema": {
+    "Generate Schema with LLM": {
       "main": [
         [
           {
-            "node": "Create & Write Schema Sheet",
+            "node": "Create and Write Schema Sheet",
             "type": "main",
             "index": 0
           }
@@ -628,7 +759,7 @@
       "ai_languageModel": [
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "ai_languageModel",
             "index": 0
           }
@@ -639,14 +770,14 @@
       "ai_outputParser": [
         [
           {
-            "node": "LLM: Generate Schema",
+            "node": "Generate Schema with LLM",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "Create & Write Schema Sheet": {
+    "Create and Write Schema Sheet": {
       "main": [
         [
           {
@@ -672,14 +803,14 @@
       "main": [
         [
           {
-            "node": "Build Output Schema & Filter",
+            "node": "Build Output Schema and Filter",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Output Schema & Filter": {
+    "Build Output Schema and Filter": {
       "main": [
         [
           {
@@ -692,7 +823,13 @@
     },
     "Loop Over Files": {
       "main": [
-        [],
+        [
+          {
+            "node": "Check for Failed Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Download File",
@@ -707,6 +844,13 @@
         [
           {
             "node": "Expand Batches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Write Data",
             "type": "main",
             "index": 0
           }

@@ -116,9 +116,11 @@ On first workflow execution, n8n auto-generates the full schema. Example output:
 
 ### 3.1 Configure smart-table-fill
 
-In the **smart-table-fill** workflow, open the **String Input** node and set:
-- `spreadsheet_id`: Copy from your Sheet's URL (the long string between `/d/` and `/edit`)
-- `data_sheet_name`: `Entries`
+In the **smart-table-fill** workflow, open the **Get Rows in Sheet** node and pick:
+- your spreadsheet (or paste its ID, the long string between `/d/` and `/edit`)
+- the `Entries` tab
+
+**String Input** reads both from that node, unless the calling workflow passes `spreadsheet_id` and `data_sheet_name` itself.
 
 ---
 
@@ -132,25 +134,23 @@ For Email-CRM mode, we use the **Apps Script Execution API** instead — it writ
 
 ### 4.2 Switch to Mode B
 
-Find the sticky note titled **"## Mode B: Email-CRM Setup"**. The 3 nodes in front of it need to be activated:
+Find the sticky note titled **"Email CRM (optional)"**. The branch is already wired to **Merge Outputs**; its 3 nodes ship disabled:
 
 1. **Activate these nodes** (right-click → Activate):
-   - `[CRM] Write via Apps Script`
-   - `[CRM] Prep Email Store Input`
-   - `[CRM] Call contact-memory-update`
+   - `CRM Write via Apps Script`
+   - `CRM Prep Email Store Input`
+   - `CRM Call Contact Memory Update`
 
 2. **Deactivate the Mode A node** (right-click → Deactivate):
    - `Write Extracted Row`
 
-3. **Connect the flow:** Wire **Merge Outputs** → **[CRM] Write via Apps Script**
-
-4. Open **[CRM] Call contact-memory-update** node and select **contact-memory-update** from the dropdown
+3. Open **CRM Call Contact Memory Update** and select **contact-memory-update** from the dropdown. It ships with the placeholder `YOUR_CONTACT_MEMORY_UPDATE_WORKFLOW_ID`.
 
 ---
 
 ## Phase 5: Apps Script Setup
 
-Now configure the Apps Script that the `[CRM] Write via Apps Script` node will call.
+Now configure the Apps Script that the `CRM Write via Apps Script` node will call.
 
 **Follow the detailed guide:**
 
@@ -167,8 +167,8 @@ This covers:
 - Apps Script deployment URL (starts with `https://script.googleapis.com/v1/scripts/AKfycb...`)
 - n8n OAuth credential with 3 scopes configured
 
-**Then in smart-table-fill**, open **[CRM] Write via Apps Script** node:
-- Paste your Apps Script URL
+**Then in smart-table-fill**, open **CRM Write via Apps Script** node:
+- Paste your Apps Script URL (it ships with the placeholder `YOUR_APPS_SCRIPT_ID`)
 - Select your new OAuth credential
 
 Click **Save** and **Publish**.

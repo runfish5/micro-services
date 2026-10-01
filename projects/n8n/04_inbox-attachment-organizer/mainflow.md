@@ -200,11 +200,12 @@ Rules, constraints and the case table: `CLAUDE.md` (Ledger Grain) and `README.md
 - **Supported formats**: PDF, DOCX, images (via OCR), etc.
 - **Input**: Binary data (per attachment). No extraction passed.
 - **Output**:
-  - `status`: `resolved` | `unresolved`
+  - `status`: `ok` | `unsupported` (a step that fails inside the converter fails this workflow, so 007 records it)
+  - `error`: `{code, mimeType, fileName, message}` for unsupported files, else null
   - `data.text`: Extracted text content (string or JSON)
   - `data.content_class`: `primary_document` | `style_element` | `unclassified` | `UNK`
   - `data.class_confidence`: `0.0-1.0` | `UNK`
-- **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`. Unsupported MIME types return `status: "unresolved"` with resolver_hint.
+- **Note**: Classification only available for image path (LLM-based). PDF/text paths return `UNK`. Unsupported MIME types return `status: "unsupported"` with the MIME type in `error`.
 
 ### 2. gdrive-recursion
 - **Called by**: Call 'gdrive-recursion'
