@@ -12,7 +12,7 @@ Workflow monitoring and incident management via Telegram — check execution sta
 ## Safety Net (active — treat like a security control)
 
 This project hosts the lab's **failure-alerting safety net**:
-- **External heartbeat** — `.github/workflows/n8n-heartbeat.yml` + `scripts/n8n-heartbeat-check.sh` (one-time setup: `scripts/setup-heartbeat.sh`). Pings n8n every 15 min from outside Railway; failure → GitHub email. Full detail: **`docs/external-heartbeat.md`**.
+- **External heartbeat** — `.github/workflows/n8n-heartbeat.yml` + `scripts/n8n-heartbeat-check.sh` (one-time setup: `scripts/setup-heartbeat.sh`). Checks n8n from outside Railway: liveness, database readiness, the API, the failure ratio and whether the DB growth guard (`14_db-janitor`) is alive; failure → GitHub email. Scheduled every 15 min, but GitHub really runs it every few hours. Full detail: **`docs/external-heartbeat.md`**.
 - **In-n8n runner-proof + email alerts** live in `10_error-handler` (survive task-runner outages).
 
 ## Commands

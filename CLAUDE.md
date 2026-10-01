@@ -94,6 +94,44 @@ keeping that way — **an unbound workflow produces no `FailedItems` row**, so i
 error handler, the 8-hour resolver and the UPKEEP briefing section alike. The historical coverage
 figure (the handler saw 107 of 285 retained failures) reflects the *old* binding state, not today's.
 
+## Database growth guard (`14_db-janitor`) — read before starting any big job
+
+On 2026-10-01 a backup run stored ~245 MB of run history in one hour and filled the 500 MB
+Postgres volume: Postgres crash-looped, n8n answered `503`, recovery took hours, and **every
+monitor stayed silent** (the heartbeat checked `/healthz`, which stays 200 without a database,
+and GitHub ran it every 2.4–8.3 hours instead of every 15 minutes).
+
+What exists now, and what each part is for:
+
+| Part | State |
+|---|---|
+| The guard: a small service next to Postgres (`projects/n8n/14_db-janitor`, bash + psql, **not an n8n workflow**). Every 2 min one Postgres function measures the volume and the bytes each workflow stored; over the limit → alert, unpublish, stop its runs; ≥85% → everything with a trigger is unpublished. Also reports "n8n is not ready" | **Built and tested locally in its image 2026-10-01. Not deployed: the Railway service does not exist yet.** Update this line when it runs in `observe`, then `enforce` |
+| Heartbeat: readiness check, HTTP status judged before the body, guard-alive check | **Pushed 2026-10-01.** The guard-alive check stays off until the repository variables `GUARD_STATUS_URL` and `HEARTBEAT_GUARD_CHECK=required` are set |
+| `inbox-backfill` stores nothing on failed runs either | **Repo + live 2026-10-01** |
+| Pruning and run-time limit as Railway variables | **Open** — set by hand; values in `projects/n8n/docs/infra-ops.md` |
+
+**Cost review due December 2026 – January 2027.** The guard is a sixth Railway service, added
+2026-10-01 on the understanding that its cost gets checked after 2–3 months. Measured locally
+before deploying: 9 MB memory (peak 15 MB), about 35 CPU-seconds per day. Compare that with the
+**Metrics** tab of the service and the usage page of the project in Railway. If it is not worth
+it, the alternative is the n8n-workflow version of the guard (no extra service, but more setup,
+and blind when n8n is down). Raise the question with the operator; do not decide it alone.
+
+Rules that follow from it:
+
+- **Big jobs are denied by default.** A workflow that stores more than 5 MB in 3 minutes or 20 MB
+  in an hour gets switched off. A legitimate big job needs an allowance with an end time
+  (`scripts/db-guard.sh allow <workflow id> <MB> <hours>`), set during a working session. Runbook:
+  `projects/n8n/14_db-janitor/docs/runbook.md`.
+- **A batch workflow stores nothing in n8n**: `saveDataSuccessExecution: none` *and*
+  `saveDataErrorExecution: none`. A failed or stopped run stores its full data just like a
+  successful one.
+- **The guard lives outside n8n on purpose.** It must keep working when n8n, its worker or the
+  task runner is down, and no database superuser credential should sit inside n8n. Do not
+  rebuild it as a workflow.
+- **n8n writes a run's data when the run ends.** Nothing can veto that write from outside, so
+  the guard bounds the damage to one check; it does not prevent the first write.
+
 ## Open thread — `/visits` command (read before touching the daily briefing)
 
 The 7 AM briefing's site digest deliberately ends with **"→ full detail in the Visits sheet"**
@@ -174,7 +212,7 @@ projects/n8n/
 ├── 11_8-hours-incident-resolver/    - Works thorugh a google sheet
 ├── 12_steward/                      - Personal assistant: briefing, dispatch, subworkflows
 ├── 13_n8n-ops-center/               - Workflow monitoring: /status, /failures, /retry
-├── 14_db-janitor/                   - Scheduled DB cleanup reporter (stub)
+├── 14_db-janitor/                   - DB growth guard: stops workflows that fill n8n's own database
 ├── 15_site-visits/                  - Website visit telemetry intake (beacon → Visits sheet)
 ├── 16_commitments-ledger/           - Our own record of what we signed up for; reconciles against 04's Billing_Ledger
 └── shared/                          - Cross-project workflows: gdrive-recursion (subworkflow), signup-intake (intake door — ACTIVE, live path is `promptpotter-waitlist`)
@@ -265,4 +303,5 @@ Blue sticky notes behind Execute Workflow nodes serve as quick-restore reference
 - `projects/n8n/docs/row-index-pattern.md` - Batch table operations pattern
 - `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
 - `projects/n8n/docs/infra-ops.md` - Infrastructure, binary data mode, volume management
+- `projects/n8n/14_db-janitor/docs/runbook.md` - DB growth guard: alerts, allowances, disk-full recovery
 - `projects/n8n/docs/workflow-as-code-sdk.md` - Code-first authoring/refactoring via `@n8n/workflow-sdk` (throwaway TS)

@@ -4,73 +4,89 @@ Infrastructure and container-layer operations for the n8n instance. Separate fro
 
 ## Binary Data Mode
 
-By default n8n stores binary data (email attachments, PDFs, images) **inline in PostgreSQL** execution records. This causes rapid volume growth — the inbox-attachment-organizer stores ~237KB per execution.
+n8n keeps binary data (email attachments, PDFs, images) for as long as it keeps the run they
+belong to. Where it keeps them depends on `N8N_DEFAULT_BINARY_DATA_MODE`:
 
-### Fix: Filesystem Storage
+| Mode | Where | Works in queue mode? |
+|---|---|---|
+| `database` | table `binary_data` in PostgreSQL | yes. This is what a queue-mode instance uses |
+| `filesystem` | files on the n8n container's disk | **no.** Primary and worker are separate containers with no shared disk, so one cannot read what the other wrote |
+| `s3` | external object storage | yes, licensed feature |
 
-Set this environment variable on your hosting platform (e.g., Docker Compose env, service dashboard):
+An earlier version of this page recommended `filesystem`. That advice only holds for a
+single-container instance. On the queue-mode setup described here, attachments live in Postgres
+and count against its volume: the inbox-attachment-organizer stores about 237 KB per run.
 
-```
-N8N_DEFAULT_BINARY_DATA_MODE=filesystem
-```
-
-- New executions store binary data as files on disk, DB holds only metadata + JSON
-- Existing data in PostgreSQL stays until executions are pruned/deleted
-- No workflow changes needed — transparent to all workflows
-
-### Verification
-
-After setting the var and redeploying:
-1. Run a workflow that processes files (e.g., inbox-attachment-organizer)
-2. Check the volume — binary files appear in `/home/node/.n8n/binaryData/`
-3. DB growth per execution should drop from ~237KB to ~50KB
+So the size of the database is governed by three things, in this order: which runs are stored at
+all (workflow settings `saveDataSuccessExecution` / `saveDataErrorExecution`), how long they are
+kept (pruning, below), and the growth guard, which catches whatever the first two let through.
 
 ## Execution Pruning (n8n Built-in)
 
-n8n has built-in execution pruning, configured via env vars:
+n8n deletes old runs by itself, configured through environment variables. Pruning runs on the
+**primary** only:
 
-| Variable | Default | Recommended |
-|----------|---------|-------------|
+| Variable | n8n default | This setup |
+|----------|-------------|------------|
 | `EXECUTIONS_DATA_PRUNE` | `true` | `true` |
-| `EXECUTIONS_DATA_MAX_AGE` | `336` (14 days, hours) | `336` |
-| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | - | `500` |
+| `EXECUTIONS_DATA_MAX_AGE` | `336` (hours = 14 days) | `336` |
+| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | `10000` | `2000` |
 
-These prune execution *records* but don't reclaim PostgreSQL disk space (see VACUUM below).
+Pruning deletes rows; PostgreSQL then reuses that space but does not hand it back to the volume
+(see VACUUM below). That is fine: a table that stops growing is the goal.
 
-## DB Janitor Workflow
+If runs older than the limit are still there, do not assume the variable is the cause. Run
+`scripts/db-guard.sh preflight` and read `executions`: it shows how many runs are
+overdue, soft-deleted or have no end time.
 
-The `14_db-janitor` workflow runs weekly (Sunday 3 AM) and sends a Telegram report of old/oversized executions. Stub mode — reports only, no automatic deletion.
+## Run-Time Limit
 
-See [`14_db-janitor/workflows/mainflow.md`](../14_db-janitor/workflows/mainflow.md) for setup.
+| Variable | n8n default | This setup |
+|----------|-------------|------------|
+| `EXECUTIONS_TIMEOUT` | `-1` (none) | `900` (seconds): every run ends after 15 minutes |
+| `EXECUTIONS_TIMEOUT_MAX` | `3600` | `7200`: the most a single workflow may ask for |
+
+A workflow that legitimately runs longer sets its own `executionTimeout` in its settings, up to
+the maximum. This is the only limit that acts *before* a run writes its data.
+
+## Database Growth Guard
+
+[`14_db-janitor`](../14_db-janitor/workflows/mainflow.md) is a small sixth service next to
+Postgres (variables: [`railway/db-guard.env.example`](railway/db-guard.env.example)). It checks
+the database every 2 minutes, switches off a workflow that stores too much, and switches off everything with a trigger when the
+volume passes 85%. Alerts, allowances for big jobs and the disk-full recovery steps are in its
+[runbook](../14_db-janitor/docs/runbook.md).
 
 ## Volume Management
 
 ### Monitoring
 
-Check your hosting platform's metrics dashboard for PostgreSQL volume usage.
+The growth guard measures the volume from inside Postgres (all databases plus the write-ahead
+log) and warns at 70%. The host's metrics dashboard shows the same volume from outside; the two
+differ by a fixed overhead, which the guard's `overhead_mb` accounts for.
+
+### Write-Ahead Log
+
+The write-ahead log (`pg_wal`) lives on the same volume as the data. PostgreSQL's default
+`max_wal_size` is 1 GB: on a 500 MB volume the log alone may fill the disk during heavy writing.
+`scripts/db-guard.sh tune-wal` sets `max_wal_size = 64MB` and `min_wal_size = 32MB`.
 
 ### VACUUM
 
-PostgreSQL doesn't return disk space after deleting rows. After pruning old executions:
+PostgreSQL doesn't return disk space after deleting rows.
 
 ```sql
--- Standard VACUUM (non-blocking, reclaims some space)
+-- Standard VACUUM: non-blocking, makes the space reusable inside the table
 VACUUM ANALYZE;
 
--- Full VACUUM (blocks writes, fully reclaims space — use during low traffic)
-VACUUM FULL;
+-- Full VACUUM: rewrites the table and returns space to the volume
+VACUUM FULL execution_data;
 ```
 
-Run from your PostgreSQL admin console (e.g., `psql`, pgAdmin, or your host's query editor).
-
-### One-Time Cleanup (Existing Bloat)
-
-If the volume is already bloated from binary data stored before enabling filesystem mode:
-
-1. Set `N8N_DEFAULT_BINARY_DATA_MODE=filesystem` and redeploy
-2. In n8n UI, delete old executions from heavy workflows (inbox-organizer, file-converter)
-3. Run `VACUUM FULL;` from your PostgreSQL console
-4. Monitor volume — should see immediate drop
+`VACUUM FULL` blocks the table and **needs free space of about the size the table will have
+afterwards**. On a nearly full volume it fails, and on a full one Postgres does not start at all.
+For that case see "If the disk is full anyway" in the
+[runbook](../14_db-janitor/docs/runbook.md).
 
 ## Environment Variables Reference
 
@@ -87,8 +103,9 @@ per service — per-service copies drift.
 | `DB_TYPE`, `DB_POSTGRESDB_*` | ✅ | ✅ | — | Host, port, database, user, password |
 | `QUEUE_BULL_REDIS_*` | ✅ | ✅ | — | Host, port, username, password |
 | `WEBHOOK_URL` | ✅ | — | — | Public URL for webhook + OAuth callbacks |
-| `N8N_DEFAULT_BINARY_DATA_MODE` | ✅ | ✅ | — | `default` (PostgreSQL) or `filesystem` |
-| `EXECUTIONS_DATA_PRUNE[_MAX_COUNT]`, `_MAX_AGE` | ✅ | — | — | Execution pruning |
+| `N8N_DEFAULT_BINARY_DATA_MODE` | ✅ | ✅ | — | `database` in queue mode (see Binary Data Mode) |
+| `EXECUTIONS_DATA_PRUNE`, `EXECUTIONS_DATA_MAX_AGE`, `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | ✅ | ✅ | — | Execution pruning. Runs on the primary; set on both so the services never disagree |
+| `EXECUTIONS_TIMEOUT`, `EXECUTIONS_TIMEOUT_MAX` | ✅ | ✅ | — | Run-time limit. The worker enforces it |
 | `N8N_RUNNERS_*` | ✅ | ✅ | ✅ | Enable/mode/auth/broker — **verify exact names against your service** |
 
 **⚠️ `N8N_ENCRYPTION_KEY`:** every credential is encrypted with it. Rebuild without the *same* key

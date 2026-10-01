@@ -1,0 +1,137 @@
+{
+  "name": "ZZ_db-guard-test [sandbox]",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## DB guard test writer\n\nA drill target for the database growth guard. Keep it unpublished except during a drill.\n\n### How it works\n1. Every minute it builds a random text of `mb_per_run` MB and keeps it as the result of the run.\n2. Random text does not compress, so each run really stores that many MB in n8n's database.\n3. With the default limits the guard should switch this workflow off after the first or second run.\n\n### Setup\n- [ ] Set `mb_per_run` in **Config** (3 is enough)\n- [ ] Publish, wait for the guard's alert, and check that this workflow is unpublished again\n- [ ] Delete the runs of this workflow afterwards\n\nSteps and expected messages: [runbook](https://github.com/runfish5/micro-services/blob/main/projects/n8n/14_db-janitor/docs/runbook.md)",
+        "height": 480,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        64
+      ],
+      "id": "5cce47a6-1fa7-5cde-ba7f-789a184f7a4a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        304
+      ],
+      "id": "08e78bdc-d0c9-59f1-bed0-5e8e0d6c4bac",
+      "name": "When Drill Ticks"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "339b990b-2e2e-535c-b322-dd25cfb48902",
+              "name": "mb_per_run",
+              "type": "number",
+              "value": 3
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        304
+      ],
+      "id": "47bc8f8e-c494-5ad7-8c76-2a17e98f72c4",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f93b7197-286b-5758-a0a8-34b92606b4a6",
+              "name": "junk",
+              "type": "string",
+              "value": "={{ Array.from({ length: Math.round($json.mb_per_run * 95000) }, () => Math.random().toString(36).slice(2)).join('') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        304
+      ],
+      "id": "5f885d51-b5d5-50c4-8447-f152bc59e3e9",
+      "name": "Build Random Payload"
+    },
+    {
+      "parameters": {
+        "content": "## Store random bytes\nThe payload stays in the run data, which is exactly what the guard measures.",
+        "height": 288,
+        "width": 464,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        176
+      ],
+      "id": "fc0d6cb5-5a1d-5eb1-b6ca-18b4bf98f49b",
+      "name": "Sticky Note1"
+    }
+  ],
+  "connections": {
+    "When Drill Ticks": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Build Random Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "executionTimeout": 60
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

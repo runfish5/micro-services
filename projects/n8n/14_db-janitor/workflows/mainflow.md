@@ -1,72 +1,86 @@
-# DB Janitor
+# DB growth guard
 
-> Weekly scheduled workflow that scans for old/oversized n8n executions and sends a Telegram cleanup report. Stub mode — reports only, no automatic deletion.
+> Checks n8n's own Postgres database every 2 minutes. A workflow that stores too much is reported,
+> switched off and stopped. Big jobs are denied by default and need a time-limited allowance.
+> Built after a backup run filled a 500 MB volume in one hour (2026-10-01).
 
-## Architecture
+Alerts, allowances, setup, drills and disk-full recovery: [`../docs/runbook.md`](../docs/runbook.md).
 
-```
-Weekly Schedule (Sun 3 AM) --> Config --> Fetch Executions --> Analyze Executions --> Has Candidates? --YES--> Format Report -----------> Send to Telegram
-Manual Trigger ------------/                                                                        \--NO--> No Candidates Message --/
-```
+**The guard is not an n8n workflow.** It is a small service that runs next to Postgres: bash,
+`psql`, `curl` and `jq` in one container. Reasons:
 
-## Why This Exists
+- Nothing to import, no credentials to create or pick inside n8n. It gets the database through
+  one variable and installs its own schema at start.
+- It keeps running when n8n is down, and reports that too.
+- No database superuser credential sits in n8n, where every workflow could use it.
 
-Binary data (email attachments, PDFs) stored inline in PostgreSQL execution records causes volume bloat. The inbox-attachment-organizer alone stores ~237KB per execution (5x other workflows). This workflow surfaces cleanup candidates so you can reclaim space.
+An earlier draft was a 25-node workflow. It worked, but needed four credentials, a separate
+install step, and an n8n that is up in order to watch the database n8n depends on.
 
-Pair with the `N8N_DEFAULT_BINARY_DATA_MODE=filesystem` env var (see `docs/infra-ops.md`) to prevent future bloat from new executions.
+## Files
 
-## Node Details
+| File | What it is |
+|---|---|
+| `Dockerfile` | The image: Alpine with bash, psql, curl, jq |
+| `service/guard-loop.sh` | The loop: ask Postgres, send alerts, switch workflows off through the n8n API |
+| `service/config.json` | The limits. Overridden per instance with the variable `GUARD_CONFIG` |
+| `sql/guard.sql` | All rules: schema `guard`, `guard.tick(cfg)`, `guard.status()`. Installed by the service at every start |
+| `sql/tick.sql` | One check: adds open allowances and the error handler's id to the config, calls `guard.tick` |
+| `sql/preflight-database.sql`, `sql/preflight-history.sql` | Read-only facts about the database and n8n's stored runs |
+| `sql/status.sql`, `sql/tune-wal.sql` | Last check plus open allowances; cap the write-ahead log |
+| `scripts/db-guard.sh` (repo root) | The operator's commands: `preflight`, `status`, `allow`, `tune-wal`, `install` |
+| `workflows/db-guard-sandbox-writer.json` | Drill target, the only n8n workflow here: stores random bytes every minute. Unpublished except during a drill |
+| `tests/guard.test.mjs` | Scenario tests for the rules, against a throwaway Postgres |
+| `../docs/railway/db-guard.env.example` | The service's variables on Railway |
 
-| Node | Type | Purpose | References |
-|------|------|---------|------------|
-| Weekly Schedule | scheduleTrigger | Fires Sunday at 3 AM (cron: `0 3 * * 0`) | -- |
-| Manual Trigger | manualTrigger | Testing entry point | -- |
-| Config | code | Defines cleanup rules: `maxAgeDays`, `maxSizeThresholdKB`, target workflow IDs | Edit workflow IDs here |
-| Fetch Executions | httpRequest | `GET /api/v1/executions?limit=100&status=success` via n8n API | Header Auth: `CREDENTIAL_ID_N8N_API` |
-| Analyze Executions | code | Filters by age + workflow ID, counts candidates, estimates reclaimable MB | References Config node |
-| Has Candidates? | if | Routes based on whether any old executions were found | -- |
-| Format Report | code | Builds Markdown summary with per-workflow counts and space estimate | -- |
-| No Candidates Message | code | Returns "no candidates found" message | -- |
-| Send to Telegram | telegram | Sends report to admin chat | Chat ID: `YOUR_CHAT_ID_1` |
-
-## Configuration
-
-Edit the **Config** node to adjust:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `maxAgeDays` | 14 | Executions older than this are flagged |
-| `maxSizeThresholdKB` | 100 | Size threshold for binary-heavy executions |
-| `targetWorkflows` | inbox-organizer, file-converter | Workflow IDs to prioritize in the report |
-| `batchSize` | 100 | Number of executions to fetch per scan |
-
-## Credentials
-
-| Credential | Type | Used By |
-|------------|------|---------|
-| n8n API Key | httpHeaderAuth (`CREDENTIAL_ID_N8N_API`) | Fetch Executions |
-| Telegram | telegramApi (`CREDENTIAL_ID_TELEGRAM`) | Send to Telegram |
-
-## Post-Import Setup
-
-1. Update **Config** node `targetWorkflows` with your actual workflow IDs
-2. Set credential IDs for n8n API and Telegram
-3. Update **Fetch Executions** URL to your n8n instance
-4. Update **Send to Telegram** chat ID
-5. Run via Manual Trigger to verify — should receive a Telegram report
-
-## Sample Report
+## One check
 
 ```
-DB Janitor Report
-Scanned: 100 recent executions
-Older than 14 days: 43
-
-- inbox-attachment-organizer: 28
-- any-file2json-converter: 8
-- other: 7
-
-Estimated reclaimable: ~7.2 MB
-
-(Stub mode — no deletions performed)
+every 120 s:
+  psql -f sql/tick.sql  ──fails──>  "the guard is blind" (at most every 30 min)
+        │
+        ▼  one JSON document: level, pct, actions[]
+  write status.json  (served on $PORT for the outside heartbeat)
+  for each action:
+     notify  → Telegram (+ email if SMTP is set)          tell first,
+     enforce → for each target:                           then act
+                 POST /api/v1/workflows/{id}/deactivate
+                 POST /api/v1/executions/stop   {workflowId}   (never a global stop)
+  GET n8n /healthz/readiness  ──not 200 twice in a row──>  "n8n is not ready"
 ```
+
+**One query, always one row.** `guard.tick` returns one JSON document even when there is nothing
+to do, so the loop never has to tell "no rows" from "no answer".
+
+**The loop decides nothing.** Every rule is in `sql/guard.sql` and covered by the tests. The
+loop only carries messages and API calls, and no failed message can stop a switch-off.
+
+**A failure names no cause.** A failed check sends the raw `psql` error. A failed switch-off
+sends the HTTP status and says the workflow is probably still on.
+
+## What `guard.tick` decides
+
+1. **Volume level**: all databases plus the write-ahead log plus `overhead_mb`, as a percentage of
+   `volume_mb`. `warn` at `warn_pct`, `hard` at `hard_pct`.
+2. **Stored bytes per workflow** in the burst window and in the last 60 minutes: run data counted
+   when the run ended, files counted when they were created.
+3. **Breach**: still writing, and over either limit (limit × factor), or over its allowance.
+4. **Targets**: the workflow itself if it starts runs on its own; otherwise the workflows that
+   call it (found by its id in their nodes, up to four levels) and that own a trigger. Protected
+   workflows are never targets; every workflow with an Error Trigger is protected automatically.
+5. **Hard stop** after `hard` on two checks in a row: every workflow with a trigger, plus every
+   workflow that wrote in the last hour.
+6. **Stuck runs**: `running` longer than `max_run_minutes`. Report only.
+
+Each alert is written to `guard.event` with a window key (half hour, day, or the run id). A second
+alert with the same key is not sent. The switch-off is repeated on every check while the breach
+lasts, the message is not.
+
+## db-guard-sandbox-writer
+
+```
+When Sandbox Ticks (1 min) --> Config (mb_per_run: 3) --> Build Random Payload
+```
+
+On the instance it is named `ZZ_db-guard-test [sandbox]`. It exists to be caught: publish it,
+watch the guard switch it off, delete its runs. No credentials.

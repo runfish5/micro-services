@@ -1,0 +1,14 @@
+{
+  "volume_mb": 500,
+  "overhead_mb": 0,
+  "warn_pct": 70,
+  "hard_pct": 85,
+  "burst_minutes": 3,
+  "default_mb_burst": 5,
+  "default_mb_hour": 20,
+  "factors": {},
+  "allowances": [],
+  "protected": [],
+  "max_run_minutes": 120,
+  "hard_stop_scope": []
+}

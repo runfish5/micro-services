@@ -15,7 +15,10 @@ name: n8n-heartbeat
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 min (UTC); GitHub may delay under load
+    # Asked for every 15 minutes, off the busy :00/:15/:30/:45 marks. GitHub treats this as
+    # best effort: measured over 40 runs in September 2026 it ran every 2.4 to 8.3 hours.
+    # This check is the slow backstop; the fast one is the growth guard service (projects/n8n/14_db-janitor).
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch: {}        # lets you run it on demand from the Actions tab
 
 concurrency:
@@ -33,4 +36,7 @@ jobs:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Set both repository variables once the growth guard service runs with a public domain.
+          HEARTBEAT_GUARD_CHECK: ${{ vars.HEARTBEAT_GUARD_CHECK }}
+          GUARD_STATUS_URL: ${{ vars.GUARD_STATUS_URL }}
         run: bash scripts/n8n-heartbeat-check.sh
