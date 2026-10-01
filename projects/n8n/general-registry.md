@@ -42,7 +42,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | LLM-bulk-responses | `01_LLM-bulk-responses/1_LLM-bulk-responses.n8n.json` |
 | `Lw53fM7EghZm7Qxy` | smart-table-fill | `02_smart-table-fill/workflows/smart-table-fill.n8n.json` |
 | - | smart-folder2table | `02_smart-table-fill/workflows/smart-folder2table.json` (manual or as subworkflow) |
-| `lRCrJIj1AEsuNxts` | inbox-attachment-organizer | `04_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
+| `OxCveU5jAa3uk_3DhRMra` | inbox-attachment-organizer | `04_inbox-attachment-organizer/workflows/inbox-attachment-organizer.json` |
 | - | expense-trend-report | `04_inbox-attachment-organizer/workflows/subworkflows/expense-trend-report.json` |
 | - | daily-briefing | `05_daily-briefing/workflows/daily-briefing.json` (simplified steward; the full one is `12_steward`) |
 | - | exact-recall-across-collections | `06_exact-recall-across-collections/workflows/exact-recall-across-collections.json` |
