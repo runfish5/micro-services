@@ -1,6 +1,6 @@
 # Main Flow (37 Nodes)
 
-> **Version 2.1.0** | Last verified: 2026-03-01
+> **Version 2.2.0** | Last verified against the workflow JSON: 2026-10-02
 
 ## Overview
 
@@ -20,7 +20,7 @@ Subject Classifier & Routing
 Deep Invoice Extraction & Storage
   - Storage: Google Sheets + Google Drive
   - Notifications: Telegram & Gmail labels
-ContactManager Integration [disabled by default]
+Contact branch (record-search → smart-CRM-fill)
 Alternative Entry: When Executed by Another Workflow
 ```
 
@@ -46,7 +46,7 @@ Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI C
                                            ↓                     │                                 │
                                       Tag 'gdr' ──→ Prepare Ledger Row ──→ Sheets ──→ Telegram & done
                                                                                                    │
-  [disabled] ContactManager → Merge[0] ────────────────────────────────────────────────────────────┤
+  Contact branch ───────────→ Merge[0] ────────────────────────────────────────────────────────────┤
   [disabled] notify the category → Merge[1] ───────────────────────────────────────────────────────┤
                                                                                                    ↓
                                                                                             Merge (3 inputs)
@@ -72,12 +72,12 @@ Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI C
     ↓
   Three routing branches (all converge at Merge):
     ├→ financial doc router (Switch with fallbackOutput: "extra")
-    │     ├─ financial → [disabled] sender_whitelist → Prepare Attachments → LM2 → If
-    │     │     ├─ Yes → GDrive upload → Tag gdr → Prepare Ledger Row → Sheets → Telegram & done → Merge[2]
-    │     │     └─ No  → Prepare Ledger Row → Sheets → Telegram & done → Merge[2]
+    │     ├─ financial → [disabled] sender_whitelist → Prepare Attachments → Accountant-concierge-LM → If
+    │     │     ├─ Yes → save doc to folder → Tag gdr → Prepare Ledger Row → insert doc record → Telegram & done → Merge[2]
+    │     │     └─ No  → Prepare Ledger Row → insert doc record → Telegram & done → Merge[2]
     │     └─ fallback (non-financial) → Merge[2]
     ├→ [disabled] notify the category (Telegram) → Merge[1]
-    └→ [disabled] ContactManager → record-search → smart-CRM-fill → Merge[0]
+    └→ Call 'record-search' → Prepare Contact Input → Call 'smart-CRM-fill' → Merge[0]
     ↓
   Merge (3 inputs) → Tag n8n → Remove inProgress
 ```
@@ -94,7 +94,7 @@ Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI C
 START: Gmail Trigger
   │
   ├→ Stop promotions (filter)
-  ├→ Set File ID (email_ID, owner_name, company_name, label_ID)
+  ├→ Set File ID (email_ID, owner_name, company_name, label_ID, archive_when_filed)
   ├→ Tag inProgress (add Gmail label)
   ├→ Gmail (get full email + download attachments)
   └→ Empty? (check binary attachment count)
@@ -111,7 +111,7 @@ START: Gmail Trigger
    *11    └→ subject-classifier-LM
               │
               ├→ [disabled] notify the category (Telegram) ──→ Merge[1]
-              ├→ [disabled] ContactManager
+              ├→ Contact branch
               │     └→ Call 'record-search'
               │        └→ Prepare Contact Input
               │           └→ Call 'smart-CRM-fill' ──→ Merge[0]
@@ -142,14 +142,14 @@ START: Gmail Trigger
                     └─ FALLBACK (output 1, non-financial):
                        └→ Merge[2]
 
-  ──→ Merge (3 inputs) → Tag n8n → Remove inProgress
+  ──→ Merge (3 inputs) → Tag n8n → Remove inProgress (also removes INBOX when archive_when_filed is on and Tag gdr ran)
 
 ALTERNATIVE ENTRY: When Executed by Another Workflow → Set File ID
 ```
 
 ## AI Models Nodes
 
-Both AI nodes use an LLM with structured output support.
+Both AI nodes use an LLM with structured output support. Their sub-nodes: `Any LM` + `output profile` (classifier), `any LM1` + `Structured output` (extractor).
 
 ### 1. Classification
 - **Node**: subject-classifier-LM
@@ -175,8 +175,8 @@ Both AI nodes use an LLM with structured output support.
 
 **One row per invoice, keyed by `invoice_number`** — not per attachment, not per email.
 `Prepare Ledger Row` groups the extracted documents; `insert doc record` upserts on that column.
-The settlement columns (`date_paid`, `payment_reference`, `payment_method`, `invoice_status`)
-are filled in later, when the receipt arrives.
+The settlement columns (`date_paid`, `payment_reference`, `payment_method`) are filled in later,
+when the receipt arrives. `invoice_status` is never written by the workflow.
 
 Rules, constraints and the case table: `CLAUDE.md` (Ledger Grain) and `README.md` (FAQ).
 
@@ -184,7 +184,7 @@ Rules, constraints and the case table: `CLAUDE.md` (Ledger Grain) and `README.md
 
 | Source | Fields |
 |--------|--------|
-| **LLM** (Accountant-concierge-LM) | `counterparty_name`, `invoice_date`, `total_amount_due`, `currency_code`, `invoice_number`, `subtotal_amount`, `tax_amount`, `discount_amount`, `due_date_or_payment_terms`, `payment_method`, `payment_reference`, `date_paid`, `purchase_order_number`, `accounting_category` |
+| **LLM** (Accountant-concierge-LM) | `counterparty_name`, `invoice_date`, `currency_code`, `invoice_number`, `subtotal_amount` (holds the extractor's `total_amount_due`), `tax_amount`, `discount_amount`, `due_date_or_payment_terms`, `payment_method`, `payment_reference`, `date_paid`, `purchase_order_number`, `accounting_category` |
 | **Node** (email-info-hub) | `email_id`, `attachment_count` |
 
 > **Prepare Ledger Row** (Code node) flattens the LLM output + email-info-hub fields into a single flat JSON object, enabling "insert doc record" to use Auto-Map mode (resilient to Google Sheets re-selection in the n8n UI).
@@ -216,24 +216,24 @@ Rules, constraints and the case table: `CLAUDE.md` (Ledger Grain) and `README.md
 - **Behavior**: Self-recursive workflow—calls itself when folders don't exist, auto-creates missing folders, caches results in PathToIDLookup sheet. Uses OR query for batch cache lookup (Google Sheets v4.7)
 
 ### 3. record-search [ContactManager]
-- **Called by**: ContactManager-lineage (disabled by default)
+- **Called by**: Call 'record-search'
 - **Purpose**: Tiered contact lookup before calling smart-table-fill
 - **Location**: `../02_smart-table-fill/workflows/subworkflows/record-search.json`
 - **Output**: `{ found, matchType, contact }`
 
 ### 4. smart-table-fill [ContactManager]
-- **Called by**: Prepare Contact Input
+- **Called by**: Call 'smart-CRM-fill' (the workflow is named `smart-CRM-fill` on the instance)
 - **Purpose**: Extracts structured data from email body into contact sheet
 - **Location**: `../02_smart-table-fill/workflows/smart-table-fill.n8n.json`
-- **Note**: Uses rate-limited LLM extraction subworkflow internally
+- **Note**: One LLM call per schema batch, sent without pause. A rate-limit failure is the error handler's to recover (`llm-extract-rate-limited`, spec only)
 
-**Design Principle:** Single-provider architecture using Google OAuth (Gmail + Drive + Sheets) eliminates multi-platform authentication complexity. This consolidation reduces deployment overhead from typical 3-5 credential configurations to one.
+**Design Principle:** Gmail, Drive and Sheets share one Google OAuth credential. The only other credentials are the LLM API key and the optional Telegram bot.
 
 
 ## Notes
 - Google Sheets provides a queryable database of all processed invoices
 - The folder structure makes manual file browsing intuitive
 - **Three Gmail labels**: `inProgress` is a temporary canary applied at start and removed on success (emails still carrying it indicate failed processing). `n8n` is a permanent success marker applied once after the Merge convergence. `gdr` marks emails whose attachments were saved to Google Drive (attachment branch only).
-- **Merge convergence**: All three output branches (ContactManager, notify, financial/fallback) feed into a 3-input Merge node. `Tag n8n` and `Remove inProgress` execute exactly once after Merge, regardless of which branches were active.
+- **Merge convergence**: All three output branches (contact, notify, financial/fallback) feed into a 3-input Merge node. `Tag n8n` and `Remove inProgress` execute exactly once after Merge, regardless of which branches were active.
 - Financial documents without attachments still get logged via the "No" branch (LLM extracts data from email body)
 - sender_whitelist is disabled by default; enable it to restrict financial processing to known senders only

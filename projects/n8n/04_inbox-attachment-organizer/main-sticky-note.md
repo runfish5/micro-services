@@ -1,34 +1,28 @@
 ## Auto-File Email Attachments to Google Drive
 
-Reads email attachment content, extracts key data to determine filing location (Accounting/2025/05_May/Expense/), and records details to Google Sheets.
+Reads each email's attachments, files financial documents to a dated Drive folder (`Accounting/2026/05_May/Expense/`) and records the invoice in Google Sheets.
 
 ### How it works
-1. Monitors Gmail for new emails with attachments
-2. Classifies documents (invoice, receipt, confirmation, newsletter, etc.)
-   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents
-3. For financial documents, verifies sender whitelist and extracts structured data
-4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)
-   - *gdrive-recursion*: Locates or creates correct folder structure
-5. Logs invoice details to Google Sheets
-6. Sends notifications via Telegram
+1. The Gmail trigger picks up each new email and tags it `inProgress`.
+2. *any-file2json-converter* turns attachments (PDF, images, documents) into text.
+3. An LLM classifies the email: financial, actionable, informational or other.
+4. For financial emails, a second LLM extracts the invoice data.
+5. *gdrive-recursion* finds or creates the folder. The file is saved and the email tagged `gdr`.
+6. One row per invoice goes to `Billing_Ledger` and a report to Telegram. The email is tagged `n8n`.
 
 ### Setup
-- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor) · [with triggers on github](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer/workflows/subworkflows)
-- [ ] Connect Google OAuth (Gmail + Drive + Sheets)
-- [ ] Add AI provider credentials (Groq or Gemini)
-- [ ] Create Gmail label `inProgress` and update Set File ID (see setup-guide.md step 3)
-- [ ] Create Google Sheet named "Billing_Ledger" with required columns (see setup-guide.md)
-- [ ] Create Google Sheet named "PathToIDLookup" in root directory (columns: path, folder_id, child_ids, last_update)
-- [ ] Download and upload folder structure template to Google Drive
-- [ ] Configure sender whitelist: add your own email address to test
-- [ ] Activate Gmail trigger
+Each step in detail: [setup-guide.md](https://github.com/runfish5/micro-services/blob/main/projects/n8n/04_inbox-attachment-organizer/docs/setup-guide.md)
+- [ ] Import and publish `any-file2json-converter` and `gdrive-recursion`, then select them in **Create Attachment Profile** and **Call 'gdrive-recursion'**
+- [ ] Contact branch: import the project 02 workflows, or disable **Call 'record-search'**, **Prepare Contact Input** and **Call 'smart-CRM-fill'**
+- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential
+- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`, and set them in **Set File ID**, **Tag n8n** and **Tag gdr**
+- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`
+- [ ] Set `owner_name` in **Set File ID** and `root_folder_id` in **Call 'gdrive-recursion'**
+- [ ] Connect a Telegram bot, or disable **Telegram & done**
+- [ ] Publish, then send yourself an email with an invoice attached
 
-- [ ] Test: forward an existing invoice email with attachments to yourself
+### Customization
+- Mail already in the mailbox: run `gmail-processor-datesize`. The trigger only sees new mail.
+- Other document types: extend the schema in **output profile**.
 
----
-#### After First Run
-- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)
-- [ ] Connect Telegram bot for notifications
-
----
-📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/3_inbox-attachment-organizer)**
+📂 **[Full docs and source code on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**

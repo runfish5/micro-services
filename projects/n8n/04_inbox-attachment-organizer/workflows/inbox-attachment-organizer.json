@@ -2,9 +2,10 @@
   "nodes": [
     {
       "parameters": {
-        "content": "Sender whitelist.\nEdit the JS array to\nadd/remove senders.\n\n",
+        "content": "Off by default. Enable to accept financial emails only from the senders in the array.",
         "height": 80,
-        "width": 150
+        "width": 150,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -263,8 +264,8 @@
     },
     {
       "parameters": {
-        "content": "## After Import\n1. Create Gmail label `inProgress`\n   (`n8n` and `gdr` labels already exist)\n2. Update Set File ID → label_ID\n   with your inProgress label ID\n   (Tag inProgress + Remove inProgress\n   reference it via expression)",
-        "height": 108,
+        "content": "## After import\n1. Create the Gmail labels `inProgress`, `n8n`, `gdr`\n2. **Set File ID**: `label_ID` = ID of `inProgress`, and your `owner_name`\n3. **Tag n8n**, **Tag gdr**: select your labels",
+        "height": 150,
         "width": 380,
         "color": 3
       },
@@ -303,9 +304,10 @@
     },
     {
       "parameters": {
-        "content": "🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
+        "content": "## Inputs\nnone set: the item and its file are passed on\n\n🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
         "height": 80,
-        "width": 150
+        "width": 150,
+        "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -349,7 +351,7 @@
       "parameters": {
         "operation": "removeLabels",
         "messageId": "={{ $json.id }}",
-        "labelIds": "={{ $('Set File ID').item.json.label_ID }}"
+        "labelIds": "={{ $('Set File ID').item.json.archive_when_filed && $('Tag gdr').isExecuted ? [$('Set File ID').item.json.label_ID, 'INBOX'] : $('Set File ID').item.json.label_ID }}"
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -365,7 +367,8 @@
           "id": "CREDENTIAL_ID_GMAIL",
           "name": "Gmail OAuth 260203"
         }
-      }
+      },
+      "notes": "Also takes a filed email out of the inbox when `archive_when_filed` is on in Set File ID. Runs last, so a failed email stays where it is."
     },
     {
       "parameters": {
@@ -641,7 +644,7 @@
     },
     {
       "parameters": {
-        "content": "### ContactManager-lineage",
+        "content": "## Update contact record\nOptional: disable these three nodes to run without the contact sheet.",
         "height": 236,
         "width": 632,
         "color": 7
@@ -796,7 +799,7 @@
     },
     {
       "parameters": {
-        "content": "#  Invoices & Receipts (is there a file to file away in Drive?)\nNodes 19-30",
+        "content": "## Extract and file invoices\nFinancial emails only. With an attachment: save to Drive, then the ledger. Without: the ledger only.",
         "height": 416,
         "width": 1136,
         "color": 7
@@ -812,7 +815,7 @@
     },
     {
       "parameters": {
-        "content": "# subject classifier\nNodes 11-13",
+        "content": "## Classify the email",
         "height": 352,
         "width": 672,
         "color": 7
@@ -828,7 +831,7 @@
     },
     {
       "parameters": {
-        "content": "# E-Mail trigger\nNodes 1-5",
+        "content": "## Receive and label email",
         "height": 768,
         "width": 1168,
         "color": 7
@@ -844,7 +847,7 @@
     },
     {
       "parameters": {
-        "content": "# attachment processer\nNodes 6-10",
+        "content": "## Convert attachments to text",
         "height": 416,
         "width": 544,
         "color": 7
@@ -963,7 +966,7 @@
             {
               "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
               "name": "Message",
-              "value": "=EMAIL: completed\n---\nTitle ✍: {{ $('Set File ID').first().json.subject }}\nContact 📤: `{{ $('email-info-hub').first().json.contact_email }}`\nFinished 🗄️: {{ $('subject-classifier-LM').item.json.output.type_of_document }}\n<mail-summary>\n{{$('subject-classifier-LM').item.json.output.message}}\n</mail-summary>",
+              "value": "=EMAIL: completed\n---\nTitle ✍: {{ ($('Set File ID').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nContact 📤: `{{ $('email-info-hub').first().json.contact_email }}`\nFinished 🗄️: {{ $('subject-classifier-LM').item.json.output.type_of_document }}\n<mail-summary>\n{{ ($('subject-classifier-LM').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\n</mail-summary>",
               "type": "string"
             }
           ]
@@ -977,7 +980,8 @@
         352
       ],
       "id": "c76b5fb1-5cff-4836-ae49-f00661b09ac1",
-      "name": "craft report note"
+      "name": "craft report note",
+      "notes": "Subject and summary are free text: Markdown characters in them are replaced, or Telegram rejects the report (400, can't parse entities)."
     },
     {
       "parameters": {
@@ -1059,10 +1063,10 @@
     },
     {
       "parameters": {
-        "content": "Connect to the created google sheet.\n\n\n",
+        "content": "Select your `Billing_Ledger` sheet.",
         "height": 80,
         "width": 150,
-        "color": 2
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1075,10 +1079,10 @@
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\n\nConfigure your  `root_path` and `root_folder_id`.\n1. root_path: \"/Accounting\". \n2. `'root_folder_id'`:\nOpen \"/Accounting\" in the browser and take the last section of the URL, for example: `1tiI-FHH-yeWju4gS` in the case of `https://drive.google.com/drive/folders/1tiI-FHH-yeWju4gS`\n",
+        "content": "\n\n\n\n\n\n\nIn **Call 'gdrive-recursion'**: set `root_folder_id` to the last part of your `/Accounting` folder URL (`https://drive.google.com/drive/folders/<ID>`). `root_path` stays `/Accounting`.",
         "height": 124,
         "width": 728,
-        "color": 2
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1091,10 +1095,10 @@
     },
     {
       "parameters": {
-        "content": "\n\n\n\n\n\nOptions:\na. Deactivate with `ctrl + d`.\nb. **Follow n8n instructions on how to use the telegram node.** [DOCs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-bas)",
+        "content": "\n\n\n\n\n\nTelegram is optional: connect a bot and set the chat ID in **Telegram & done**, or disable that node.",
         "height": 428,
         "width": 184,
-        "color": 2
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1107,7 +1111,7 @@
     },
     {
       "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads email attachment content, extracts key data to determine filing location (Accounting/2025/May/Expense/), and records details to Google Sheets.\n\n### How it works\n1. Monitors Gmail for new emails with attachments\n2. Classifies documents (financial, actionable, informational, Other)\n   - *any-file2json-converter*: Extracts text from PDFs, images (OCR), and documents\n3. For financial documents, extracts structured data.\n4. Files attachments to organized Google Drive folders (Accounting/2025/05_May/Expense/)\n   - *gdrive-recursion*: Locates or creates correct folder structure\n5. Logs invoice details to Google Sheets\n6. Sends notifications via Telegram\n\n### Setup\n- [ ] Import all 5 workflows (1 main + 2 subworkflows + 1 recursive + 1 batch processor)\n- [ ] Connect Google OAuth (Gmail + Drive + Sheets)\n- [ ] Add AI provider credentials (Groq or Gemini)\n- [ ] Create Gmail label `inProgress` and update Set File ID (see setup-guide.md step 3)\n- [ ] Create Google Sheet named \"Billing_Ledger\" with required columns\n- [ ] Download and upload folder structure template to Google Drive\n- [ ] Configure sender whitelist: add your own email address to test\n- [ ] Activate Gmail trigger\n\n- [ ] Test: forward an existing invoice email with attachments to yourself\n\n---\n#### After First Run\n- [ ] Run `gmail-processor-datesize` workflow to clean up and process all existing emails/attachments in your inbox for a truly organized system (the Gmail trigger only catches new incoming emails)\n- [ ] Connect Telegram bot for notifications\n\n---\n📂 **[View full docs & source code on GitHub →](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
+        "content": "## Auto-File Email Attachments to Google Drive\n\nReads each email's attachments, files financial documents to a dated Drive folder (`Accounting/2026/05_May/Expense/`) and records the invoice in Google Sheets.\n\n### How it works\n1. The Gmail trigger picks up each new email and tags it `inProgress`.\n2. *any-file2json-converter* turns attachments (PDF, images, documents) into text.\n3. An LLM classifies the email: financial, actionable, informational or other.\n4. For financial emails, a second LLM extracts the invoice data.\n5. *gdrive-recursion* finds or creates the folder. The file is saved and the email tagged `gdr`.\n6. One row per invoice goes to `Billing_Ledger` and a report to Telegram. The email is tagged `n8n`.\n\n### Setup\nEach step in detail: [setup-guide.md](https://github.com/runfish5/micro-services/blob/main/projects/n8n/04_inbox-attachment-organizer/docs/setup-guide.md)\n- [ ] Import and publish `any-file2json-converter` and `gdrive-recursion`, then select them in **Create Attachment Profile** and **Call 'gdrive-recursion'**\n- [ ] Contact branch: import the project 02 workflows, or disable **Call 'record-search'**, **Prepare Contact Input** and **Call 'smart-CRM-fill'**\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`, and set them in **Set File ID**, **Tag n8n** and **Tag gdr**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`\n- [ ] Set `owner_name` in **Set File ID** and `root_folder_id` in **Call 'gdrive-recursion'**\n- [ ] Connect a Telegram bot, or disable **Telegram & done**\n- [ ] Publish, then send yourself an email with an invoice attached\n\n### Customization\n- Mail already in the mailbox: run `gmail-processor-datesize`. The trigger only sees new mail.\n- Other document types: extend the schema in **output profile**.\n\n📂 **[Full docs and source code on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
         "height": 880,
         "width": 544
       },
@@ -1175,7 +1179,9 @@
             }
           ]
         },
-        "batching": {}
+        "batching": {
+          "batchSize": 1
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
@@ -1186,7 +1192,9 @@
       "id": "0a52d145-dedd-46ff-affc-c0d64011fdcf",
       "name": "Accountant-concierge-LM",
       "retryOnFail": true,
-      "maxTries": 4
+      "maxTries": 4,
+      "waitBetweenTries": 5000,
+      "notes": "One attachment per call, one after the other. Not paced: n8n ignores the batch delay when the batch size is 1, so an email with three or more documents still exceeds 8,000 tokens per minute."
     },
     {
       "parameters": {
@@ -1396,6 +1404,12 @@
               "name": "label_ID",
               "value": "Label_8225839616655499948",
               "type": "string"
+            },
+            {
+              "id": "7c1d2e3f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+              "name": "archive_when_filed",
+              "value": false,
+              "type": "boolean"
             }
           ]
         },
@@ -1447,7 +1461,9 @@
           ]
         },
         "simple": false,
-        "filters": {},
+        "filters": {
+          "q": "-{subject:\"n8n workflow failure alert\" subject:\"n8n infra/runner failure\"}"
+        },
         "options": {
           "dataPropertyAttachmentsPrefixName": "attachment_",
           "downloadAttachments": false
@@ -1466,13 +1482,15 @@
           "id": "CREDENTIAL_ID_GMAIL",
           "name": "Gmail OAuth 260203"
         }
-      }
+      },
+      "notes": "Ignores the error handler's own alert emails. Without this filter a failing run answers its own alert: one failure, one email, every minute."
     },
     {
       "parameters": {
-        "content": "## Write to Fiscus History",
+        "content": "## Write ledger row",
         "height": 224,
-        "width": 400
+        "width": 400,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -1485,7 +1503,7 @@
     },
     {
       "parameters": {
-        "content": "# Silent Failure Detector\n\n\n\n\n\n\n`'n8n'` label = this run completed\n`'inProgress'` label = still there? that run died\n\nIf something throws, the error workflow alerts you and it shows up here too. But a workflow broken by mis-engineering throws nothing. That is what this catches.\n\nYour inbox is the status surface: the signal rides on the emails themselves, so there is no dashboard to check. Search `label:inProgress` to find the failures.",
+        "content": "## Mark the run as complete\n\n\n\n\n\n\n`n8n` = this run finished.\n`inProgress` still on an email = that run died, with or without an error.\n\nSearch `label:inProgress` to find them.",
         "height": 176,
         "width": 384,
         "color": 7
@@ -1498,6 +1516,38 @@
       ],
       "id": "3b6df6ee-9b14-443a-9bfb-00fb42e4b0e4",
       "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\nnone set: the current item is passed on",
+        "height": 100,
+        "width": 180,
+        "color": 5
+      },
+      "id": "1ef90623-f2ab-5c97-a58d-b20791e49efd",
+      "name": "Sticky Inputs Record Search",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\nnone set: the current item is passed on",
+        "height": 100,
+        "width": 180,
+        "color": 5
+      },
+      "id": "e828dc73-fcd8-5615-b916-eb5f2e58b5a9",
+      "name": "Sticky Inputs CRM Fill",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        -112
+      ]
     }
   ],
   "connections": {
@@ -1933,5 +1983,10 @@
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
   }
 }

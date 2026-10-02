@@ -16,7 +16,7 @@ Automatically process email attachments (images, PDFs, documents), understand co
 
 > ### Single Authentication Advantage
 >
-> **Authentication is automation's biggest bottleneck.** This workflow operates with **ONE Google OAuth connection** (Gmail + Drive + Sheets) — avoiding the 3-5 platform authentications typical workflows require.
+> **Authentication is automation's biggest bottleneck.** Gmail, Drive and Sheets run on **one Google OAuth connection**. Besides that the workflow needs only an LLM API key and, for the reports, a Telegram bot.
 
 ## 🌟 Use Cases
 
@@ -31,9 +31,8 @@ flowchart LR
     C -->|Financial| E[🤖 Attachment-organizer]
     C -->|...| X[Other routes]
     E --> F[📁 Save to Drive]
-    E --> G[📊 Log to Sheets]
-    F --> H[📲 Notify]
-    G --> H
+    F --> G[📊 Log to Sheets]
+    G --> H[📲 Notify]
     H ~~~ I[ ]
     classDef hidden fill:none,stroke:none,color:none
     class I hidden
@@ -54,13 +53,13 @@ Anyone drowning in email attachments — accountants, small business owners, fre
 
 ## 📋 Features
 
- ✅ Reads images via AI vision (Gemini Flash OCR) and processes PDFs and documents
+ ✅ Reads images with a vision-capable LLM, and processes PDFs and documents
 
  ✅ Logs to Google Sheets
 
  ✅ Extensible via structured output schemas
 
- ✅ Processes existing emails in mailbox (not just new incoming emails)
+ ✅ Processes emails already in the mailbox, not only new ones, with a verified backup first
 
 ---
 
@@ -83,8 +82,8 @@ what an accountant calls "one journal entry per transaction".
 
 ### A row changed after it was written
 
-`date_paid`, `payment_reference`, `payment_method` and `invoice_status` fill in when the receipt
-arrives, possibly days later.
+`date_paid`, `payment_reference` and `payment_method` fill in when the receipt arrives, possibly
+days later. `invoice_status` is yours: the workflow never writes it.
 
 ### `AUTOKEY::` in the invoice_number column?
 
@@ -99,5 +98,5 @@ supplier's.**
 
 - n8n ([cloud](https://n8n.cloud) or [self-hosted](https://youtu.be/kq5bmrjPPAY))
 - Google (Gmail, Drive, Sheets) — single login
-- Chat model (Groq, Gemini — both free)
-- Telegram bot (optional)
+- LLM API key, with one vision-capable model. A free tier is enough for new mail; catching up a backlog needs a paid tier
+- Telegram bot for the reports (optional: disable the Telegram node to run without)
