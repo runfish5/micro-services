@@ -26,6 +26,15 @@ its own Execute Workflow node to continue on error and handles `{error}`, as `sm
 Deliberately not done here: wiring every node's error output into one handler. It hid failures from
 callers that do not check `status` (`04` would have filed the error text as a document).
 
+## Routing rules to keep
+
+- **SVG goes to the text route, not the image route.** In `Route by File Type`, rule 0 excludes
+  `svg` and rule 5 accepts it: the image branch (`Convert Image Format`) cannot decode SVG. The
+  condition looks odd; do not tidy it out. General rule: route by what a branch can do, not by
+  what the MIME label says.
+- **`anything converter`** on the instance is an active, uncalled duplicate of this workflow.
+  Only this one is called; the duplicate should be deleted.
+
 ## Called By
 
 - `04_inbox-attachment-organizer`

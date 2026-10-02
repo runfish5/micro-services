@@ -129,5 +129,14 @@ the live constant — do the same, in that direction, rather than hand-patching 
 ## Open thread — `/visits`
 
 The site digest ends with "→ full detail in the Visits sheet" rather than "→ /visits" because
-that command does not exist yet. Full context and the intended fix are in the root `CLAUDE.md`.
-Swap the line in `Format Message` when the agent lands.
+that command does not exist yet. The digest names only the 3 most engaged visitors; there is no
+way to ask for the rest from Telegram.
+
+Intended fix: a `/visits` agent built as `12_steward/CLAUDE.md` § "Adding a New Agent" describes.
+A subworkflow reads the `Visits` tab and returns `{chatId, response}`; add an entry in the
+menu-handler **Config** registry and the key in the Classifier Output Parser `route_type` enum.
+Then swap the closing line in `Format Message`.
+
+The only live Telegram command surface is `menu-handler` (`/help`, the agent registry, free-text
+routing). `13_n8n-ops-center/telegram-command-interface.n8n.json` is committed but not imported:
+`/status`, `/failures`, `/retry` and `/search` do not exist on the live bot.

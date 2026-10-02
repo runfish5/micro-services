@@ -70,6 +70,19 @@ the whole `sendMessage` — which is how the runner-proof branch lost 22 alerts 
 exists for. This became load-bearing the moment `error_message` started carrying real error text
 instead of one fixed, punctuation-free sentence; workflow names alone (`04_inbox-…`) would break it.
 
+## Bindings and open points
+
+- 21 of 22 active workflows carry an `errorWorkflow`. Keep it that way: an unbound workflow
+  produces no `FailedItems` row, so the handler, the 8-hour resolver and the UPKEEP section never
+  see it.
+- The handler itself is unbound on purpose (self-binding would loop). Its own failures are
+  therefore not logged. If that matters, bind it to a second, minimal handler.
+- `Send Auto-Retry Alert`, `CODE RED Alert`, `Format Telegram Alert` and the runner-proof alert
+  send Telegram Markdown: literal text in them must not contain `_`, `*`, backtick or `[` either.
+- The auto-retry calls the failed workflow with `smart-folder2table` inputs. For any other
+  workflow that retry does nothing useful.
+- The resolver (`11_8-hours-incident-resolver`) is `active: false`.
+
 ## LLM Cost Estimation
 
 Calculates expected Groq/Google API calls for retry scheduling (rate-limit awareness). Cost varies by failed node - earlier failures = more work remaining.
