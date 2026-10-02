@@ -510,7 +510,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
-        "text": "=⏳ Rate limit hit in {{ String($('Prepare & Classify Error').first().json.workflow_name || '?').replace(/[_*\\[\\]`~]/g,'') }}\n\nRestarting via Execute Workflow after {{ $('Prepare & Classify Error').first().json.retry_after_seconds }}s delay...\n\nFailed node: {{ String($('Prepare & Classify Error').first().json.failed_node || '?').replace(/[_*\\[\\]`~]/g,'') }}\nrate_limit_wait_seconds={{ $('Prepare & Classify Error').first().json.retry_after_seconds }}\n\nResumability: Already-processed files will be skipped.",
+        "text": "=⏳ Rate limit hit in {{ String($('Prepare & Classify Error').first().json.workflow_name || '?').replace(/[_*\\[\\]`~]/g,'') }}\n\nRestarting via Execute Workflow after {{ $('Prepare & Classify Error').first().json.retry_after_seconds }}s delay...\n\nFailed node: {{ String($('Prepare & Classify Error').first().json.failed_node || '?').replace(/[_*\\[\\]`~]/g,'') }}\nWait before retry (s): {{ $('Prepare & Classify Error').first().json.retry_after_seconds }}\n\nResumability: Already-processed files will be skipped.",
         "additionalFields": {
           "appendAttribution": false
         }
