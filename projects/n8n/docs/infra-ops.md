@@ -35,6 +35,14 @@ n8n deletes old runs by itself, configured through environment variables. Prunin
 Pruning deletes rows; PostgreSQL then reuses that space but does not hand it back to the volume
 (see VACUUM below). That is fine: a table that stops growing is the goal.
 
+Measured on this instance 2026-10-01: runs disappear at exactly 56 days, so the value in effect
+is 1344 hours, not 336. Pruning works; the limit is just long for a 500 MB volume.
+
+**Pruning does not delete files.** When n8n removes a run, by pruning or because the workflow
+does not save successful runs, the files of that run stay in `binary_data` with nothing pointing
+at them (1,148 such files here, the oldest from February). The growth guard deletes them an hour
+after their run is gone (`orphan_file_hours`).
+
 If runs older than the limit are still there, do not assume the variable is the cause. Run
 `scripts/db-guard.sh preflight` and read `executions`: it shows how many runs are
 overdue, soft-deleted or have no end time.

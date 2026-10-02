@@ -1,7 +1,7 @@
 # Workflows
 
 ## Main
-- `inbox-attachment-organizer.json` — Main workflow (33 nodes)
+- `inbox-attachment-organizer.json` — Main workflow (37 nodes)
 
 ## Subworkflows
 
@@ -51,27 +51,26 @@ flowchart LR
 
 ---
 
+## For existing mail
+
+The Gmail trigger only sees new mail. Two independent workflows deal with what is already in the
+mailbox. Both are started by hand; neither calls the other.
+
 ### [gmail-processor-datesize](subworkflows/gmail-processor-datesize.json)
-Batch processes existing inbox emails (calls main workflow per email). Uses a **double-loop** pattern: outer loop feeds date chunks to Gmail, inner loop processes individual messages.
+A **Gmail search** selects emails, and a **target workflow** runs once per email. With its default
+Config it catches up the organizer: one click sends up to 200 missed emails through it. It has no
+rules of its own (no whitelist, no labels), so it can't drift from the workflow it calls.
+Details: [`docs/gmail-processor-datesize.md`](../docs/gmail-processor-datesize.md).
 
 ```mermaid
 flowchart LR
-    A["Code: date intervals<br/><i>e.g. 3-day chunks</i>"] --> B["Loop 1<br/>(date batches)"]
-    B -->|each chunk| C["Gmail: fetch<br/>messages"]
-    C --> D["Loop 2<br/>(emails)"]
-    D -->|each email| E{"Whitelisted<br/>sender?"}
-    E -->|Yes| F["Analyze +<br/>Mark processed"]
-    E -->|No| G["Skip"]
-    F --> D
-    G --> D
-    D -->|done| B
-    B -->|done| H["Finished"]
-    H ~~~ I[ ]
-    classDef hidden fill:none,stroke:none,color:none
-    class I hidden
+    A["Config<br/><i>query, window, target</i>"] --> B["Build Date Windows<br/><i>one item per window</i>"]
+    B --> C["Search Gmail Messages<br/><i>Gmail search</i>"]
+    C -->|one email at a time| D["Wait, then run<br/>target per email"]
+    D --> E["Summarize Run<br/><i>processed / failed / left</i>"]
 ```
 
-1. Gmail Trigger only catches new emails — this handles historical/backlog
-2. Outer loop splits date range into small chunks (avoids 500-message API limit)
-3. Inner loop processes each email: fetch full message, check whitelist, analyze or skip
-4. See [`docs/gmail-processor-datesize.md`](../docs/gmail-processor-datesize.md) for full details
+### [gmail-backup](gmail-backup.json)
+Saves every email as an `.eml` file and all labels as a snapshot in Drive, verifies the copy, and
+restores from it through a form. Optional: run it before the catch-up if you want a way back.
+Details: [`docs/gmail-backup.md`](../docs/gmail-backup.md).

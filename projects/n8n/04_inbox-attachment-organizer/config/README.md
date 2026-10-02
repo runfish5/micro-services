@@ -2,6 +2,6 @@
 
 ## Error Handler Workflow
 
-**Moved to shared infrastructure**: See [`../../shared/error-handler.n8n.json`](../../shared/error-handler.n8n.json)
+Moved to its own project: [`10_error-handler/workflows/010-error-handler.json`](../../10_error-handler/workflows/010-error-handler.json)
 
-Full documentation: [`../../shared/README.md`](../../shared/README.md)
+Documentation: [`10_error-handler/workflows/mainflow.md`](../../10_error-handler/workflows/mainflow.md)

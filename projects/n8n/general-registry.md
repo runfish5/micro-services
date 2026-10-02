@@ -58,9 +58,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 |-------------|------|-----------|-----------|
 | `GtcLjBMusAUB0h30` | any-file2json-converter | `03_any-file2json-converter/workflows/any-file2json-converter.json` | inbox-attachment-organizer, smart-folder2table, exact-recall-across-collections |
 | `vFnk7s9sqVnrt4hC` | gdrive-recursion | `shared/gdrive-recursion.json` | inbox-attachment-organizer, self (recursive) |
-| `13vNowtGuPAKnfhj` | inbox-backfill | `04_inbox-attachment-organizer/workflows/inbox-backfill.json` | Manual runs, its own restore form, itself (email backup chunks; must stay published) |
+| `13vNowtGuPAKnfhj` | gmail-backup | `04_inbox-attachment-organizer/workflows/gmail-backup.json` | Manual runs, its own restore form, itself (email backup chunks; must stay published) |
 | `6V3qbVqk2Wp81WU0DeVjR` | smart-CRM-fill (= smart-table-fill in CRM mode) | `02_smart-table-fill/workflows/smart-table-fill.n8n.json` | inbox-attachment-organizer |
-| `eShHXaF_dgYe0K2lMb8AY` | gmail-processor-datesize | `04_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual runs, inbox-backfill (generic: Gmail search → target per email) |
+| `eShHXaF_dgYe0K2lMb8AY` | gmail-processor-datesize | `04_inbox-attachment-organizer/workflows/subworkflows/gmail-processor-datesize.json` | Manual runs (generic: Gmail search → target per email) |
 | `ZPJYCwXcmisoSkuz` | record-search | `02_smart-table-fill/workflows/subworkflows/record-search.json` | inbox-attachment-organizer |
 | `AP7QbVnt424dz8dD` | contact-memory-update | `02_smart-table-fill/workflows/subworkflows/contact-memory-update.json` | smart-table-fill |
 | - | learning-notes | `12_steward/workflows/subworkflows/learning-notes.json` | menu-handler (via Config registry) |

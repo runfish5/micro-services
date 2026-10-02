@@ -1,3 +1,3 @@
 # Subworkflows
 
-See [setup-guide.md](setup-guide.md) for detailed subworkflow setup instructions.
+What each sub-workflow does: [`workflows/README.md`](../workflows/README.md). How to import and connect them: [setup-guide.md](setup-guide.md).
