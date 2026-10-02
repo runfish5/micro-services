@@ -1,0 +1,1525 @@
+{
+  "name": "gmail-backup",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Gmail backup with restore\n\n### How it works\n1. Reads every email in the mailbox with its labels.\n2. Saves every email as a complete .eml file in Drive (folder `gmail-backup`, only new ones), then the labels as a JSON snapshot.\n3. Reads the snapshot back and stops with an error unless files and labels match the mailbox.\n4. On `verify`, reports what changed since a snapshot.\n5. Restore is a separate flow with its own form: it resets labels and imports deleted emails back.\n\n### Setup\n- [ ] Connect Gmail and Google Drive credentials\n- [ ] Publish this workflow: it calls itself to save emails in chunks\n- [ ] Optional: set `backup_folder_id` in **Config** (default `root` = top of My Drive)\n- [ ] Click ▶ on **When Clicking Execute** (the other two triggers are not for this). **Compare Snapshot to Mailbox** shows `verified: true` and the snapshot link and ID\n- [ ] For `verify`, set `action` to `verify` and paste that link or ID into `snapshot_file_id`\n- [ ] To restore, click ▶ on **When Restore Requested** and open the form\n\n### Customization\nChange `RESTORE_LABELS` in **Compute Restore Plan** to restore more or fewer labels. Set `scope` in **Config** to a Gmail search to back up only part of the mailbox.\n",
+        "height": 820,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        864
+      ],
+      "id": "0d0d412f-6a6e-4b5d-96a9-8f2ad47a2e35",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## 1. Start here\nClick ▶ on **When Clicking Execute**. `action` in **Config**: `backup` (default) or `verify`.",
+        "height": 352,
+        "width": 432,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        912
+      ],
+      "id": "e7bb5f20-e0b6-42f5-9684-d7715097b1b1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Read the mailbox\nEvery email with its labels, and Gmail's own total for comparison.\nTakes about 3 minutes per 800 emails.",
+        "height": 352,
+        "width": 672,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        688,
+        912
+      ],
+      "id": "0df61c3d-61be-419d-ac17-188376ce8d54",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Save and verify snapshot\nWrites the labels and the list of email files to Drive, reads it back and stops the run unless it matches the mailbox.",
+        "height": 352,
+        "width": 864,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3392,
+        912
+      ],
+      "id": "8bd53452-2fd4-4479-b281-a5371226fe3b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Only to undo: restore from a snapshot\nClick ▶ on **When Restore Requested** and open the form. Resets the labels `n8n`, `gdr` and `inProgress`, and imports deleted emails back from their .eml files. Mail that arrived later is never touched. Needs a typed `RESTORE <count>`.",
+        "height": 576,
+        "width": 3136,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1328
+      ],
+      "id": "aacb6474-aba9-5b45-a3d4-aaa9c2c662d5",
+      "name": "Sticky Note Restore"
+    },
+    {
+      "parameters": {
+        "content": "## Back up every email\nEach email once, as a complete .eml file in `gmail-backup`, 25 per chunk (about 10 seconds). Emails over 8 MB are listed in the result: download them in Gmail and drop them in by hand.",
+        "height": 656,
+        "width": 1664,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        688
+      ],
+      "id": "34f645ba-16ac-5b7b-9acf-76c46415baa3",
+      "name": "Sticky Email Backup"
+    },
+    {
+      "parameters": {
+        "content": "## Internal: do not start by hand\nThe backup calls this itself (**Save Email Chunk** below), once per 25 emails: fetches each raw email, saves it as `<id>.eml` and returns the file ids.",
+        "height": 400,
+        "width": 1440,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        208
+      ],
+      "id": "0a5dedc4-b7b7-56bd-8a7a-96331bb18939",
+      "name": "Sticky Chunk Saver"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        304,
+        1104
+      ],
+      "id": "6f8fb624-58f1-48fe-9147-a55f9329b421",
+      "name": "When Clicking Execute",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7d5e3ef0-c004-5792-9bc7-489d92b6117f",
+              "name": "action",
+              "type": "string",
+              "value": "backup"
+            },
+            {
+              "id": "ce57a7c3-e0de-57a5-bdcf-3c0d2d557b0b",
+              "name": "backup_folder_id",
+              "type": "string",
+              "value": "root"
+            },
+            {
+              "id": "216ae5fb-849c-5687-91f1-2736bade2ff2",
+              "name": "snapshot_file_id",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "25554f33-036e-522d-a286-5fb770de2fff",
+              "name": "scope",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "position": [
+        528,
+        1104
+      ],
+      "id": "c9f3727f-0b53-4700-afb7-61d18e26b309",
+      "name": "Config",
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        752,
+        1104
+      ],
+      "id": "cad7f3cd-8658-426f-9ee5-d4426ad788bc",
+      "name": "Fetch Mailbox Size",
+      "typeVersion": 4.2,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "includeSpamTrash": true,
+          "q": "={{ $('Config').first().json.scope }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        976,
+        1104
+      ],
+      "id": "dfe0e564-3714-468a-8b76-7b355a9b11ee",
+      "name": "List All Messages",
+      "typeVersion": 2.1,
+      "webhookId": "09bb4207-877b-5055-a732-eac63abeb3dd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9d515c6e-a7db-5612-a53c-bd7805946788",
+              "leftValue": "={{ $('Config').first().json.action === 'backup' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1200,
+        1104
+      ],
+      "id": "76ed21e1-8090-4421-8e81-14f20bf24d20",
+      "name": "If Snapshot Needed",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// One JSON file: every email id with its labels, plus the mailbox size it was taken against.\nconst c = $('Config').first().json;\n// n8n's Gmail node returns labels as [{id, name}], the raw API as labelIds. Accept both.\nconst labelsOf = j => j.labelIds ?? (j.labels || []).map(l => l.id);\nconst messages = $('List All Messages').all().map(i => ({\n  id: i.json.id,\n  threadId: i.json.threadId,\n  labelIds: [...labelsOf(i.json)].sort(),\n}));\n// Every real mailbox has INBOX/SENT somewhere. No labels at all means the field was misread,\n// and a snapshot of nothing would still \"verify\" against a mailbox read the same wrong way.\nif (messages.length && messages.every(m => m.labelIds.length === 0)) {\n  throw new Error('No labels found on any message: the label field was not read. Snapshot not saved.');\n}\n// Label names next to their ids: a restore can then be limited by name ('n8n', 'gdr', ...)\nconst labelNames = {};\nfor (const i of $('List All Messages').all()) for (const l of i.json.labels || []) labelNames[l.id] = l.name;\n// Email backup: one .eml per message. Files saved earlier plus the ones saved in this run.\nconst emlFiles = {};\nconst folderId = $('Create Email Backup Folder').isExecuted\n  ? $('Create Email Backup Folder').first().json.id\n  : $('Find Email Backup Folder').first().json.id;\nfor (const i of $('List Saved Emails').all()) if (i.json.name) emlFiles[i.json.name.replace(/\\.eml$/, '')] = i.json.id;\nif ($('Save Email Chunk').isExecuted) {\n  for (const chunk of $('Save Email Chunk').all()) {\n    for (const f of chunk.json.saved || []) emlFiles[f.name.replace(/\\.eml$/, '')] = f.id;\n  }\n}\n// Too large to fetch automatically: named in the result, not a reason to stop\nconst MAX_BYTES = 8 * 1024 * 1024;\nconst info = Object.fromEntries($('List All Messages').all().map(i => [i.json.id, i.json]));\nconst tooLarge = messages\n  .filter(m => !emlFiles[m.id] && (info[m.id].sizeEstimate || 0) > MAX_BYTES)\n  .map(m => ({ file_name: `${m.id}.eml`, size_mb: +(info[m.id].sizeEstimate / 1048576).toFixed(1),\n               subject: info[m.id].Subject || '', from: info[m.id].From || '',\n               date: new Date(+info[m.id].internalDate).toISOString().slice(0, 10) }));\nconst noFile = messages.filter(m => !emlFiles[m.id] && (info[m.id].sizeEstimate || 0) <= MAX_BYTES).map(m => m.id);\nif (noFile.length) {\n  throw new Error(`Email backup incomplete: ${noFile.length} of ${messages.length} emails have no .eml file (e.g. ${noFile.slice(0, 3).join(', ')}). Snapshot not saved.`);\n}\nconst snapshot = {\n  taken_at: new Date().toISOString(),\n  email_backup_folder_id: folderId,\n  // message id -> Drive file id of its .eml: a restore re-imports deleted emails from these\n  eml_files: Object.fromEntries(messages.filter(m => emlFiles[m.id]).map(m => [m.id, emlFiles[m.id]])),\n  // over 8 MB and not yet dropped into gmail-backup by hand\n  too_large: tooLarge,\n  label_names: labelNames,\n  scope: c.scope,\n  mailbox_total: $('Fetch Mailbox Size').first().json.messagesTotal,\n  count: messages.length,\n  messages,\n};\nconst fileName = `gmail-labels-${snapshot.taken_at.replace(/[:.]/g, '-')}.json`;\nreturn [{\n  json: { fileName, count: messages.length },\n  binary: { data: {\n    data: Buffer.from(JSON.stringify(snapshot)).toString('base64'),\n    mimeType: 'application/json',\n    fileName,\n  } },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3440,
+        1040
+      ],
+      "id": "17ae3b90-90aa-418e-b42a-c140974ad138",
+      "name": "Build Snapshot File",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.backup_folder_id }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        3664,
+        1040
+      ],
+      "id": "18d2ba46-3796-4619-8ada-a46fa9475d1b",
+      "name": "Save Snapshot to Drive",
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.action === 'backup' ? $('Save Snapshot to Drive').first().json.id : (String($('Config').first().json.snapshot_file_id).match(/[-\\w]{25,}/) || [''])[0] }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        3888,
+        1104
+      ],
+      "id": "54e57b63-10c9-4584-b888-fb45b5d9565c",
+      "name": "Load Snapshot from Drive",
+      "typeVersion": 3,
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Snapshot (as read back from Drive) vs the mailbox right now.\n// backup:   proves the saved file is complete and readable. Throws if not.\n// verify:   reports what changed since the snapshot. Changes nothing.\nconst c = $('Config').first().json;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst snap = JSON.parse(buf.toString('utf8'));\n\n// Gmail sets these itself. They can't be added or removed.\nconst FIXED = new Set(['SENT', 'DRAFT', 'CHAT']);\n\nconst labelsOf = j => j.labelIds ?? (j.labels || []).map(l => l.id);\nconst now = new Map($('List All Messages').all().map(i => [i.json.id, labelsOf(i.json)]));\nconst changed = [], missing = [];\n// A draft that is gone was sent, edited or discarded (a draft gets a new id on every edit).\n// That is not a deleted email, so it does not count as missing.\nlet draftsGone = 0;\nfor (const m of snap.messages) {\n  const cur = now.get(m.id);\n  if (!cur) { if (m.labelIds.includes('DRAFT')) draftsGone++; else missing.push(m.id); continue; }\n  const add = m.labelIds.filter(l => !cur.includes(l) && !FIXED.has(l));\n  const remove = cur.filter(l => !m.labelIds.includes(l) && !FIXED.has(l));\n  if (add.length || remove.length) changed.push({ id: m.id, add, remove });\n}\nconst inSnapshot = new Set(snap.messages.map(m => m.id));\nconst newSince = [...now.keys()].filter(id => !inSnapshot.has(id)).length;\n\n// The file this run read: the one just saved, or the one named in Config\nconst fileId = c.action === 'backup'\n  ? $('Save Snapshot to Drive').first().json.id\n  : (String(c.snapshot_file_id).match(/[-\\w]{25,}/) || [''])[0];\n\nconst report = {\n  action: c.action,\n  snapshot_file_id: fileId,         // paste this into the restore form, or into snapshot_file_id for verify\n  snapshot_link: `https://drive.google.com/file/d/${fileId}/view`,\n  snapshot_taken_at: snap.taken_at,\n  snapshot_count: snap.count,\n  mailbox_total_at_snapshot: snap.mailbox_total,\n  current_count: now.size,\n  in_sync: changed.length === 0 && missing.length === 0,\n  changed: changed.length,\n  missing: missing.length,          // deleted for good: labels can't bring these back\n  new_since_snapshot: newSince,     // arrived later: restore leaves them alone\n  drafts_gone: draftsGone,          // drafts sent, edited or discarded since: restore skips them\n  examples: changed.slice(0, 10),\n  // Full content: every email in the snapshot has a .eml file (checked before the snapshot was saved)\n  emails_backed_up: Object.keys(snap.eml_files || {}).length,\n  // download these in Gmail (Download message), save into gmail-backup under file_name, run backup again\n  emails_too_large: snap.too_large || [],\n  email_backup_folder_id: snap.email_backup_folder_id || 'none: this snapshot holds labels only',\n};\n\n// backup: the snapshot just written must be complete, or nothing proceeds\nif (c.action === 'backup') {\n  const problems = [];\n  if (snap.messages.length !== snap.count) problems.push(`file holds ${snap.messages.length} of ${snap.count} messages`);\n  // Only a whole-mailbox snapshot can be checked against Gmail's own count,\n  // which leaves out trash and spam\n  const counted = snap.messages.filter(m => !m.labelIds.includes('TRASH') && !m.labelIds.includes('SPAM')).length;\n  if (!snap.scope && counted < snap.mailbox_total) problems.push(`listed ${counted} of the ${snap.mailbox_total} messages Gmail reports (trash and spam excluded)`);\n  if (report.emails_backed_up + report.emails_too_large.length !== snap.count) problems.push(`only ${report.emails_backed_up} of ${snap.count} emails have a .eml file`);\n  if (!report.in_sync) problems.push(`file differs from the mailbox (${changed.length} changed, ${missing.length} missing)`);\n  if (problems.length) throw new Error('Backup NOT verified: ' + problems.join('; '));\n  report.verified = true;\n}\nreturn [{ json: report }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4112,
+        1104
+      ],
+      "id": "380c4cf1-3c62-4539-8f18-bdc9dbabb306",
+      "name": "Compare Snapshot to Mailbox",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ addLabelIds: $json.add, removeLabelIds: $json.remove }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 20
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2992,
+        1504
+      ],
+      "id": "aed11a86-88be-4a0a-adfa-e47fa364cd99",
+      "name": "Restore Labels in Gmail",
+      "typeVersion": 4.2,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      }
+    },
+    {
+      "name": "When Restore Requested",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        1600
+      ],
+      "webhookId": "1e805494-8346-5612-a128-a4cd76f2e16a",
+      "parameters": {
+        "path": "d06260fa-5ddf-522b-9752-3d4fea4151b5",
+        "formTitle": "Restore Gmail labels from a snapshot",
+        "formDescription": "Step 1 of 2. Nothing changes yet: the next page shows exactly what a restore would change, and asks you to confirm.\n\nWhere to find the snapshot: every backup run shows snapshot_file_id and snapshot_link in the output of Compare Snapshot to Mailbox. Or open Google Drive, right-click the file gmail-labels-<date>.json, choose Share > Copy link, and paste the whole link here.\n\nReading the mailbox takes about 3 minutes per 800 emails, so the next page takes a moment.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Snapshot file ID or link",
+              "requiredField": true,
+              "placeholder": "1t_gks... or https://drive.google.com/file/d/..."
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Show what would change",
+          "appendAttribution": false
+        }
+      },
+      "id": "d09de2ce-8286-53c6-be20-a3dce53a35b3"
+    },
+    {
+      "name": "Confirm Restore",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1600
+      ],
+      "webhookId": "3862adb8-55b8-5b7c-abba-cbcde2228088",
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Confirmation",
+              "requiredField": true,
+              "placeholder": "Type the phrase shown above"
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Step 2 of 2: confirm restore",
+          "formDescription": "=Snapshot taken {{ $json.snapshot_taken_at }}.\n\n{{ $json.changed }} emails will get their labels set back to the snapshot.\nOnly these labels are reset: {{ $json.restoring_labels }}. Everything else stays as it is now.\n{{ $json.reimport }} deleted emails will be imported back from the backup, with the labels they had.\n{{ $json.missing }} deleted emails have no backup file and can't be restored.\n{{ $json.drafts_gone }} drafts were sent, edited or discarded since and are not restored.\n{{ $json.new_since_snapshot }} emails arrived later and stay untouched.\n\nTo go ahead, type exactly:  RESTORE {{ $json.total }}",
+          "buttonLabel": "Restore"
+        }
+      },
+      "id": "41dbb2c2-01dc-58db-885b-7c0e7f48cdf2"
+    },
+    {
+      "name": "If Phrase Matches",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        1600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "88a27093-4b96-5f45-b612-3219b971c503",
+              "leftValue": "={{ ($json.Confirmation || '').trim() }}",
+              "rightValue": "=RESTORE {{ $('Compute Restore Plan').first().json.total }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d98a9330-c5e6-516e-ac57-e26fcc84a0fa",
+              "leftValue": "={{ $('Compute Restore Plan').first().json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9df0ec56-1084-5ae1-9525-b050789eccb8"
+    },
+    {
+      "name": "Split Restore Work",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        1504
+      ],
+      "parameters": {
+        "jsCode": "// One item per email: label resets, then deleted emails to import back\nconst plan = $('Compute Restore Plan').first().json;\nreturn [\n  ...plan.changes.map(c => ({ json: c })),\n  ...plan.reimports.map(r => ({ json: { ...r, reimport: true } })),\n];"
+      },
+      "id": "54413f9f-b1fd-5aa9-b27c-29f8c24d59c1"
+    },
+    {
+      "name": "Show Restore Result",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        1504
+      ],
+      "webhookId": "9073beff-c6fa-5525-8dad-82d3818e86f9",
+      "executeOnce": true,
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Restore done",
+        "completionMessage": "=Reset the labels of {{ $('Compute Restore Plan').first().json.changed }} emails and imported {{ $('Compute Restore Plan').first().json.reimport }} deleted emails back from the backup. To double-check, run verify with a new backup: the imported emails come back with new ids.",
+        "options": {}
+      },
+      "id": "7677289e-f1d9-593c-819f-8912c06f17b3"
+    },
+    {
+      "name": "Show Restore Cancelled",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        1728
+      ],
+      "webhookId": "1f79542f-4407-5cbc-b3c9-68d771a0f2b0",
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Nothing was changed",
+        "completionMessage": "={{ $('Compute Restore Plan').first().json.total === 0 ? 'The mailbox already matches this snapshot. There is nothing to restore.' : 'The confirmation did not match the phrase, so nothing was touched. Start the form again to retry.' }}",
+        "options": {}
+      },
+      "id": "3d9ef2d4-a690-5d27-9454-a18ca473b269"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "includeSpamTrash": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        1600
+      ],
+      "id": "f46699a3-04b0-59a0-a718-a089a44eda13",
+      "name": "List Current Labels",
+      "webhookId": "50484845-b6f5-59fa-9c5f-645d32d61e20",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ (String($('When Restore Requested').first().json['Snapshot file ID or link']).match(/[-\\w]{25,}/) || [''])[0] }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        752,
+        1600
+      ],
+      "id": "55dd2047-ed0f-5f0b-a2c8-b112e1db8bfc",
+      "name": "Load Snapshot for Restore",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// What a restore would do, for the emails in the snapshot only. Emails that arrived later are never touched.\n// - email still there, labels differ: reset the workflow's labels\n// - email gone: re-import it from its .eml backup, with the labels it had\nconst snap = JSON.parse((await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8'));\n\n// n8n's Gmail node returns labels as [{id, name}], the raw API as labelIds. Accept both.\nconst labelsOf = j => j.labelIds ?? (j.labels || []).map(l => l.id);\n// Gmail sets these itself. They can't be added or removed.\nconst FIXED = new Set(['SENT', 'DRAFT', 'CHAT']);\n\n// Restore resets ONLY these labels, by name: by default the ones the inbox attachment organizer sets.\n// Your own reading, starring and archiving is never undone.\n// Add 'INBOX' once a workflow archives emails. An empty list restores every label.\nconst RESTORE_LABELS = ['n8n', 'gdr', 'inProgress'];\n\nconst idOf = {};\nfor (const i of $('List Current Labels').all()) for (const l of i.json.labels || []) idOf[l.name] = l.id;\nfor (const [id, name] of Object.entries(snap.label_names || {})) idOf[name] ??= id;\nconst scope = RESTORE_LABELS.length ? new Set(RESTORE_LABELS.map(n => idOf[n] ?? n)) : null;\nconst restorable = l => !FIXED.has(l) && (!scope || scope.has(l));\n\nconst now = new Map($('List Current Labels').all().map(i => [i.json.id, labelsOf(i.json)]));\nif (now.size && [...now.values()].every(l => l.length === 0)) {\n  throw new Error('No labels found on any current message: the label field was not read. Nothing restored.');\n}\nconst changes = [], missing = [], reimport = [];\n// A draft that is gone was sent, edited or discarded: Gmail gives a draft a new id on every\n// edit. Importing it back would leave a stray copy next to the sent email.\nlet draftsGone = 0;\nfor (const m of snap.messages) {\n  const cur = now.get(m.id);\n  if (!cur) {\n    if (m.labelIds.includes('DRAFT')) { draftsGone++; continue; }\n    const fileId = (snap.eml_files || {})[m.id];\n    if (fileId) reimport.push({ snapshot_id: m.id, file_id: fileId, labels: m.labelIds.filter(l => !FIXED.has(l)) });\n    else missing.push(m.id);\n    continue;\n  }\n  const add = m.labelIds.filter(l => !cur.includes(l) && restorable(l));\n  const remove = cur.filter(l => !m.labelIds.includes(l) && restorable(l));\n  if (add.length || remove.length) changes.push({ id: m.id, add, remove });\n}\nconst inSnapshot = new Set(snap.messages.map(m => m.id));\nreturn [{ json: {\n  snapshot_taken_at: snap.taken_at,\n  restoring_labels: RESTORE_LABELS.length ? RESTORE_LABELS.join(', ') : 'all labels',\n  changed: changes.length,\n  reimport: reimport.length,\n  missing: missing.length,          // deleted, and this snapshot has no .eml for them\n  drafts_gone: draftsGone,          // sent, edited or discarded since: not restored\n  total: changes.length + reimport.length,\n  new_since_snapshot: [...now.keys()].filter(id => !inSnapshot.has(id)).length,\n  changes,\n  reimports: reimport,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        1600
+      ],
+      "id": "09811743-8af8-5fbc-b0cb-a138ec9a2d25",
+      "name": "Compute Restore Plan"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = 'gmail-backup' and mimeType = 'application/vnd.google-apps.folder' and '{{ $('Config').first().json.backup_folder_id }}' in parents and trashed = false",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Config').first().json.backup_folder_id }}"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {
+          "fields": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1424,
+        1040
+      ],
+      "id": "9b96559a-79be-52cd-a56e-90730cc56692",
+      "name": "Find Email Backup Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "820147ee-2de6-5c6a-93c7-a36b675c4322",
+              "leftValue": "={{ !$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        1040
+      ],
+      "id": "5e1e0491-0bd8-573d-8193-cddf8f8bc1e3",
+      "name": "If Backup Folder Missing"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "gmail-backup",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.backup_folder_id }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1872,
+        1216
+      ],
+      "id": "8257ec09-1a8e-500f-995a-430a52ee7ea7",
+      "name": "Create Email Backup Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "trashed = false",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Create Email Backup Folder').isExecuted ? $('Create Email Backup Folder').first().json.id : $('Find Email Backup Folder').first().json.id }}"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {
+          "fields": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2096,
+        1040
+      ],
+      "id": "da2e8c48-15c4-5ad4-86b4-58b25a3bf975",
+      "name": "List Saved Emails",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Emails never change in Gmail, so each one is saved once, as <message id>.eml.\n// Only emails without a file yet go on; the rest are already backed up.\nconst saved = new Set($('List Saved Emails').all().map(i => i.json.name).filter(Boolean));\n// Emails over 8 MB hang the worker (a 21 MB one did, twice). They are listed in the result\n// instead; download them in Gmail (Download message) and drop them here as <id>.eml.\nconst MAX_BYTES = 8 * 1024 * 1024;\nconst todo = $('List All Messages').all()\n  .filter(i => (i.json.sizeEstimate || 0) <= MAX_BYTES)\n  .map(i => i.json.id)\n  .filter(id => !saved.has(`${id}.eml`));\n// One item even when nothing is new, so the run always reaches Build Snapshot File\nreturn todo.length ? todo.map(id => ({ json: { id } })) : [{ json: { nothing_new: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        1040
+      ],
+      "id": "77aa0dce-b0ba-5ac1-aea4-816cd5010781",
+      "name": "Select Emails to Save"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2c6585a1-98cb-52f3-a96a-b55d405b9525",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2544,
+        1040
+      ],
+      "id": "2c2633b6-13e7-5225-8926-2d0a292639cb",
+      "name": "If New Emails"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=raw",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 500
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1872,
+        400
+      ],
+      "id": "acb65e85-cdf2-54f4-b6ab-fd2553a4b703",
+      "name": "Fetch Raw Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/upload/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "uploadType",
+              "value": "multipart"
+            },
+            {
+              "name": "fields",
+              "value": "id,name"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "multipart/related; boundary=eml_part",
+        "body": "={{ '--eml_part\\r\\nContent-Type: application/json; charset=UTF-8\\r\\n\\r\\n' + JSON.stringify({ name: $json.id + '.eml', mimeType: 'message/rfc822', parents: [$('Split Chunk Ids').first().json.folder_id] }) + '\\r\\n--eml_part\\r\\nContent-Type: message/rfc822\\r\\nContent-Transfer-Encoding: base64\\r\\n\\r\\n' + $json.raw.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil($json.raw.length / 4) * 4, '=') + '\\r\\n--eml_part--' }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 500
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2096,
+        400
+      ],
+      "id": "0a1e8a47-38bc-5ffd-95b6-1625c715a473",
+      "name": "Save Email to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notesInFlow": true,
+      "notes": "Gmail returns the email as base64 text. It is sent to Drive as it is, in one request, so no file is ever created inside n8n. A Convert to File + Drive node pair would put every email into n8n's own database first."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc31f00e-c2af-5d23-bd8d-bcda0d1131b2",
+              "leftValue": "={{ $json.reimport === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1872,
+        1504
+      ],
+      "id": "2f3621fe-9312-5569-9718-67915f6149be",
+      "name": "If Email Deleted"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.file_id }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2096,
+        1392
+      ],
+      "id": "f89ec1f6-cc09-5dc2-a0c4-99e3d15c6e8a",
+      "name": "Download Email from Backup",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
+          "name": "Google Drive OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/import",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "uploadType",
+              "value": "media"
+            },
+            {
+              "name": "internalDateSource",
+              "value": "dateHeader"
+            },
+            {
+              "name": "neverMarkSpam",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "message/rfc822"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        1392
+      ],
+      "id": "14160759-7881-598d-af31-70df2adf09d4",
+      "name": "Import Email to Gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID_GMAIL",
+          "name": "Gmail OAuth 260203"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The imported email has a new id. Give it the labels it had in the snapshot,\n// and drop any Gmail added on import that it did not have.\nconst work = $('Download Email from Backup').all();\nreturn $input.all().map((i, n) => {\n  const want = work[n].json.labels;\n  const got = i.json.labelIds || [];\n  return { json: {\n    id: i.json.id,\n    add: want.filter(l => !got.includes(l)),\n    remove: got.filter(l => !want.includes(l) && !['SENT', 'DRAFT', 'CHAT'].includes(l)),\n  } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        1392
+      ],
+      "id": "ff9f4ffb-e6cc-541c-b66c-38ba5dfd81fe",
+      "name": "Set Labels on Imported"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2768,
+        1504
+      ],
+      "id": "5e93927f-704c-59a2-bd10-8de1a9b2124a",
+      "name": "Merge Restore Work"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 25 emails per chunk. Each chunk is saved by a run of its own (When Saving Email Chunk),\n// so this run never holds the raw mailbox in memory.\nconst SIZE = 25;\nconst ids = $input.all().map(i => i.json.id);\nconst folderId = $('Create Email Backup Folder').isExecuted ? $('Create Email Backup Folder').first().json.id : $('Find Email Backup Folder').first().json.id;\nconst chunks = [];\nfor (let i = 0; i < ids.length; i += SIZE) chunks.push({ json: { ids: ids.slice(i, i + SIZE), folder_id: folderId } });\nreturn chunks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        944
+      ],
+      "id": "04e79e33-76b9-5b25-aa8b-47c891125b94",
+      "name": "Make Email Chunks"
+    },
+    {
+      "parameters": {
+        "mode": "each",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ids": "={{ $json.ids }}",
+            "folder_id": "={{ $json.folder_id }}"
+          },
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "schema": [
+            {
+              "id": "ids",
+              "displayName": "ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            },
+            {
+              "id": "folder_id",
+              "displayName": "folder_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2992,
+        944
+      ],
+      "id": "66d0d06d-076a-5576-a9fb-d103af5dd61c",
+      "name": "Save Email Chunk"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "ids",
+              "type": "array"
+            },
+            {
+              "name": "folder_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        400
+      ],
+      "id": "e18a74ea-050c-5534-85d5-b93c70a11189",
+      "name": "When Saving Email Chunk"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per email id of this chunk\nconst { ids, folder_id } = $input.first().json;\nreturn ids.map(id => ({ json: { id, folder_id } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        400
+      ],
+      "id": "be2abbe2-616f-5964-875f-20423a94e1f8",
+      "name": "Split Chunk Ids"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One small item back to the caller: which files were written\nreturn [{ json: { saved: $input.all().map(i => ({ id: i.json.id, name: i.json.name })) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        400
+      ],
+      "id": "f40a915a-c16a-5145-a180-6f08f1dfcf61",
+      "name": "Return Saved Files"
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\nids: ={{ $json.ids }}\nfolder_id: ={{ $json.folder_id }}",
+        "height": 120,
+        "width": 300,
+        "color": 5
+      },
+      "id": "c45fff4f-28fa-5ab6-895d-ddf9f65a1767",
+      "name": "Sticky Inputs Email Chunk",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2960,
+        944
+      ]
+    }
+  ],
+  "connections": {
+    "When Clicking Execute": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Mailbox Size",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Mailbox Size": {
+      "main": [
+        [
+          {
+            "node": "List All Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List All Messages": {
+      "main": [
+        [
+          {
+            "node": "If Snapshot Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Snapshot Needed": {
+      "main": [
+        [
+          {
+            "node": "Find Email Backup Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Snapshot from Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Snapshot File": {
+      "main": [
+        [
+          {
+            "node": "Save Snapshot to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Snapshot to Drive": {
+      "main": [
+        [
+          {
+            "node": "Load Snapshot from Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Snapshot from Drive": {
+      "main": [
+        [
+          {
+            "node": "Compare Snapshot to Mailbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Restore Requested": {
+      "main": [
+        [
+          {
+            "node": "List Current Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Restore": {
+      "main": [
+        [
+          {
+            "node": "If Phrase Matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Phrase Matches": {
+      "main": [
+        [
+          {
+            "node": "Split Restore Work",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Restore Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Labels in Gmail": {
+      "main": [
+        [
+          {
+            "node": "Show Restore Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Current Labels": {
+      "main": [
+        [
+          {
+            "node": "Load Snapshot for Restore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Snapshot for Restore": {
+      "main": [
+        [
+          {
+            "node": "Compute Restore Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Email Backup Folder": {
+      "main": [
+        [
+          {
+            "node": "If Backup Folder Missing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Backup Folder Missing": {
+      "main": [
+        [
+          {
+            "node": "Create Email Backup Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Saved Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Email Backup Folder": {
+      "main": [
+        [
+          {
+            "node": "List Saved Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Saved Emails": {
+      "main": [
+        [
+          {
+            "node": "Select Emails to Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Emails to Save": {
+      "main": [
+        [
+          {
+            "node": "If New Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Emails": {
+      "main": [
+        [
+          {
+            "node": "Make Email Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Snapshot File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Restore Plan": {
+      "main": [
+        [
+          {
+            "node": "Confirm Restore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Restore Work": {
+      "main": [
+        [
+          {
+            "node": "If Email Deleted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Email Deleted": {
+      "main": [
+        [
+          {
+            "node": "Download Email from Backup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Restore Work",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Restore Work": {
+      "main": [
+        [
+          {
+            "node": "Restore Labels in Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Email from Backup": {
+      "main": [
+        [
+          {
+            "node": "Import Email to Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Email to Gmail": {
+      "main": [
+        [
+          {
+            "node": "Set Labels on Imported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Labels on Imported": {
+      "main": [
+        [
+          {
+            "node": "Merge Restore Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Email Chunks": {
+      "main": [
+        [
+          {
+            "node": "Save Email Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Email Chunk": {
+      "main": [
+        [
+          {
+            "node": "Build Snapshot File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Saving Email Chunk": {
+      "main": [
+        [
+          {
+            "node": "Split Chunk Ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Chunk Ids": {
+      "main": [
+        [
+          {
+            "node": "Fetch Raw Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Raw Email": {
+      "main": [
+        [
+          {
+            "node": "Save Email to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Email to Drive": {
+      "main": [
+        [
+          {
+            "node": "Return Saved Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "instanceId": "YOUR_INSTANCE_ID"
+  }
+}

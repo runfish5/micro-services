@@ -1,73 +1,51 @@
-# Testing the Gmail Systematic Processor
+# Testing the Gmail Batch Processor
 
-Step-by-step guide for testing the `gmail-processor-datesize` workflow without affecting production emails.
+Step-by-step checks for `gmail-processor-datesize`.
 
-## 1. Before you start
+## 1. Dry run
 
-- Send 1-2 emails **to yourself** with a PDF attachment (invoice, receipt, anything).
-- In the **Set Label Variable** node, add your own email address to `email_whitelist` so the If node doesn't skip your test messages.
+Set `email_limit` to `0` in **Config** and run it. **Search Gmail Messages** lists the matches
+(up to 500 per window), then **Stop If Dry Run** stops before any target runs. This confirms the
+credential works and shows exactly what a real run would process.
 
-## 2. Configure for testing
+## 2. Count before you process
 
-In **Set Label Variable**, change these fields:
+Paste the `query` into the Gmail search bar. That number (capped by `email_limit` per window) is
+how many times the target will run. For the default search:
 
-| Field | Test value | Why |
-|-------|-----------|-----|
-| `email_limit` | `2` | Only fetch 2 emails per chunk — keeps test runs fast |
-| `lookback_days` | `1` | Only scan yesterday + today |
+```
+{-label:n8n label:inProgress} -label:gdr -category:promotions -in:draft -{subject:"n8n workflow failure alert" subject:"n8n infra/runner failure"}
+```
 
-Leave `batch_mode` as `date` and `interval_days` as `3` for your first test.
+## 3. Smallest real run
 
-### Dry run
+Send yourself one email with a PDF attached, then in **Config**:
 
-Set `email_limit` to `0`. The workflow will execute the setup branch (label creation) but skip all Gmail fetches. Useful for verifying the label logic without touching any emails.
-
-## 3. Disable Analyze file (optional)
-
-If you just want to verify the fetch/filter/label logic without triggering the full classifier subworkflow, **disable** the Analyze file node (right-click > Disable).
-
-Mark as Processed will still run, so you can confirm labeling works independently.
-
-## 4. Run and inspect
-
-Click **Execute Workflow**, then click each node to see its output:
-
-- **Set Date-Range to process** — should show 1 date interval (yesterday to tomorrow)
-- **Get many messages** — should return at most 2 emails per chunk
-- **Edit Fields** — should show extracted `id` and `from-address`
-- **If** — should route your whitelisted emails to the True branch
-- **Mark as Processed** — should apply the `GdriveFiled` label
-
-## 5. Second test: size mode
-
-To process emails regardless of when they arrived:
-
-| Field | Value |
-|-------|-------|
-| `batch_mode` | `size` |
-| `email_limit` | `50` |
-
-This fetches up to 50 of your newest emails (single wide date range from 2000 to tomorrow). Good for catching emails that fell outside your `lookback_days` window.
-
-## 6. Clean up labels
-
-After testing, remove the `GdriveFiled` label from your test emails. Two options:
-
-**Option A** — Enable the **Remove label from message** node in the workflow and re-run. It's wired after Mark as Processed but disabled by default.
-
-**Option B** — In Gmail, search `label:GdriveFiled`, select all results, click the label icon, and uncheck `GdriveFiled`.
-
-## 7. Restore production settings
-
-Reset all fields in **Set Label Variable**:
-
-| Field | Production value |
-|-------|-----------------|
-| `batch_mode` | `date` |
-| `email_limit` | `500` |
+| Field | Test value |
+|---|---|
+| `query` | `from:me has:attachment newer_than:1d -label:gdr` |
+| `email_limit` | `1` |
 | `lookback_days` | `1` |
-| `interval_days` | `3` |
 
-Also:
-- Re-enable Analyze file (if you disabled it)
-- Disable Remove label from message (if you enabled it)
+`-label:gdr` skips the email if the live trigger filed it first; otherwise the file would be saved
+twice.
+
+Run it, then inspect:
+
+- **Build Date Windows**: one window (yesterday to tomorrow)
+- **Search Gmail Messages**: one item with an `id`
+- **Run Target per Email**: the organizer's output, or an `error` item
+- **Summarize Run**: `found: 1, failed: 0`
+- In Gmail, the email now carries `n8n` (and `gdr` if the attachment was filed), and not `inProgress`
+
+## 4. Idempotency check
+
+With the default Config, run it until **Summarize Run** shows `left_for_next_run: 0`, then once more.
+That last run should find only the emails that failed before (`found` near zero). If the same
+emails keep coming back, the organizer isn't reaching `Tag n8n` for them. Open one of their
+executions.
+
+## 5. Reset Config after testing
+
+Put `query`, `email_limit: 500` and `lookback_days: 365` back (the defaults in
+[gmail-processor-datesize.md](gmail-processor-datesize.md#configuration)).

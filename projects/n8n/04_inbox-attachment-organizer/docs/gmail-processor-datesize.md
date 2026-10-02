@@ -1,114 +1,124 @@
-# Gmail Systematic Processor
+# Gmail Batch Processor (`gmail-processor-datesize`)
 
-Batch-process existing inbox emails by date range. Calls the main inbox-attachment-organizer workflow per email.
+Finds emails with a **Gmail search** and runs a **target workflow** once per email. It's generic on
+purpose: build anything that has to act on a *set* of existing emails on top of it, instead of
+writing another fetch-and-loop.
 
-## Why This Exists
+Out of the box it catches up `inbox-attachment-organizer`: its default search finds the emails
+the organizer missed (see [below](#catching-up-the-organizer)).
 
-The Gmail Trigger node only catches **new** emails arriving after activation. To process historical or backlogged emails, you need this standalone batch processor. Run it manually whenever you want to reprocess a time window of past emails.
+## Why this exists
 
----
+The Gmail Trigger only sees emails that arrive **while the workflow is active**. Anything older,
+or anything that arrived during an outage, is invisible to it. This workflow is the way to reach
+those emails.
 
-## The Double-Loop Pattern
-
-This is the core design of this workflow — and the reason it exists as a separate subworkflow.
-
-### The problem
-
-Gmail's "Get Many Messages" node returns up to 500 messages per call. For large inboxes or wide date ranges, a single fetch either hits that limit (silently dropping messages) or times out. n8n has no built-in way to paginate Gmail by date.
-
-### The solution: two nested loops
-
-A **Code node** generates small date intervals (e.g. 3-day chunks), then two `Split In Batches` nodes process them:
-
-```
-Outer loop (Loop Over Items2)         Inner loop (Loop Over Items)
- Feeds one date chunk at a time        Feeds one email at a time
- ┌─────────────────────────┐           ┌──────────────────────────┐
- │  {start: Jan 1, end: Jan 3}  │──→  Gmail fetches  ──→│  Process email 1 of N        │
- │  {start: Jan 4, end: Jan 6}  │     messages in       │  Process email 2 of N        │
- │  {start: Jan 7, end: Jan 9}  │     this chunk        │  ...                         │
- └─────────────────────────┘                             │  Done → back to outer loop   │
-                                                         └──────────────────────────────┘
-```
+## What it does, and what it deliberately doesn't
 
 ```mermaid
-flowchart TD
-    CODE["Code: generate date intervals<br/><i>e.g. 3-day chunks</i>"] --> OUTER["Loop Over Items2<br/><b>(outer — date batches)</b>"]
-    OUTER -->|each chunk| GMAIL["Gmail: Get Many Messages<br/><code>receivedAfter / receivedBefore</code>"]
-    GMAIL --> INNER["Loop Over Items<br/><b>(inner — individual emails)</b>"]
-    INNER -->|each email| FETCH["Gmail: Get full message<br/>+ download attachments"]
-    FETCH --> IF{"Sender in<br/>whitelist?"}
-    IF -->|Yes| ANALYZE["Execute Workflow:<br/>main classifier"]
-    IF -->|No| SKIP["Skip → next email"]
-    ANALYZE --> MARK["Mark as Processed<br/>(add Gmail label)"]
-    MARK --> INNER
-    SKIP --> INNER
-    INNER -->|"all emails done"| OUTER
-    OUTER -->|"all chunks done"| DONE["Finished"]
+flowchart LR
+    M["When Clicking Execute"] --> C["Config"]
+    S["When Called by<br/>Another Workflow"] --> C
+    C --> D["Build Date Windows<br/><i>Code</i>"]
+    D -->|"one item per window"| F["Search Gmail Messages<br/><i>Gmail search</i>"]
+    F --> X["Stop If Dry Run<br/><i>also applies max_emails</i>"]
+    X --> L["Loop Over Emails"]
+    L -->|"one email"| W["Rate Limit Wait"] --> T["Run Target per Email"] --> L
+    L -->|"done"| R["Summarize Run"]
 ```
 
-### Why not a single loop?
+It **selects** emails and **hands them over**. It never decides what an email means, and never
+labels, archives, whitelists or filters. All of that is the target's job, so each rule is written
+down in exactly one place.
 
-n8n's `Split In Batches` node only operates on items **already loaded in memory**. It cannot tell Gmail "give me the next page." So the outer loop controls what Gmail fetches (by feeding it date windows), and the inner loop iterates over whatever Gmail returned. This is the only way to do date-batched pagination in n8n without a custom node.
-
----
+The target receives the message item as-is (`id`, `threadId`, `labels`) and fetches the full
+email itself. `inbox-attachment-organizer` does this already, starting at `Set File ID`.
 
 ## Configuration
 
-Everything is in the **Set Label Variable** node (first node after the trigger):
+Everything is in **Config**. A manual run uses the defaults; a calling workflow overrides any
+field it passes (`$json.field ?? default`).
 
-| Field | Purpose | Default |
-|-------|---------|---------|
-| `processLabel` | Gmail label name used to mark processed emails | `GdriveFiled` |
-| `email_whitelist` | Array of sender addresses — only these get analyzed, rest are skipped | `["payments-noreply@google.com", ...]` |
-| `batch_mode` | `date` = scan by date chunks, `size` = fetch newest N emails | `date` |
-| `email_limit` | Max emails to fetch per date chunk. `0` = dry run (no emails processed) | `500` |
-| `lookback_days` | How far back to start scanning (date mode only) | `1` |
-| `interval_days` | Size of each date chunk in days (date mode only) | `3` |
+| Field | What it does | Default |
+|---|---|---|
+| `query` | Gmail search, same syntax as the search bar | the emails the organizer missed ([below](#catching-up-the-organizer)) |
+| `target_workflow_id` | ID of the workflow run once per email (the part of its URL after `/workflow/`) | the author's organizer: replace it with yours |
+| `max_emails` | max emails **per run**. `0` = no cap. The rest is reported as `left_for_next_run`; run again to continue | `200` |
+| `rate_limit_wait_seconds` | pause between two emails, for targets that call a rate-limited LLM. Keep it under 60: a longer wait makes n8n park the run in its database | `0` |
+| `batch_mode` | `date` = walk back in windows, `size` = newest N over all time | `date` |
+| `lookback_days` | how far back to start (date mode). Older emails are not looked at: raise it to reach them | `365` |
+| `interval_days` | size of each window in days (date mode) | `30` |
+| `email_limit` | max emails **per window**. `0` = dry run: lists the matches in **Search Gmail Messages** (up to 500 per window) and runs no target | `500` |
 
-### Batch Modes
+## Design notes
 
-**Date mode** (`batch_mode = date`) — The default. Generates chunked date intervals going back `lookback_days` from today, with each chunk spanning `interval_days`. This flattens load peaks by fetching emails in small windows. Best for daily scheduled runs.
+**Windows without loops.** `Build Date Windows` emits one item per window, and `Search Gmail Messages` runs once
+per input item, so the mailbox is fetched window by window without a loop. A loop around the
+search would carry a trap: a window with zero emails stops the branch, the loop never resumes, and
+the run ends early looking like a success.
 
-**Size mode** (`batch_mode = size`) — Fetches up to `email_limit` of the newest emails regardless of date. Uses a single wide date range (2000 to tomorrow). Best for one-off reprocessing or catching emails outside the lookback window.
+**Sequential, failure-tolerant hand-off.** `Loop Over Emails` hands one email at a time to
+`Run Target per Email`, which waits for the sub-run. It is set to continue on error, so one bad
+email becomes an `error` item instead of aborting the batch, and to always output, so a target
+that returns nothing does not end the loop early. **Summarize Run** returns
+`{query, found, processed, failed, left_for_next_run, errors}` to the caller.
 
-**Dry run** (`email_limit = 0`) — The Code node returns an empty array, so no Gmail calls are made. The setup branch (label creation, label lookup) still runs. Useful for verifying label logic without touching emails.
+**Pause and cap.** `Rate Limit Wait` waits `rate_limit_wait_seconds` before every email except
+the first. The cap needs no node of its own: `Stop If Dry Run` stops everything when
+`email_limit` is `0`, and otherwise lets only the first `max_emails` emails through.
 
----
+**No attachment download here.** The walker only lists messages. The target fetches what it needs,
+so a run over hundreds of emails holds a few hundred ids in memory, not their attachments.
 
-## Flow Walkthrough
+## Catching up the organizer
 
-### Setup branch (runs once)
+The Config defaults make one click a catch-up: every email the organizer missed while it was down,
+broken, or not yet switched on goes through it. Those emails are one Gmail search:
 
-1. **Set Label Variable** — loads config (label name, whitelist, batch settings)
-2. **Create a label** — creates the Gmail label (no-ops if it exists, `onError: continueRegularOutput`)
-3. **Get many labels** → **Filter** — fetches all labels, finds the one matching `processLabel` to get its ID
+```
+{-label:n8n label:inProgress} -label:gdr -category:promotions -in:draft -{subject:"n8n workflow failure alert" subject:"n8n infra/runner failure"}
+```
 
-### Processing branch
+| Part | Why |
+|---|---|
+| `-label:n8n` | never seen: arrived while the organizer wasn't running |
+| `label:inProgress` | started, then died: the organizer sets this label at the start of a run and removes it at the end |
+| `-label:gdr` | already filed to Drive. `save doc to folder` is a plain upload, so a re-run would store the file twice |
+| `-category:promotions` | the live trigger drops promotions (`Stop promotions`) before the organizer, and the called path skips that node, so the query does it instead |
+| `-in:draft` | a draft is not mail yet. The live trigger never sees one, and Gmail gives it a new id on every edit |
+| `-{subject:"n8n workflow failure alert" ...}` | the error handler's own alert emails. The live trigger ignores them too (`Gmail Trigger` → Search). If the organizer processed them, a failing run would answer its own alert, once a minute |
 
-4. **Set Date-Range to process** — Code node reads config from Set Label Variable and generates date intervals (or returns empty for dry run)
-5. **Loop Over Items2** (outer) — feeds one date chunk per iteration
-6. **Get many messages** — fetches emails in that date window (capped by `email_limit`)
-7. **Loop Over Items** (inner) — feeds one email per iteration
-8. **Gmail** — fetches full message with attachments
-9. **Edit Fields** — extracts `id` and `from-address` (with fallback chain)
-10. **If** (whitelist check) — sender in whitelist?
-    - **Yes** → **Analyze file** (calls main workflow) → **Mark as Processed** (adds label) → next email
-    - **No** → skip → next email
-11. When inner loop finishes → back to outer loop for next date chunk
+**How to run it**
 
----
+1. Paste the search into the Gmail search bar to see what will be processed.
+2. Click **Execute workflow**. One click processes up to 200 emails, about 20 seconds each.
+3. The output of **Summarize Run** shows `left_for_next_run`. Click again until it is `0`.
 
-## Testing Tips
+Running it twice is safe: every email the organizer finishes is labelled `n8n`, so the next run
+only picks up what is still missing. A failed email keeps `inProgress` and is picked up again.
+Every filed invoice sends a Telegram report, so a large run is noisy.
 
-n8n is a visual, feedback-driven tool. Test incrementally:
+**Want a way back first?** Run [`gmail-backup`](gmail-backup.md) before the first click. It is a
+separate workflow and optional: the organizer never deletes or edits an email, it only sets
+labels, and the backup lets you reset those.
 
-1. **Start with a dry run**: Set `email_limit` to `0` and execute. Verify the setup branch works (label created, label ID found) without fetching any emails.
-2. **Small test next**: Set `email_limit` to `2` and `lookback_days` to `1`. This fetches at most 2 emails from yesterday — fast and safe.
-3. **Try size mode**: Set `batch_mode` to `size` and `email_limit` to `50` to test fetching by count instead of date.
-4. **Run setup branch in isolation**: Click on `Set Label Variable` and execute just that branch to verify label creation works.
-5. **Check loop output**: After running, click on each `Split In Batches` node to inspect what items it received and how many iterations it ran.
-6. **Disable Analyze file first**: If you just want to verify the fetch/filter logic without triggering the full classifier pipeline, disable the `Analyze file` node temporarily.
-7. **Watch the If node**: Click on it after execution to see which emails went to "true" (whitelisted) vs "false" (skipped). This confirms your whitelist is correct.
+**A large backlog needs a paid LLM tier.** One email costs about 5,000 tokens on average
+(classifier, one extraction per attachment, contact branch). A free tier is enough for new mail,
+not for a backlog: a typical one allows 8,000 tokens per minute and 200,000 per day, which is
+about 40 emails per day, new mail included. Past that every email fails on the limit and keeps
+its `inProgress` label until the next run. For a few hundred emails, switch the model nodes of
+the organizer and its sub-workflows to a paid tier for the catch-up: 200 emails are about one
+million tokens, well under one US dollar on a small, fast model. Emails with images also need a
+vision-capable LLM without a tight per-minute limit: every inline logo is one request.
 
-Full testing guide: `docs/testing-gmail-processor.md`
+**On a free LLM tier** set `max_emails: 25` and `rate_limit_wait_seconds: 45`, or most emails fail
+on the tokens-per-minute limit.
+
+**Self-hosted n8n in queue mode** keeps its files in the database. There the attachment files of
+every processed email stay behind, about 2 MB per email with attachments. On a small database,
+keep `max_emails` low, or run the [database guard](../../14_db-janitor/workflows/mainflow.md),
+which deletes those files an hour later.
+
+## Testing
+
+See [testing-gmail-processor.md](testing-gmail-processor.md).

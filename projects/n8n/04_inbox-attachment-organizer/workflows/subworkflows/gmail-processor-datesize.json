@@ -1,309 +1,173 @@
 {
+  "name": "gmail-processor-datesize",
   "nodes": [
     {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
       "position": [
-        80,
-        80
+        0,
+        208
       ],
-      "id": "9792d966-129f-4a4e-9396-931c19a77617",
-      "name": "When clicking 'Execute workflow'"
+      "id": "f9fcdd1d-98de-57f5-a450-026a5bfa0e2d",
+      "name": "When Clicking Execute",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            },
+            {
+              "name": "batch_mode"
+            },
+            {
+              "name": "email_limit",
+              "type": "number"
+            },
+            {
+              "name": "lookback_days",
+              "type": "number"
+            },
+            {
+              "name": "interval_days",
+              "type": "number"
+            },
+            {
+              "name": "target_workflow_id"
+            },
+            {
+              "name": "max_emails",
+              "type": "number"
+            },
+            {
+              "name": "rate_limit_wait_seconds",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        0,
+        400
+      ],
+      "id": "93919283-d564-5d68-ad38-200c325523a3",
+      "name": "When Called by Another Workflow",
+      "typeVersion": 1.1
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "label-input",
-              "name": "processLabel",
-              "value": "=GdriveFiled",
-              "type": "string"
+              "id": "42bfb6ee-9fa9-5a10-aee8-37a1915cd474",
+              "name": "query",
+              "type": "string",
+              "value": "={{ $json.query ?? \"{-label:n8n label:inProgress} -label:gdr -category:promotions -in:draft -{subject:\\\"n8n workflow failure alert\\\" subject:\\\"n8n infra/runner failure\\\"}\" }}"
             },
             {
-              "id": "ca5e7a2f-fc00-482f-816f-cb0eb6871ad4",
-              "name": "email_whitelist",
-              "value": "[\"payments-noreply@google.com\",\n\"invoice+statements@mail.anthropic.com\",\n\"uniqued4ve@gmail.com\"]",
-              "type": "array"
-            },
-            {
-              "id": "batch-mode-field",
+              "id": "c0f94679-4d43-5d36-b6cb-24099bfbbb23",
               "name": "batch_mode",
-              "value": "date",
-              "type": "string"
+              "type": "string",
+              "value": "={{ $json.batch_mode ?? \"date\" }}"
             },
             {
-              "id": "email-limit-field",
+              "id": "d5541d00-8d14-5ad6-b9a8-ce859af6aaa0",
               "name": "email_limit",
-              "value": 500,
-              "type": "number"
+              "type": "number",
+              "value": "={{ $json.email_limit ?? 500 }}"
             },
             {
-              "id": "lookback-days-field",
+              "id": "28c7545e-70cc-52a4-b69e-0eba7cec5b74",
               "name": "lookback_days",
-              "value": 1,
-              "type": "number"
+              "type": "number",
+              "value": "={{ $json.lookback_days ?? 365 }}"
             },
             {
-              "id": "interval-days-field",
+              "id": "6c22fe8c-827a-5d56-b778-a9bc82c6d492",
               "name": "interval_days",
-              "value": 3,
-              "type": "number"
+              "type": "number",
+              "value": "={{ $json.interval_days ?? 30 }}"
+            },
+            {
+              "id": "d29bce41-2dea-58af-b46e-cccdc69222f2",
+              "name": "target_workflow_id",
+              "type": "string",
+              "value": "={{ $json.target_workflow_id ?? \"OxCveU5jAa3uk_3DhRMra\" }}"
+            },
+            {
+              "id": "2eafc2ee-90e9-5fab-af37-69eaf71dec3b",
+              "name": "max_emails",
+              "type": "number",
+              "value": "={{ $json.max_emails ?? 200 }}"
+            },
+            {
+              "id": "a960a9d4-b212-5006-8b5d-aeb1858815cf",
+              "name": "rate_limit_wait_seconds",
+              "type": "number",
+              "value": "={{ $json.rate_limit_wait_seconds ?? 0 }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "b6b6bb48-5366-4f71-aebb-fc26a4096600",
-      "name": "Set Label Variable",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.3,
       "position": [
-        304,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "label",
-        "operation": "create",
-        "name": "={{ $json.processLabel }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        528,
-        80
+        240,
+        304
       ],
-      "id": "b01b4398-2f2b-4be9-ab1d-2138c224de61",
-      "name": "Create a label",
-      "webhookId": "2bdeb3c4-fb9d-4c82-8cab-00b60e3f2bb1",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "CREDENTIAL_ID_GMAIL",
-          "name": "Google_0Auth"
-        }
-      },
-      "onError": "continueRegularOutput"
+      "id": "419c8afe-d604-5c67-be66-e490118e5a6b",
+      "name": "Config",
+      "typeVersion": 3.4
     },
     {
       "parameters": {
-        "resource": "label"
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        752,
-        80
-      ],
-      "id": "daf15002-9965-465f-be6a-bd6df342fbb8",
-      "name": "Get many labels",
-      "webhookId": "5dd9fd28-6fa1-4094-9f96-c57238f374c8",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "CREDENTIAL_ID_GMAIL",
-          "name": "gmail-26-inboxOrg"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "99f03dda-f6ac-4bf7-9e50-0fdfd8814215",
-              "leftValue": "={{ $json.name }}",
-              "rightValue": "={{ $('Set Label Variable').item.json.processLabel }}",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        960,
-        80
-      ],
-      "id": "b8111a4f-4448-4f2f-8dba-a2b170c09f27",
-      "name": "Filter"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Read config from Set Label Variable node\nconst config = $('Set Label Variable').first().json;\nconst batchMode    = config.batch_mode    || 'date';\nconst emailLimit   = config.email_limit   ?? 500;\nconst lookbackDays = config.lookback_days ?? 1;\nconst intervalDays = config.interval_days ?? 3;\n\n// Dry run: 0 = don't process anything\nif (emailLimit === 0) return [];\n\nconst daysAgo = days => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];\nconst todayDate = new Date($today);\ntodayDate.setDate(todayDate.getDate() + 1);\nconst endDate = todayDate.toISOString().split('T')[0];\n\n// Size mode: single wide interval, email_limit caps the fetch\nif (batchMode === 'size') {\n  return [{ json: { start: '2000-01-01', end: endDate } }];\n}\n\n// Date mode: chunked intervals\nconst startDate = daysAgo(lookbackDays);\nconst intervals = [];\nlet current = new Date(startDate);\nconst end = new Date(endDate);\n\nwhile (current < end) {\n  const intervalEnd = new Date(current);\n  intervalEnd.setDate(intervalEnd.getDate() + intervalDays);\n  intervals.push({\n    json: {\n      start: current.toISOString().split('T')[0],\n      end: intervalEnd > end ? end.toISOString().split('T')[0] : intervalEnd.toISOString().split('T')[0]\n    }\n  });\n  current = intervalEnd;\n}\nreturn intervals;"
+        "jsCode": "// One item per date window. The Gmail search runs once per item,\n// so a big mailbox is fetched in small pieces instead of one huge request.\nconst c = $('Config').first().json;\n\nconst day = d => d.toISOString().split('T')[0];\n// Window ends are exclusive dates (Gmail 'before:'). Tomorrow in UTC, so today is always\n// included. ($today is local midnight: east of UTC, +1 day of it is still today.)\nconst end = new Date(Date.now() + 86400000);\n\n// size mode: one window over all time, email_limit caps it\nif (c.batch_mode === 'size') {\n  return [{ json: { start: '2000-01-01', end: day(end) } }];\n}\n\n// date mode: lookback_days back from today, in interval_days steps\nconst windows = [];\nlet cur = new Date(Date.now() - c.lookback_days * 86400000);\nwhile (cur < end) {\n  const next = new Date(cur);\n  next.setDate(next.getDate() + c.interval_days);\n  windows.push({ json: { start: day(cur), end: day(next > end ? end : next) } });\n  cur = next;\n}\nreturn windows;"
       },
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
-        80,
-        320
+        560,
+        304
       ],
-      "id": "8af55391-257f-47bc-a540-f35e3d28dabd",
-      "name": "Set Date-Range to process"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        304,
-        320
-      ],
-      "id": "dbccc65c-81fe-45dc-8bc1-1ef7771197a0",
-      "name": "Loop Over Items2"
+      "id": "479ee25f-ad17-5129-9c32-fc69321719da",
+      "name": "Build Date Windows",
+      "typeVersion": 2
     },
     {
       "parameters": {
         "operation": "getAll",
-        "limit": "={{ $('Set Label Variable').item.json.email_limit }}",
+        "limit": "={{ $('Config').first().json.email_limit || 500 }}",
         "filters": {
+          "q": "={{ $('Config').first().json.query }}",
           "receivedAfter": "={{ $json.start }}",
           "receivedBefore": "={{ $json.end }}"
         }
       },
       "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
       "position": [
-        528,
-        320
+        784,
+        304
       ],
-      "id": "3ad587f5-4982-4980-83a4-607b86395e0d",
-      "name": "Get many messages",
-      "webhookId": "1af94b15-c787-484c-a985-105961534353",
+      "id": "aa198234-3aa9-5608-a35c-7f8d45b86b96",
+      "name": "Search Gmail Messages",
+      "typeVersion": 2.1,
+      "webhookId": "1398fa15-e1d3-5e3b-8066-75ffb4f36780",
       "credentials": {
         "gmailOAuth2": {
           "id": "CREDENTIAL_ID_GMAIL",
-          "name": "gmail-26-inboxOrg"
+          "name": "Gmail OAuth 260203"
         }
       }
     },
     {
       "parameters": {
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        752,
-        320
-      ],
-      "id": "119b10a1-3c56-4205-857c-e1838c00ce45",
-      "name": "Loop Over Items"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "messageId": "={{ $json.id }}",
-        "simple": false,
-        "options": {
-          "dataPropertyAttachmentsPrefixName": "attachment_",
-          "downloadAttachments": true
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        960,
-        320
-      ],
-      "id": "19a851f7-6a46-4dab-9fcf-fc6debb034cb",
-      "name": "Gmail",
-      "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "CREDENTIAL_ID_GMAIL",
-          "name": "gmail-26-inboxOrg"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "9cde5ab0-1774-4855-99e9-999efcba6b12",
-              "name": "id",
-              "value": "={{ $('Loop Over Items').item.json.id }}",
-              "type": "string"
-            },
-            {
-              "id": "2a4a8528-47ef-4d35-a522-a0991eabb7af",
-              "name": "from-address",
-              "value": "={{ $input.item.json.From?.match(/<(.+?)>/)?.[1] || $input.item.json.from?.value?.[0]?.address || \"ERROR_in_EMAILs\" }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1184,
-        320
-      ],
-      "id": "30a0f040-94ef-4892-ae36-b3d40a10284a",
-      "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "c9f0b3eb-8520-414e-8ba9-3bb5a319c09e",
-              "leftValue": "={{ $('Set Label Variable').item.json.email_whitelist }}",
-              "rightValue": "={{ $json['from-address'] }}",
-              "operator": {
-                "type": "array",
-                "operation": "contains",
-                "rightType": "any"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1408,
-        320
-      ],
-      "id": "0934bf87-dcac-4137-bf5e-574d4723256f",
-      "name": "If"
-    },
-    {
-      "parameters": {
+        "mode": "each",
         "workflowId": {
           "__rl": true,
-          "value": "lRCrJIj1AEsuNxts",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/lRCrJIj1AEsuNxts",
-          "cachedResultName": "9_inbox_classifier_main"
+          "mode": "id",
+          "value": "={{ $('Config').first().json.target_workflow_id }}"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -318,268 +182,296 @@
         }
       },
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
       "position": [
-        1632,
-        320
+        1680,
+        496
       ],
-      "id": "ec45c843-296d-4b18-ae6b-565c9af7f522",
-      "name": "Analyze file",
+      "id": "53c27649-c920-549e-8926-19d886c07ba9",
+      "name": "Run Target per Email",
+      "typeVersion": 1.3,
+      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "operation": "addLabels",
-        "messageId": "={{ $('Edit Fields').item.json.id }}",
-        "labelIds": "={{ $('Filter').item.json.id }}"
+        "jsCode": "// One result per run, shown here and returned to a caller.\n// A failed email does not stop the run: the target's error arrives here as an item.\n// The loop runs the target once per email, so run r of the target belongs to email r.\nconst sent = $('Stop If Dry Run').all();\nconst errors = [];\nfor (let r = 0; r < sent.length; r++) {\n  let out = [];\n  try { out = $('Run Target per Email').all(0, r); } catch (e) { break; }\n  const bad = out.find(i => i.json.error);\n  if (bad) errors.push({ id: sent[r].json.id ?? 'unknown', error: bad.json.error });\n}\nconst found = $('Search Gmail Messages').all().length;\nreturn [{ json: {\n  query: $('Config').first().json.query,\n  found,\n  processed: sent.length - errors.length,\n  failed: errors.length,\n  // found but not sent this run, because of max_emails. Run again to continue.\n  left_for_next_run: found - sent.length,\n  errors: errors.slice(0, 20),\n} }];"
       },
-      "id": "e14e5c6d-a4ee-4342-8b0c-dc111fe6ec5a",
-      "name": "Mark as Processed",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.code",
       "position": [
-        1840,
-        320
+        1680,
+        288
       ],
-      "webhookId": "4e6601d7-b005-492e-9466-50fc56c5929b",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "CREDENTIAL_ID_GMAIL",
-          "name": "gmail-26-inboxOrg"
-        }
-      },
-      "disabled": true
+      "id": "0ac569dd-ea5a-59aa-b783-96337dfa85b5",
+      "name": "Summarize Run",
+      "typeVersion": 2
     },
     {
       "parameters": {
-        "operation": "removeLabels",
-        "messageId": "={{ $('Edit Fields').item.json.id }}",
-        "labelIds": "={{ $('Filter').item.json.id }}"
-      },
-      "id": "ce0f5ccd-f19c-4ece-b07e-d191b8a41628",
-      "name": "Remove label from message",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        2064,
-        320
-      ],
-      "webhookId": "remove-label-webhook-0001",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "CREDENTIAL_ID_GMAIL",
-          "name": "Google_0Auth"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "content": "## Configuration (Set Label Variable node)\n\nAll settings are in the first Set node — edit them like cells in a spreadsheet.\n\n| Field | What it does | Default |\n|-------|-------------|--------|\n| `batch_mode` | `date` = scan by date chunks, `size` = fetch newest N emails | `date` |\n| `email_limit` | Max emails to fetch. **0 = dry run** | `500` |\n| `lookback_days` | How many days back to scan (date mode) | `1` |\n| `interval_days` | Days per batch chunk (date mode) | `3` |\n\n### Quick-start test\n1. Send yourself 1-2 emails with a PDF attachment\n2. Add your email address to `email_whitelist`\n3. Set `email_limit` to `2`, `lookback_days` to `1`\n4. Execute workflow, click each node to inspect output\n\n### Second test: process all your test emails\nSet `batch_mode` to `size`, `email_limit` to `50` — fetches up to 50 newest emails regardless of date.\n\n### Clean up\nEnable **Remove label from message** node and re-run, or remove `GdriveFiled` label manually in Gmail.\n\nFull guide: `docs/testing-gmail-processor.md`",
-        "height": 480,
-        "width": 700
+        "content": "## Gmail batch processor\n\n### How it works\n1. Takes a Gmail search, a time range and a target workflow from **Config**. A calling workflow can override any of them.\n2. Splits the time range into date windows, so a large mailbox is fetched in small pieces.\n3. Searches Gmail in each window.\n4. Runs the target workflow once per email, one after another. A failing email is counted, not fatal.\n5. Returns a summary: found, processed, failed, left for the next run.\n\nIt holds no rules of its own: no whitelist, no labels. Every decision stays in the target.\n\n### Setup\n- [ ] Connect your Gmail credential to **Search Gmail Messages**\n- [ ] Set `target_workflow_id` in **Config** to the ID of your inbox attachment organizer (the default is the author's)\n- [ ] Click **Execute workflow**. The output of **Summarize Run** shows `left_for_next_run`: click again until it is `0`\n- [ ] More than about 40 emails: use a paid LLM tier in the target. On a free tier set `max_emails: 25` and `rate_limit_wait_seconds: 45`\n\n### Customization\nThe default `query` finds the emails the organizer missed: never processed, or stuck on `inProgress`. Change `query` and `target_workflow_id` to run any workflow over any set of emails. Want a way back first? Run `gmail-backup`.\n",
+        "height": 800,
+        "width": 480
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1120,
-        -16
+        -624,
+        32
       ],
-      "id": "aa55c017-a560-4c7e-9585-356aa99f6d59",
+      "id": "a7728b03-90cb-5876-a408-7bf109afa0e4",
       "name": "Sticky Note"
     },
     {
       "parameters": {
-        "content": "### Label nodes (both disabled)\nThe main workflow (inbox-attachment-organizer)\nnow handles all Gmail labeling:\n`inProgress` → `n8n` / `gdr`.\n\nThese nodes are disabled to avoid\nredundant `GdriveFiled` labels.",
-        "height": 332,
-        "width": 398,
-        "color": 4
+        "content": "## Receive run options\nRun by hand, or called with a query, a time range and a target workflow.",
+        "height": 560,
+        "width": 464,
+        "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1792,
-        112
+        -64,
+        32
       ],
-      "id": "504eafb5-6389-449d-a21f-c9f08aca179d",
+      "id": "56f1750d-31ee-5572-ab52-2ad5990387f2",
       "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Find emails by date window\nSplits the time range into windows and searches Gmail in each. With `email_limit: 0` it stops after the search: a dry run.",
+        "height": 368,
+        "width": 672,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        128
+      ],
+      "id": "e7625980-8535-5c50-a6ae-b8110cee3f96",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Run target and report\nOne target run per email, one after the other. `rate_limit_wait_seconds` pauses between emails, `max_emails` caps a run. Failures are counted, not fatal.",
+        "height": 560,
+        "width": 912,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        128
+      ],
+      "id": "2bda9ab6-bb70-5c05-a58f-5434d6a945a3",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Inputs\npassthrough, one item per email:\nid, threadId, labels\n\ntarget: Config.target_workflow_id",
+        "height": 240,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        416
+      ],
+      "id": "6592b19f-fd4e-5ea1-8388-d1bb6a679d2d",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a78ed797-3dc6-53a4-9eea-18f119fbd46d",
+              "leftValue": "={{ $('Config').first().json.email_limit }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "346f2ac6-f7ef-5d54-95dd-29466083875b",
+              "leftValue": "={{ $itemIndex < ($('Config').first().json.max_emails || Infinity) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1008,
+        304
+      ],
+      "id": "f84bb210-15bb-526b-a005-880b92c21202",
+      "name": "Stop If Dry Run"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1232,
+        304
+      ],
+      "id": "59c737fd-26d2-5cd1-b3b5-428f2d2539ad",
+      "name": "Loop Over Emails"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Loop Over Emails').context['currentRunIndex'] === 0 ? 0 : ($('Config').first().json.rate_limit_wait_seconds || 0) }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        496
+      ],
+      "id": "365efa20-5be7-5d5e-b6e8-dc9c2fc36b5a",
+      "name": "Rate Limit Wait",
+      "webhookId": "02a89da7-62d1-5b5e-aa94-15cda8f6c326"
+    },
+    {
+      "parameters": {
+        "content": "## A click processes emails\nUp to `max_emails` (200) per click. Set `email_limit` to `0` for a dry run: it lists the matches and stops.",
+        "height": 150,
+        "width": 260,
+        "color": 3
+      },
+      "id": "63242448-edd4-5ce3-a210-0b8f1cd6986a",
+      "name": "Sticky Click Warning",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        114
+      ]
     }
   ],
   "connections": {
-    "When clicking 'Execute workflow'": {
+    "When Clicking Execute": {
       "main": [
         [
           {
-            "node": "Set Label Variable",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Label Variable": {
+    "When Called by Another Workflow": {
       "main": [
         [
           {
-            "node": "Create a label",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a label": {
+    "Config": {
       "main": [
         [
           {
-            "node": "Get many labels",
+            "node": "Build Date Windows",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get many labels": {
+    "Build Date Windows": {
       "main": [
         [
           {
-            "node": "Filter",
+            "node": "Search Gmail Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter": {
+    "Search Gmail Messages": {
       "main": [
         [
           {
-            "node": "Set Date-Range to process",
+            "node": "Stop If Dry Run",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Date-Range to process": {
+    "Run Target per Email": {
       "main": [
         [
           {
-            "node": "Loop Over Items2",
+            "node": "Loop Over Emails",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Loop Over Items2": {
+    "Stop If Dry Run": {
       "main": [
-        [],
         [
           {
-            "node": "Get many messages",
+            "node": "Loop Over Emails",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get many messages": {
+    "Loop Over Emails": {
       "main": [
         [
           {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items2",
+            "node": "Summarize Run",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Gmail",
+            "node": "Rate Limit Wait",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gmail": {
+    "Rate Limit Wait": {
       "main": [
         [
           {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "If",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Analyze file",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Analyze file": {
-      "main": [
-        [
-          {
-            "node": "Mark as Processed",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mark as Processed": {
-      "main": [
-        [
-          {
-            "node": "Remove label from message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Remove label from message": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
+            "node": "Run Target per Email",
             "type": "main",
             "index": 0
           }
@@ -588,6 +480,11 @@
     }
   },
   "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
   "meta": {
     "instanceId": "YOUR_INSTANCE_ID"
   }
