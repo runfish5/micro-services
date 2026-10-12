@@ -81,6 +81,34 @@ on the red sticky note beside the flow; the design notes are in [`CLAUDE.md`](CL
 
 No workflow *sends* a newsletter yet. This is the list and its consent record.
 
+### If your site is on Vercel: the sender in five steps
+
+The confirmation mail needs a sender on your own domain, such as `no-reply@example.com`.
+A Vercel project can get one without opening another account by hand:
+
+1. **Provision the mail service from the Vercel CLI**, inside the linked project:
+   `vercel integration add resend/resend-email --plan free -m domain=example.com -m region=eu-west-1 -e production`.
+   The first run asks you to accept the provider's terms (`vercel integration accept-terms resend`).
+   Vercel creates the account, bills it with your project, and stores `RESEND_API_KEY` as a
+   production environment variable.
+2. **Verify the domain.** The service lists three DNS records: one DKIM `TXT` at
+   `resend._domainkey`, and an `MX` plus an SPF `TXT` at `send`. Add them wherever your DNS is
+   hosted, which is not necessarily Vercel. They sit on subdomains, so existing mail routing on the
+   apex is untouched. Until they verify, every send is refused and the form says "not saved".
+3. **Give n8n the key.** Read it once with `vercel env pull --environment=production` into a file
+   outside the repo, then create an n8n **Header Auth** credential with name `Authorization` and
+   value `Bearer <key>`. Delete the pulled file.
+4. **Bind it** to `Send Confirm Email` and set `MAIL_FROM` in `Shape Reach` to the no-reply
+   address on the verified domain.
+5. **Point the site at the door.** Store the `reach` webhook's production URL as a server-only
+   variable on the Vercel project and redeploy; a Vercel variable only takes effect on the next
+   deployment.
+
+The key lives in two places, Vercel and n8n, and the site itself never uses it: n8n sends the
+mail so that "mail first, then the row" stays one transaction the form can report honestly.
+Any other transactional mail API works the same way; only the URL in `Send Confirm Email` and the
+DNS records differ.
+
 **Sender:** the PromptPotter app, on the first `/auth/me` of a new account
 (`N8N_SIGNUP_WEBHOOK_URL`). The old sender, `promptpotter-web` `/api/waitlist`,
 now sits in that repo's `internal/parked-waitlist/`.
