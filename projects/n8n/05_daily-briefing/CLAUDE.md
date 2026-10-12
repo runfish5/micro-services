@@ -100,7 +100,8 @@ check which one you are pointing at before copying a node.
 
 ## Never commit personal data in this file
 
-`SELF_IPS` is empty in the committed copy and populated only on the live instance; a home IP is
+`SELF_NETS` (address prefixes; `SELF_IPS` until 2026-10-11) is empty in the committed copy and
+populated only on the live instance; a home IP is
 personal data and this repo is public. The same rule extends to every plugin: customer numbers,
 phone numbers and account references stay in the sheets, and the workflow reads them from there.
 The mirror script refuses to write a workflow containing an IPv4 literal — treat that as the
@@ -122,9 +123,25 @@ the failure looks exactly like a quiet morning.
 **not** — it was left untouched on purpose while the seam was proven on a sandbox copy.
 
 Promoting it means splicing `Plugins` + `Run Plugin` in and replacing `Format Message`, and the
-one thing that must not be lost in the process is the live `SELF_IPS` value, which exists only
+one thing that must not be lost in the process is the live self-address list, which exists only
 on the instance. The sandbox build handled this by taking the committed code and re-injecting
 the live constant — do the same, in that direction, rather than hand-patching live code.
+
+## The site digest was promoted to live on 2026-10-11
+
+The committed `Format Message` renamed `SELF_IPS` to `SELF_NETS` (prefix match) and added three
+lines to the SITE block: sign-in presses, bounces, source. The same block went to the live node
+that day through the REST API, by the rule above: committed code, live address list re-injected.
+Only the text between `// --- Site digest` and `// Signups:` was replaced, and each live IPv4
+address was shortened to its first three octets on the way in.
+
+Why the rename mattered, measured rather than argued: the old exact list matched 369 of the
+operator's 574 home-line rows in the `Visits` sheet. The line had rotated to a second address that
+was never added, so 205 rows of their own browsing were being reported as a visitor. The prefixes
+match all of them.
+
+The live workflow had 16 nodes when this was done, so the "Live vs committed" section above
+describes a state that has since moved on.
 
 ## Open thread — `/visits`
 

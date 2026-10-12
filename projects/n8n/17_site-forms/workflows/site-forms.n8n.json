@@ -1,0 +1,1309 @@
+{
+  "name": "Site Forms",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Take website forms into Google Sheets, with a double opt-in newsletter\n\nOne webhook for a site's contact form and newsletter band. Messages and the subscriber list land in a sheet, senders join your contact book, and a morning briefing can print what came in.\n\n### How it works\n1. Checks every submission and answers the site only after the row is written, so the form can say honestly whether it worked.\n2. Stores a contact message as one row and adds the sender to the contact book.\n3. Mails one confirmation link for a newsletter request and holds the address as pending, with limits per address and per hour.\n4. Confirms or unsubscribes when the button behind that link is pressed on your site.\n5. Renders a briefing section of the last day's messages and list changes when another workflow calls it.\n\n### Setup steps\n- [ ] Create two tabs in one spreadsheet: `Messages` (ts, email, name, message, path) and `Subscribers` (email, state, token, requested_at, path, confirmed_at, unsubscribed_at, mails)\n- [ ] Connect a Google Sheets credential and pick that spreadsheet, and your contact sheet, in each Sheets node\n- [ ] Create a Header Auth credential named `X-Forms-Secret` with a long random value, bind it to **When Form Is Sent**, and have your site send the same header\n- [ ] Create a Header Auth credential for your mail service (`Authorization: Bearer <key>`) and bind it to **Send Confirmation Mail**\n- [ ] Fill in **Set Site Config**: site name, the page the mailed link opens, the sender address\n\n[Project page and the site side](https://github.com/runfish5/micro-services/blob/main/projects/n8n/17_site-forms/README.md)",
+        "height": 944,
+        "width": 480
+      },
+      "id": "33d2ceda-f4bd-4114-a14e-22a3e014816e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Receive and check a form\n\nOnly a sender holding the shared secret gets in. The settings live in one node; the check turns the body into one of four routes.",
+        "height": 240,
+        "width": 976,
+        "color": 7
+      },
+      "id": "fcff3c5e-1e60-49d1-a43a-71d6785591c4",
+      "name": "Receive section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reach",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8f946be3-0930-46fa-a6f2-83add36bdf3c",
+      "name": "When Form Is Sent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        576,
+        464
+      ],
+      "webhookId": "site-forms-reach",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_FORMS_SECRET",
+          "name": "Forms shared secret"
+        }
+      },
+      "notes": "Body: kind (contact | newsletter | confirm | unsubscribe), email, name, message, path, token.\nThe site mints the token for a newsletter request; a server has a real random source."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47269efc-5819-48ab-a155-e44b7245e814",
+              "name": "site_name",
+              "value": "YOUR_SITE_NAME",
+              "type": "string"
+            },
+            {
+              "id": "42bdf9dd-7f4d-4ccb-a0b1-31f4b6e54a1c",
+              "name": "confirm_page",
+              "value": "YOUR_CONFIRM_PAGE_URL",
+              "type": "string"
+            },
+            {
+              "id": "840620d6-786a-4fa8-a6e4-f23263b28ee6",
+              "name": "mail_from",
+              "value": "YOUR_FROM_ADDRESS",
+              "type": "string"
+            },
+            {
+              "id": "2e63a867-78b7-411a-ad78-4258fcdb3aac",
+              "name": "resend_after_h",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "a1365244-b37c-4333-a1b3-4727a0c123ae",
+              "name": "max_mails_unconfirmed",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "b3217fc5-512f-4b43-aaa0-9cb0d30a72c5",
+              "name": "max_mails_per_hour",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "45dcd182-9054-4e93-a71d-ee03356c8288",
+              "name": "confirm_within_days",
+              "value": 14,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b26b7dbd-ff6b-4861-a8bc-c0b1689a38f0",
+      "name": "Set Site Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        464
+      ],
+      "notes": "confirm_page: the page on YOUR site the mailed link opens. It shows a button and posts the token back; this workflow never serves a page.\nmail_from: e.g. Example <no-reply@example.com>, on a domain verified with your mail service."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Everything a site form can say arrives here as one of four kinds:\n//   contact      a message from the contact form\n//   newsletter   a request to subscribe (starts the double opt-in)\n//   confirm      the button behind the mailed link was pressed\n//   unsubscribe  the same link, the other verb\n// A submission missing what its kind needs leaves as route 'invalid' and is\n// answered 422. Nothing here throws, so a bad POST does not page the error\n// workflow.\n//\n// The time is this workflow's clock, never the sender's: the resend gate\n// further on counts from it.\nconst b = $('When Form Is Sent').first().json.body || {};\nconst clip = (v, n) => String(v ?? '').trim().slice(0, n);\n\nconst kind = clip(b.kind, 20);\nconst email = clip(b.email, 200).toLowerCase();\nconst name = clip(b.name, 120);\nconst parts = name.split(/\\s+/).filter(Boolean);\nconst message = clip(b.message, 4000);\nconst token = clip(b.token, 64);\nconst tokenOk = /^[A-Za-z0-9-]{16,64}$/.test(token);\nconst emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n\nlet route = 'invalid';\nif (kind === 'contact' && emailOk && message) route = 'contact';\nif (kind === 'newsletter' && emailOk && tokenOk) route = 'newsletter';\nif ((kind === 'confirm' || kind === 'unsubscribe') && tokenOk) route = 'token';\n\nreturn [{\n  json: {\n    route,\n    kind,\n    received_at: $now.toISO(),\n    email,\n    name,\n    first_name: parts[0] || '',\n    surname: parts.slice(1).join(' '),\n    message,\n    path: clip(b.path, 200),\n    token: tokenOk ? token : '',\n  },\n}];"
+      },
+      "id": "ae3ee282-f91c-4892-adb2-72842c9767e3",
+      "name": "Validate Form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "contact",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "contact"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "newsletter",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "newsletter"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "token",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "token"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "d1e22625-bf49-4cbb-aa33-bf9d45443477",
+      "name": "Route by Kind",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1248,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Store a contact message\n\nOne row per message, then the answer to the site.",
+        "height": 240,
+        "width": 512,
+        "color": 7
+      },
+      "id": "e05eedb2-d75d-42d9-a23c-e2ff3969c7bc",
+      "name": "Message section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID/values/Messages:append",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "valueInputOption",
+              "value": "RAW"
+            },
+            {
+              "name": "insertDataOption",
+              "value": "INSERT_ROWS"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ $json.received_at, $json.email, $json.name, $json.message, $json.path ]] }) }}",
+        "options": {}
+      },
+      "id": "e03650a6-47dd-438d-ace2-f49763f1d603",
+      "name": "Append Message Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1584,
+        96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "notes": "A raw append with INSERT_ROWS, not the Sheets node: two messages arriving together would otherwise overwrite one another. RAW keeps a message that starts with = from running as a formula."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"state\": \"saved\" }",
+        "options": {}
+      },
+      "id": "d722a437-d38b-4e42-a8ff-5795c3ce7672",
+      "name": "Respond Saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1808,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Start the double opt-in\n\nReads the list, decides whether a mail is due, sends it and only then stores the address as pending. The answer is the same whether or not a mail went out.",
+        "height": 288,
+        "width": 1552,
+        "color": 7
+      },
+      "id": "970aba60-095a-4da6-afb4-5cbd1549b172",
+      "name": "Opt-in section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Subscribers",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "f14cc7f9-f57a-496d-a81b-f7c9c418705a",
+      "name": "Get Subscriber List in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1584,
+        384
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide whether this request earns a confirmation mail.\n//\n// The form is public, so anyone can type anyone's address into it. Three\n// limits keep that from becoming a way to mail strangers:\n//   - a confirmed address gets nothing\n//   - an unconfirmed one gets one mail per resend_after_h, and at most\n//     max_mails_unconfirmed in total until it confirms\n//   - the whole list gets at most max_mails_per_hour, so a flood of made-up\n//     addresses stops itself before it empties the mail quota\n// The form answers the same in every case: it never tells a visitor whether\n// an address is on the list.\nconst cfg = $('Set Site Config').first().json;\nconst form = $('Validate Form').first().json;\nconst rows = $input.all().map((i) => i.json).filter((r) => r && r.email);\nconst row = rows.find((r) => String(r.email).trim().toLowerCase() === form.email) || {};\n\nconst HOUR = 3600e3;\nconst age = (v) => { const n = Date.parse(String(v || '')); return Number.isFinite(n) ? Date.now() - n : Infinity; };\nconst mails = Number(row.mails) || 0;\n// requested_at moves only when a mail goes out, so this counts mails.\nconst sentThisHour = rows.filter((r) => age(r.requested_at) < HOUR).length;\n\nlet why = '';\nif (row.state === 'confirmed') why = 'already confirmed';\nelse if (age(row.requested_at) < cfg.resend_after_h * HOUR) why = 'asked recently';\nelse if (mails >= cfg.max_mails_unconfirmed) why = 'mail limit for this address';\nelse if (sentThisHour >= cfg.max_mails_per_hour) why = 'hourly limit for the list';\n\nreturn [{ json: { due: why === '', why, mails: mails + 1 } }];"
+      },
+      "id": "6bef8d67-7347-4f54-a5dc-4842f617d390",
+      "name": "Plan Confirmation Mail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e6942191",
+              "leftValue": "={{ $json.due }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e6942191-6aa5-4317-a88b-9de6a591a9a6",
+      "name": "If Mail Is Due",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d277983d-595f-4bc0-a2d6-7570cb082a18",
+              "name": "subject",
+              "value": "={{ 'Confirm your subscription to ' + $('Set Site Config').first().json.site_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d8a9f666-c286-4a15-abb0-2efafaeb1776",
+              "name": "text",
+              "value": "={{ [ 'Someone asked to subscribe this address to updates from ' + $('Set Site Config').first().json.site_name + '.', '', 'If that was you, confirm here:', $('Set Site Config').first().json.confirm_page + '?a=confirm&t=' + $('Validate Form').first().json.token, '', 'If it was not you, ignore this mail and the address is not added.', '', 'This address does not take replies.' ].join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ecad54f4-6198-4d6f-ab38-99855cfba060",
+      "name": "Write Confirmation Mail",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2256,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $('Set Site Config').first().json.mail_from, to: [$('Validate Form').first().json.email], subject: $json.subject, text: $json.text }) }}",
+        "options": {}
+      },
+      "id": "7262a591-bab7-4c9a-a017-93d04153595d",
+      "name": "Send Confirmation Mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        384
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_MAIL_API",
+          "name": "Mail API key"
+        }
+      },
+      "notes": "Any transactional mail API works; only this URL and body differ. The mail goes first and the row second: a failed send leaves no pending address behind."
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Subscribers",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $('Validate Form').first().json.email }}",
+            "state": "pending",
+            "token": "={{ $('Validate Form').first().json.token }}",
+            "requested_at": "={{ $('Validate Form').first().json.received_at }}",
+            "path": "={{ $('Validate Form').first().json.path }}",
+            "mails": "={{ $('Plan Confirmation Mail').first().json.mails }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": []
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "f11409ce-dceb-4f2b-a215-8445d1ef57b8",
+      "name": "Upsert Subscriber in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2704,
+        384
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "notes": "confirmed_at and unsubscribed_at are left out on purpose: asking again must not erase when an address joined or left."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"state\": \"pending\" }",
+        "options": {}
+      },
+      "id": "5428251f-1a93-4b47-a230-71ebb4167ab5",
+      "name": "Respond Pending",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2928,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Confirm or unsubscribe by token\n\nThe token finds its one row. A confirm link works once and expires; an unsubscribe link always works. An unknown or spent token is answered 422, as is any submission that failed the check.",
+        "height": 416,
+        "width": 1552,
+        "color": 7
+      },
+      "id": "fff11019-2140-43e6-a35c-40b75fe2e361",
+      "name": "Token section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Subscribers",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "token",
+              "lookupValue": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ba16204d-761f-4672-aef3-bffe3d3127e5",
+      "name": "Find Subscriber by Token",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1584,
+        704
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// What a token may change on the one Subscribers row that owns it.\n//   confirm      pending -> confirmed, while the request is younger than\n//                confirm_within_days. Already confirmed is a quiet yes. An\n//                unsubscribed row is not revived by an old link: subscribing\n//                again starts from the form and gets a fresh token.\n//   unsubscribe  anything -> unsubscribed, at any age, and repeating it is a\n//                quiet yes.\n// 'changed' is false on a repeat, so the contact book is written once.\nconst cfg = $('Set Site Config').first().json;\nconst form = $('Validate Form').first().json;\nconst row = $input.first().json || {};\n\nconst invalid = [{ json: { valid: false, changed: false } }];\nif (!row.email || String(row.token || '') !== form.token) return invalid;\n\nconst DAY = 86400e3;\nconst asked = Date.parse(String(row.requested_at || ''));\nconst now = $now.toISO();\nlet state = String(row.state || '');\nlet confirmed_at = String(row.confirmed_at || '');\nlet unsubscribed_at = String(row.unsubscribed_at || '');\nlet mails = Number(row.mails) || 0;\nlet changed = false;\n\nif (form.kind === 'confirm') {\n  if (state === 'unsubscribed') return invalid;\n  if (state !== 'confirmed') {\n    if (!(Date.now() - asked < cfg.confirm_within_days * DAY)) return invalid;\n    state = 'confirmed'; confirmed_at = now; mails = 0; changed = true;\n  }\n} else if (state !== 'unsubscribed') {\n  state = 'unsubscribed'; unsubscribed_at = now; changed = true;\n}\n\nreturn [{\n  json: { valid: true, changed, token: form.token, email: String(row.email).trim().toLowerCase(), state, confirmed_at, unsubscribed_at, mails },\n}];"
+      },
+      "id": "8ce2851a-4e56-4f39-ab03-2a6eb9a4e015",
+      "name": "Decide Token Change",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2eb06c4c",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2eb06c4c-d219-4ef6-a08f-a5bb17d97940",
+      "name": "If Token Is Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Subscribers",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "token": "={{ $json.token }}",
+            "state": "={{ $json.state }}",
+            "confirmed_at": "={{ $json.confirmed_at }}",
+            "unsubscribed_at": "={{ $json.unsubscribed_at }}",
+            "mails": "={{ $json.mails }}"
+          },
+          "matchingColumns": [
+            "token"
+          ],
+          "schema": []
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "4165eb4e-3d25-4439-ad9a-0b3ec7fce3ef",
+      "name": "Update Subscriber in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2256,
+        688
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, state: $('Decide Token Change').first().json.state }) }}",
+        "options": {}
+      },
+      "id": "568ebde8-3341-4113-a955-2499a2b1a05b",
+      "name": "Respond Done",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2480,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "91ea1170",
+              "leftValue": "={{ $('Decide Token Change').first().json.changed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "91ea1170-9437-420b-aa26-a9d198dacba8",
+      "name": "If State Changed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2704,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"state\": \"invalid\" }",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "6cbdf91e-90d5-4339-a65f-61d2bd1352b2",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2256,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Update the contact book\n\nBoth branches hand over the same small change. It is joined with the contact's existing row, so a known contact keeps everything a form has no business touching.",
+        "height": 448,
+        "width": 1104,
+        "color": 7
+      },
+      "id": "e9185b48-d81c-411c-aea2-dc3a27362e54",
+      "name": "Contact section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// What the contact book learns from a message: who wrote, and about what.\nconst form = $('Validate Form').first().json;\nreturn [{\n  json: {\n    change: {\n      email: form.email,\n      first_name: form.first_name,\n      surname: form.surname,\n      group_add: 'contact',\n      group_remove: '',\n      association: 'site-contact',\n      topic: 'Site message · ' + (form.path || '/'),\n      note: form.message.slice(0, 500),\n    },\n  },\n}];"
+      },
+      "id": "50fe6019-a805-4dc9-a61a-712245eee93b",
+      "name": "Build Contact From Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// What the contact book learns from a confirm or an unsubscribe: the address\n// joins or leaves the group 'newsletter'.\nconst t = $('Decide Token Change').first().json;\nconst joined = t.state === 'confirmed';\nreturn [{\n  json: {\n    change: {\n      email: t.email,\n      first_name: '',\n      surname: '',\n      group_add: joined ? 'newsletter' : '',\n      group_remove: joined ? '' : 'newsletter',\n      association: 'site-newsletter',\n      topic: joined ? 'Newsletter · confirmed' : 'Newsletter · unsubscribed',\n      note: '',\n    },\n  },\n}];"
+      },
+      "id": "03125c60-4163-4569-a888-1ba3493e3bb9",
+      "name": "Build Contact From Subscription",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_ENTRIES_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Entries",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.change.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b66ecafc-fb54-489e-a663-03168603f2ce",
+      "name": "Find Contact in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3392,
+        528
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "e0417b31-f3be-4da4-ac88-156a14b1d552",
+      "name": "Combine Change With Contact",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3616,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the Entries write. The next node auto-maps and matches on email, so it\n// writes exactly the keys emitted here and nothing else.\n//   known contact  only what changed: groups, last_topic, contact_updated_at.\n//                  Their name, status and notes were curated elsewhere and a\n//                  web form is not a reason to overwrite them.\n//   new contact    a full starting row.\n// Someone leaving the newsletter who was never in the book is not added to it.\nconst { change: c, ...cur } = $json;\nconst known = !!cur.email;\n\nif (!known && !c.group_add) return [];\n\nconst groups = new Set(String(cur.groups || '').split(',').map((g) => g.trim()).filter(Boolean));\nif (c.group_add) groups.add(c.group_add);\nif (c.group_remove) groups.delete(c.group_remove);\n\nconst now = $now.toISO();\nconst row = {\n  email: known ? cur.email : c.email,\n  groups: [...groups].join(', '),\n  last_topic: c.topic,\n  contact_updated_at: now,\n};\nif (!known) {\n  Object.assign(row, {\n    first_name: c.first_name,\n    surname: c.surname,\n    status: 'lead',\n    association: c.association,\n    notes: c.note,\n    contact_created_at: now,\n  });\n}\nreturn [{ json: row }];"
+      },
+      "id": "50b60436-2a8f-4d8b-a9e2-d3f960c89c23",
+      "name": "Prepare Contact Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_ENTRIES_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Entries",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": []
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "9a5da17f-270c-4f2b-a186-843793b9c068",
+      "name": "Upsert Contact in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4064,
+        432
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Render the briefing section\n\nCalled by the morning briefing with a time zone and a window. Returns exactly one item: the messages in full and who asked, confirmed or left.",
+        "height": 240,
+        "width": 976,
+        "color": 7
+      },
+      "id": "1d57ea8a-1764-4dc6-ae05-27f8a701c131",
+      "name": "Briefing section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "442a050c-5377-4257-a00f-3736d259a0f6",
+      "name": "When Called for Briefing",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        1136
+      ],
+      "notes": "tz: IANA time zone\nwindow_hours: how far back to look"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Messages",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "96105dc6-a51a-4420-a462-9d5f03d8ee0f",
+      "name": "Get Messages in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        800,
+        1136
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Subscribers",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "66973ba4-ed4f-49ad-a3f3-837753292d12",
+      "name": "Get Subscribers for Briefing",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1024,
+        1136
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin: the SITE INBOX section.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally, and everything\n// printed here was typed by a stranger.\n//\n// Nothing pings when a form is sent; this section is the only place a message\n// or a signup is announced, so it prints the message itself, not a count.\nconst MAX_MSGS = 5;      // each can run to MSG_CHARS; the 4096 cap is shared\nconst MSG_CHARS = 400;\nconst MAX_SUBS = 10;\n\nconst input = $('When Called for Briefing').first().json;\nconst tz = input.tz || 'UTC';\nconst since = Date.now() - (Number(input.window_hours) || 24) * 3600e3;\n\nconst ts = (v) => { const n = Date.parse(String(v || '')); return Number.isFinite(n) ? n : null; };\nconst fresh = (v) => { const n = ts(v); return n !== null && n >= since; };\nconst hhmm = (v) => new Date(ts(v)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });\nconst flat = (v) => String(v ?? '').replace(/\\s+/g, ' ').trim();\n\nconst messages = $('Get Messages in Sheets').all().map((i) => i.json).filter((r) => r && r.email && fresh(r.ts));\nconst subs = $('Get Subscribers for Briefing').all().map((i) => i.json).filter((r) => r && r.email);\n\nmessages.sort((a, b) => ts(b.ts) - ts(a.ts));\nconst msgItems = messages.slice(0, MAX_MSGS).map((m) => {\n  const who = flat(m.name) ? flat(m.name) + ' <' + flat(m.email) + '>' : flat(m.email);\n  const body = flat(m.message);\n  const text = body.length > MSG_CHARS ? body.slice(0, MSG_CHARS) + '…' : body;\n  return who + ' · ' + hhmm(m.ts) + ' · ' + (flat(m.path) || '/') + '\\n    ' + text;\n});\nif (messages.length > MAX_MSGS) msgItems.push('+' + (messages.length - MAX_MSGS) + ' more in the Messages tab');\n\n// One row per address, so one line per address: the latest thing that happened.\nconst events = [];\nfor (const s of subs) {\n  const from = flat(s.path) ? ' · from ' + flat(s.path) : '';\n  if (s.state === 'unsubscribed' && fresh(s.unsubscribed_at)) events.push({ at: ts(s.unsubscribed_at), text: flat(s.email) + ' · unsubscribed' });\n  else if (s.state === 'confirmed' && fresh(s.confirmed_at)) events.push({ at: ts(s.confirmed_at), text: flat(s.email) + ' · confirmed' + from });\n  else if (s.state === 'pending' && fresh(s.requested_at)) events.push({ at: ts(s.requested_at), text: flat(s.email) + ' · asked, not confirmed yet' + from });\n}\nevents.sort((a, b) => b.at - a.at);\nconst subItems = events.slice(0, MAX_SUBS).map((e) => e.text);\nif (events.length > MAX_SUBS) subItems.push('+' + (events.length - MAX_SUBS) + ' more in the Subscribers tab');\n\nconst count = (state) => subs.filter((s) => s.state === state).length;\nconst totals = count('confirmed') + ' confirmed · ' + count('pending') + ' pending · ' + count('unsubscribed') + ' unsubscribed';\nif (subItems.length) subItems.push('List: ' + totals);\n\n// Always exactly one item: zero items is indistinguishable from a crash.\nreturn [{\n  json: {\n    key: 'reach',\n    icon: '📬',\n    title: 'SITE INBOX',\n    blocks: [\n      { heading: 'Messages', items: msgItems },\n      { heading: 'Newsletter', items: subItems },\n    ],\n    empty: 'Nothing new · list: ' + totals,\n  },\n}];"
+      },
+      "id": "22daa031-edcb-45cd-ab95-52af63a130b5",
+      "name": "Build Briefing Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        1136
+      ]
+    }
+  ],
+  "connections": {
+    "When Form Is Sent": {
+      "main": [
+        [
+          {
+            "node": "Set Site Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Site Config": {
+      "main": [
+        [
+          {
+            "node": "Validate Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Form": {
+      "main": [
+        [
+          {
+            "node": "Route by Kind",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Kind": {
+      "main": [
+        [
+          {
+            "node": "Append Message Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Subscriber List in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Subscriber by Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Message Row": {
+      "main": [
+        [
+          {
+            "node": "Respond Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Saved": {
+      "main": [
+        [
+          {
+            "node": "Build Contact From Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Subscriber List in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Plan Confirmation Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Confirmation Mail": {
+      "main": [
+        [
+          {
+            "node": "If Mail Is Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Mail Is Due": {
+      "main": [
+        [
+          {
+            "node": "Write Confirmation Mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Confirmation Mail": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation Mail": {
+      "main": [
+        [
+          {
+            "node": "Upsert Subscriber in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Subscriber in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Respond Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Subscriber by Token": {
+      "main": [
+        [
+          {
+            "node": "Decide Token Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Token Change": {
+      "main": [
+        [
+          {
+            "node": "If Token Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Token Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Update Subscriber in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Subscriber in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Respond Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Done": {
+      "main": [
+        [
+          {
+            "node": "If State Changed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If State Changed": {
+      "main": [
+        [
+          {
+            "node": "Build Contact From Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Contact From Message": {
+      "main": [
+        [
+          {
+            "node": "Find Contact in Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Change With Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Contact From Subscription": {
+      "main": [
+        [
+          {
+            "node": "Find Contact in Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Change With Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Combine Change With Contact",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine Change With Contact": {
+      "main": [
+        [
+          {
+            "node": "Prepare Contact Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Contact Row": {
+      "main": [
+        [
+          {
+            "node": "Upsert Contact in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called for Briefing": {
+      "main": [
+        [
+          {
+            "node": "Get Messages in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Get Subscribers for Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Subscribers for Briefing": {
+      "main": [
+        [
+          {
+            "node": "Build Briefing Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}

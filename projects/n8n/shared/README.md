@@ -23,7 +23,7 @@ Resolves folder paths to Google Drive IDs. n8n requires IDs, not paths.
 > registered". The marketing site's waitlist form is parked (signing in *is* signing up); **Door 1's
 > sender is now the PromptPotter app**, which POSTs every new account here on first `/auth/me`.
 > **Every signup now gets a CRM row automatically** — the old "tap to add" gate is gone. The
-> confirmation-email branch is **disabled on the instance**; that, and the auto-CRM change, are
+> account-email branch is **on**: a new account gets one "your account is open" mail. Both are
 > explained in [`CLAUDE.md`](CLAUDE.md).
 
 Generic signup / waitlist **intake door**. Two ways in (a webhook for senders
@@ -51,63 +51,14 @@ truth — `src/lib/account-open-email.ts` + `src/pages/api/account-open-email.ts
 Set *Render Email*'s URL (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`) and bind the
 **Gmail OAuth** credential on import.
 
-⚠️ That endpoint was renamed from `waitlist-email` and now sends an **approval**
-notice — "your account is open" — so re-enabling this branch as-is would tell a
-brand-new, not-yet-approved signup that they are in. See `CLAUDE.md` § Flow C.
+That endpoint was renamed from `waitlist-email` and sends an **account open** notice.
+Signing up is the grant, so the sentence is true for every new account. If your own sign-up
+is gated behind an approval, disable this branch until the approval exists.
 
 **Import note:** the committed JSON ships with placeholders. A gitignored
 `signup-intake.local.n8n.json` sits alongside it with the real sheet IDs, chat ID
 and bot credential already bound (and the live webhook path) — import that one to
 skip the re-typing; bind the Google Sheets credential once after import.
-
-**Site forms (Door 3).** A third webhook, `POST /webhook/reach`, takes what a website's
-forms say: a contact message, or a newsletter request with **double opt-in**.
-
-- A **contact message** is stored in a `Messages` tab, one row per message, and the sender is
-  added to the contact book (`Entries`) in the group `contact`.
-- A **newsletter request** mails one confirmation link, from a no-reply address on your own
-  domain through a transactional mail API, and waits as `pending` in a `Subscribers` tab. The link opens a page on your own site; pressing the button there confirms,
-  and the address joins `Entries` in the group `newsletter`. The same token unsubscribes.
-- Nothing pings Telegram. The **morning briefing** has a `SITE INBOX` section that prints
-  yesterday's messages in full and who asked, confirmed or left. This workflow renders that
-  section itself; the briefing calls it by id (one line in its `Plugins` node).
-- This door answers only after the row is written (and, for a newsletter request, after the
-  mail is sent), so the site can tell a visitor honestly whether it worked.
-
-Your site needs two things: a server-side forwarder that POSTs
-`{ kind, email, name, message, path, token, ts }` here, and a page for the mailed link that
-POSTs `{ kind: 'confirm' | 'unsubscribe', token }` when its button is pressed. Setup steps are
-on the red sticky note beside the flow; the design notes are in [`CLAUDE.md`](CLAUDE.md).
-
-No workflow *sends* a newsletter yet. This is the list and its consent record.
-
-### If your site is on Vercel: the sender in five steps
-
-The confirmation mail needs a sender on your own domain, such as `no-reply@example.com`.
-A Vercel project can get one without opening another account by hand:
-
-1. **Provision the mail service from the Vercel CLI**, inside the linked project:
-   `vercel integration add resend/resend-email --plan free -m domain=example.com -m region=eu-west-1 -e production`.
-   The first run asks you to accept the provider's terms (`vercel integration accept-terms resend`).
-   Vercel creates the account, bills it with your project, and stores `RESEND_API_KEY` as a
-   production environment variable.
-2. **Verify the domain.** The service lists three DNS records: one DKIM `TXT` at
-   `resend._domainkey`, and an `MX` plus an SPF `TXT` at `send`. Add them wherever your DNS is
-   hosted, which is not necessarily Vercel. They sit on subdomains, so existing mail routing on the
-   apex is untouched. Until they verify, every send is refused and the form says "not saved".
-3. **Give n8n the key.** Read it once with `vercel env pull --environment=production` into a file
-   outside the repo, then create an n8n **Header Auth** credential with name `Authorization` and
-   value `Bearer <key>`. Delete the pulled file.
-4. **Bind it** to `Send Confirm Email` and set `MAIL_FROM` in `Shape Reach` to the no-reply
-   address on the verified domain.
-5. **Point the site at the door.** Store the `reach` webhook's production URL as a server-only
-   variable on the Vercel project and redeploy; a Vercel variable only takes effect on the next
-   deployment.
-
-The key lives in two places, Vercel and n8n, and the site itself never uses it: n8n sends the
-mail so that "mail first, then the row" stays one transaction the form can report honestly.
-Any other transactional mail API works the same way; only the URL in `Send Confirm Email` and the
-DNS records differ.
 
 **Sender:** the PromptPotter app, on the first `/auth/me` of a new account
 (`N8N_SIGNUP_WEBHOOK_URL`). The old sender, `promptpotter-web` `/api/waitlist`,

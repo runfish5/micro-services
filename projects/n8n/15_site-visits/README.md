@@ -38,12 +38,37 @@ Columns, in order:
 visitor can put anything in a link label, and under the default `USER_ENTERED` a
 `target` of `=1+1` would be stored as a live formula. RAW makes every value text.
 
+The same document also holds `Messages` and `Subscribers`, written by
+[`17_site-forms`](../17_site-forms/README.md). A visit row has no email and a form row has no IP,
+so the two cannot be joined to a person; what links them is the `path` each form row records.
+
 ## Sender
 
 The website's `/api/track` endpoint. The client beacon never talks to n8n directly —
 the browser only knows about the site's own origin, so the webhook URL stays private
 and the IP, geo and user-agent are stamped server-side where they cannot be spoofed
 by the payload.
+
+## What never reaches the sheet
+
+Dropped by the website before a row is written, so every reader of this tab sees the same
+filtered set rather than each one re-deriving it:
+
+- **Loopback and private addresses** — local development.
+- **Anything naming itself a bot** — `bot`, `crawl`, `headless`, `curl` and the like in the
+  user-agent.
+- **Browsers years out of date** — Chrome or Firefox below a floor version (130 when written).
+  The crawlers that do not name themselves wear an old desktop browser: in the first two months
+  that was 64 of the 125 addresses that were not the owner, mostly from data centres, landing on
+  the legal pages. The floor is a constant in the website's `/api/track`; it wants raising now and
+  then, and a stale one only lets more through.
+- **The owner's own devices** — a browser that once opened the site with `?self=1` reports nothing
+  from then on (`?self=0` undoes it). This is the only thing the site ever stores on a device, and
+  only on one whose owner typed that parameter. It exists because the briefing's address list
+  cannot recognise a phone: mobile carriers hand out a new address per session.
+
+Rows written before 2026-10-11 predate the last two rules. Anything computed over older rows has
+to filter them itself.
 
 ## Reader
 

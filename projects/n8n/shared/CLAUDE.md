@@ -43,24 +43,20 @@ account it POSTs `{email, name, use_case, signup_source: 'promptpotter-app'}` he
 must carry the **live** path. The app also sends its own Telegram notice on a separate outbound
 channel, deliberately: that one fires even when this webhook is unset.
 
-### The confirmation email is DISABLED on the live workflow (2026-08-13)
+### The account email is ON, live and in the files (operator-confirmed 2026-10-12)
 
-`Render Email` and `Send Confirmation Email` are both `disabled: true` on the instance. They stay
-enabled in this committed template, which is generic and correct for an importer who has a real
-confirmation renderer.
+`Render Email` and `Send Confirmation Email` are enabled on the instance and in both copies here.
+A new account gets one mail, "your account is open", rendered by the website at
+`https://promptpotter.com/api/account-open-email` and sent through Gmail.
 
-Two reasons, and the first answers "why did my test signup never get a mail":
+It was switched off from 2026-08-13 for two reasons, and both are gone. `Render Email` pointed at
+a dead host on a renamed route; `.local` and the instance now carry the live URL. And the mail
+announced an approval that a brand-new signup did not yet have; since 2026-08-14 signing up *is*
+the grant, so the sentence is simply true.
 
-1. `Render Email` pointed at `https://promptpotter.dev/api/waitlist-email` — a **dead host** (`.com`
-   is canonical) on a route since renamed. It could never have rendered anything.
-2. The endpoint that replaced it sends an **approval** notice ("your account is open"). Repointing
-   the URL alone would mail that to every brand-new, unentitled signup.
-
-**Reason 2 dissolved on 2026-08-14 and reason 1 has a live URL now.** Signing up grants access, so
-"your account is open" is simply *true* for a brand-new signup — there is no unentitled state left for
-it to lie about — and `.local` already points at `https://promptpotter.com/api/account-open-email`.
-Re-enabling both nodes is now a one-line change rather than a renderer to write. It is left DISABLED
-because turning it on starts mailing real people, which is the operator's call, not a cleanup.
+These notes said "disabled" for two months after the instance had it on, and a real signup on
+2026-10-11 received the mail while the docs claimed nobody could. When a node's `disabled` flag
+changes on the instance, change it here in the same sitting.
 
 ### Every signup joins the CRM — the gate was removed on purpose (2026-08-13)
 
@@ -132,87 +128,8 @@ importer to paste the webhook URL into `N8N_WAITLIST_WEBHOOK_URL` — a route an
 longer exist anywhere. A parked workflow may keep its old vocabulary; it may not keep instructions
 that send a reader somewhere gone.
 
-**Flow C can now be revived as-is** — see the 2026-08-14 note above. The email it calls says "your
-account is open", which stopped being a lie the moment signing up became the grant. It stays
-`disabled: true` on the instance until the operator decides to start mailing people, not because the
-copy is wrong.
-
-### Door 3 — site forms, double opt-in and the briefing section (2026-10-11)
-
-**Live since 2026-10-12**, promoted over the REST API: the 29 nodes were added to the live workflow
-and its existing 28 sent back untouched. The contact and token routes are verified end to end from
-the site. The newsletter route stops at `Send Confirm Email` until the sender domain is verified
-with the mail service, and says so to the visitor.
-
-A third door for what a site's forms say: `POST /webhook/reach` with
-`{ kind, email, name, message, path, token, ts }`. It shares the workflow because it shares the
-paste-time configuration (the same two spreadsheets, the same credentials), and it shares nothing
-else: **every node in these flows is new, and no existing node feeds or is fed by them.** That is the
-2026-08-13 lesson applied in advance.
-
-```
-Reach Webhook → Shape Reach → Route Kind
-   contact     → Append to Messages (raw HTTP) → Respond Saved ────────────────┐
-   newsletter  → Lookup Subscriber → Plan Subscription → Should Send           │
-                    yes → Send Confirm Email → Upsert Subscriber → Respond Pending
-                    no  → Respond Pending                                      │
-   token       → Find By Token → Apply Token → Token Known                     │
-                    yes → Update Subscriber → Respond Done ────────────────────┤
-                    no  → Respond Invalid (422)                                ▼
-   invalid     → Respond Invalid          Contact Change → Contact Lookup → Merge Contact → Upsert Contact
-
-Called (Execute Workflow Trigger) → Get Messages → Get Subscribers → Build Section
-```
-
-Two new tabs in the **Signups** document, and their grain:
-
-| Tab | Grain | Columns | Written by |
-|-----|-------|---------|-----------|
-| `Messages` | one row per contact-form message, append-only | `ts, email, name, message, path` | `Append to Messages` |
-| `Subscribers` | one row per address: the consent record | `email, state, token, requested_at, path, confirmed_at, unsubscribed_at` | `Upsert Subscriber`, `Update Subscriber` |
-
-`Subscribers.state`: `pending` → `confirmed` → `unsubscribed`. Asking again after unsubscribing
-starts over at `pending` with a fresh token.
-
-Design facts, each with the failure it prevents:
-
-- **This door answers after the write; Door 1 answers before it.** A visitor typed this, so the
-  sender must be able to say "not saved" and mean it. For a newsletter request the answer waits for
-  the mail too. The order is mail, then row: if the row were written first and the mail failed, the
-  retry would find a fresh `pending` row and send nothing.
-- **Nothing here pings Telegram**, by operator decision. The briefing section is the only
-  announcement, so it prints each message in full instead of a count.
-- **`Plan Subscription` is an abuse gate, not a convenience.** The form is public and takes any
-  address. A confirmed address gets no mail, a pending one at most one per 24 h, and the answer is
-  the same in every case so the form cannot be used to test who is on the list.
-- **The mailed link opens a page on the sender's site, never an n8n URL.** That page shows a button
-  and POSTs the token back through the sender as `kind: confirm` or `unsubscribe`. A GET that
-  changed state would be triggered by every mail scanner that follows links, and a link into n8n
-  would publish the instance host to every subscriber.
-- **An old confirm link does not revive an unsubscribed address.** `Apply Token` answers "invalid".
-- **The contact book learns only what changed.** `Merge Contact` emits `groups`, `last_topic` and
-  `contact_updated_at` for a known contact and a full row only for a new one; `Upsert Contact`
-  auto-maps, so it writes exactly those keys. `Add to CRM (Entries)` overwrites status and notes on
-  every signup; this path does not copy that. A newsletter address joins `Entries` on **confirm**,
-  not on request: an unconfirmed address may not be its owner's.
-- **`Contact Change` is shared by two flows on purpose** and is safe because it reads
-  `$('Apply Token')` only on the token route. Naming a node that did not execute throws.
-- **Sheets writes are `cellFormat: RAW`**, and the message append is the raw HTTP call with
-  `insertDataOption=INSERT_ROWS`, for the reasons in `15_site-visits/README.md`. The two
-  `Subscribers` writes are upserts through the Sheets node, which reads before it writes: two
-  requests for the *same* address in the same second can collide. Accepted at this volume.
-- **`Contact Lookup` matches `email` only**, like `CRM Lookup`. A person filed under another
-  address in `more_emails` gets a second row. `record-search` in project 02 is the fix if it matters.
-- **The confirmation mail is plain text built in `Plan Subscription`**, unlike Flow C, whose branded
-  HTML belongs to the website. A consent mail has one job and should survive any mail client.
-- **`Send Confirm Email` is an HTTP call to a transactional mail API, not the Gmail node.** Gmail
-  can only send as the account that is bound, which puts a personal address in front of every
-  subscriber. The sender is `MAIL_FROM` in `Shape Reach`, a no-reply address on the site's own
-  domain. That domain has to be verified with the mail service (DNS records) or every send is
-  refused; a refused send fails the request, so the form says so. The key is a Header Auth
-  credential (`CREDENTIAL_ID_MAIL_API`).
-- **No workflow sends a newsletter yet.** When one exists it must read only `state = confirmed` and
-  put `CONFIRM_PAGE?a=unsubscribe&t=<token>` in every mail.
+**Flow C is live** — see the 2026-10-12 note above. The email it calls says "your account is
+open", which stopped being a lie the moment signing up became the grant.
 
 ### Two committed copies
 

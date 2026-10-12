@@ -50,7 +50,8 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | telegram-command-interface | `13_n8n-ops-center/telegram-command-interface.n8n.json` |
 | - | ZZ_db-guard-test [sandbox] | `14_db-janitor/workflows/db-guard-sandbox-writer.json` (drill target; unpublished except during a drill) |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` (one workflow: generate 06:30 + digest + tap) |
-| `G766da6yCLuQS50T` | Signup Intake → CRM triage | `shared/signup-intake.n8n.json` (`.local` variant alongside) — **active**; live webhook path is `promptpotter-waitlist`, NOT the committed `signup-intake`. Sender = the PromptPotter app; auto-writes the CRM row; email branch disabled |
+| `ykuOczmIegskR6jb` | Site Forms | `17_site-forms/workflows/site-forms.n8n.json` (`.local` variant alongside): **active**; webhook path `reach`, header auth. Sender = the website's `/api/reach` |
+| `G766da6yCLuQS50T` | Signup Intake → CRM triage | `shared/signup-intake.n8n.json` (`.local` variant alongside) — **active**; live webhook path is `promptpotter-waitlist`, NOT the committed `signup-intake`. Sender = the PromptPotter app; auto-writes the CRM row; account email on |
 
 ### Subworkflows
 
@@ -67,7 +68,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | deal-finder | `12_steward/workflows/subworkflows/deal-finder.json` | menu-handler (via Config registry) |
 | - | price-checker | `12_steward/workflows/subworkflows/price-checker.json` | deal-finder, daily-briefing |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` | daily-briefing (Plugins registry) and menu-handler (Config `task`) — **must stay active** or both callers fail |
-| `G766da6yCLuQS50T` | Signup Intake → CRM triage (its `Called` trigger) | `shared/signup-intake.n8n.json` | daily-briefing (Plugins registry, key `reach`) — the site-forms section (live 2026-10-12) |
+| `ykuOczmIegskR6jb` | Site Forms (its `When Called for Briefing` trigger) | `17_site-forms/workflows/site-forms.n8n.json` | daily-briefing (Plugins registry, key `reach`): the `SITE INBOX` section. **Must stay active** or the section fails |
 
 ### Support Workflows
 
@@ -95,7 +96,7 @@ workflow holds a workflow id in a registry node and knows nothing else about the
 | Edge | Why it is allowed |
 |------|-------------------|
 | `05_daily-briefing` → `16` | The briefing is a renderer with a `Plugins` registry. It has no knowledge of commitments; swapping the id swaps the plugin. Removing the registry line removes the dependency. |
-| `05_daily-briefing` → `shared/signup-intake` | The same registry, one more line (`reach`). The intake door owns the `Messages` and `Subscribers` tabs and renders its own section; the briefing only prints what comes back. |
+| `05_daily-briefing` → `17` | The same registry, one more line (`reach`). Site Forms owns the `Messages` and `Subscribers` tabs and renders its own section; the briefing only prints what comes back. |
 | `12_steward` → `16` | menu-handler dispatches every agent by id from its `Config` registry. The `task` entry is one more row in a list that already points at 12's own subworkflows. |
 
 The test for a future exception is the same: if the dependency is a **line in a registry**, the
