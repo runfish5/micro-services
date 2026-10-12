@@ -60,7 +60,7 @@ changes on the instance, change it here in the same sitting.
 
 ### Every signup joins the CRM — the gate was removed on purpose (2026-08-13)
 
-`Append to Signups` now fans out to **three** branches: `Add to CRM (Entries)`, `Notify (Telegram)`
+`Append to Signups` now fans out to **three** branches: `Add Contact to CRM`, `Send Signup Alert`
 and `Render Email`. The CRM row is written for everyone, automatically.
 
 This **reverses** the "Signups is the unjudged inbox, Entries is the gated clean list — do not
@@ -68,12 +68,12 @@ collapse them" rule stated below, by operator decision: a contact record that ex
 someone taps a button is a contact record that depends on somebody being at their phone, and an
 untapped signup simply never existed. Curation moved *after* the write instead of gating it.
 
-It needed no expression changes. `Add to CRM (Entries)` reads `$json.email / first_name / surname /
+It needed no expression changes. `Add Contact to CRM` reads `$json.email / first_name / surname /
 source / use_case`, which is exactly `Triage`'s output shape and therefore exactly what
 `Append to Signups` emits — the node was already fed a compatible item from `Lookup Signup`.
 
 ⚠️ **It DID need a rewire, and the first attempt shipped broken — the lesson generalises.**
-`Add to CRM (Entries)` was **shared** by both flows, so its downstream (`Flag Promoted` →
+`Add Contact to CRM` was **shared** by both flows, so its downstream (`Flag Promoted` →
 `Mark Promoted` → `Confirm Added`) belonged to the button path. Feeding it from Flow A made a fresh
 signup fall through into that tail and die on `Flag Promoted`, which reads
 `$('Parse Callback')` — a node only the Telegram callback executes. Execution 6354, `status=error`,
@@ -82,7 +82,7 @@ so nothing looked wrong from the outside.**
 
 The fix removed work rather than adding a node: the CRM row now exists before any tap, so the tap no
 longer needs to write it. `Lookup Signup` goes straight to `Flag Promoted`, and
-`Add to CRM (Entries)` is **terminal** — it is Flow A's alone.
+`Add Contact to CRM` is **terminal** — it is Flow A's alone.
 
 **Reusing a node across two flows silently reuses its downstream.** When wiring into an existing
 node, look at what it feeds before assuming it is a leaf.
@@ -117,8 +117,8 @@ flow.
 `promptpotter-waitlist`; the box's `N8N_SIGNUP_WEBHOOK_URL` carries it, and renaming the path 404s
 every signup POST the moment it is imported. The node's *name* is cosmetic, its *path* is a binding.
 
-**`account_count` rides the app's POST** — `Normalize (Web)` picks it off `$json.body`, `Normalize`
-carries it through both doors (Door 2 has none, so `0`), and `Notify (Telegram)` renders it as
+**`account_count` rides the app's POST** — `Shape Web Signup` picks it off `$json.body`, `Normalize`
+carries it through both doors (Door 2 has none, so `0`), and `Send Signup Alert` renders it as
 `*Free tier:* N accounts`. It is deliberately NOT assigned in `Triage`, so it never reaches
 `Append to Signups` — that node is `autoMapInputData` and a new key there means a new Sheet column.
 
@@ -171,7 +171,7 @@ only states. (An earlier `re-engaged` / "Update CRM" state was prototyped and **
 Signup Webhook (POST /webhook/signup-intake)     Hosted Signup Form (n8n-hosted page)
         │  → Respond OK ({ok:true}, async)               │
         ▼                                                 ▼
-   Normalize (Web)                                  Normalize (Form)
+   Shape Web Signup                                  Shape Form Signup
         └───────────────┬─────────────────────────────────┘
                         ▼
                    Normalize (code) — canonical shape; splits name → first_name/surname; signup_timestamp
@@ -181,7 +181,7 @@ Signup Webhook (POST /webhook/signup-intake)     Hosted Signup Form (n8n-hosted 
                    Triage (Set) — known_in_crm = $json.email ? 'yes':'no'; status='new'; carries signup fields from $('Normalize')
                         ▼
                    Append to Signups (appendOrUpdate Sheet1, autoMapInputData, match email)
-                        ├──────────────► Notify (Telegram)   — operator alert + buttons (Flow B)
+                        ├──────────────► Send Signup Alert   — operator alert + buttons (Flow B)
                         └──────────────► Compose Confirmation → Send Confirmation Email  (Flow C, parallel)
 ```
 
@@ -191,13 +191,13 @@ Signup Webhook (POST /webhook/signup-intake)     Hosted Signup Form (n8n-hosted 
   the PromptPotter app does, with an extra `account_count` (see below).
   `responseMode: responseNode` → `Respond OK` returns `{ok:true}` immediately, then the rest runs async.
 - **Door 2 — Hosted Signup Form**: a `formTrigger`-hosted public page (no website needed). Form field
-  labels (`Email`, `Name`, `Use case`) **must** match the keys read in `Normalize (Form)`.
+  labels (`Email`, `Name`, `Use case`) **must** match the keys read in `Shape Form Signup`.
 - **`known_in_crm`** is derived in `Triage` purely from whether `CRM Lookup` returned a row. It is
   stored on the Signups row and drives the Telegram message.
 
 ### The compact CRM preview (the one curated feature on the alert)
 
-`Notify (Telegram)` always shows name / email / source / use case / `Already in CRM: YES/no`. **When
+`Send Signup Alert` always shows name / email / source / use case / `Already in CRM: YES/no`. **When
 `known_in_crm === 'yes'`**, the message text appends a short preview of the existing contact:
 
 ```
@@ -223,7 +223,7 @@ Telegram Trigger (callback_query)
    ▼
 Parse Callback (code) — splits callback_data "action:email" → { action, email, message_id, chat_id, original_text }
    ▼
-Action? (switch: addcrm | dismiss)
+Route Button Tap (switch: addcrm | dismiss)
    ├─ addcrm ─► Lookup Signup (re-read Signups by email) ─► Flag Promoted ─► Mark Promoted (Signups status='promoted') ─► Confirm Added (editMessageText + "✅ ADDED TO CRM")
    └─ dismiss ─► Mark Dismissed (Signups status='dismissed') ─► Confirm Dismissed (editMessageText + "🗑 DISMISSED")
 ```
@@ -231,7 +231,7 @@ Action? (switch: addcrm | dismiss)
 - **Buttons carry only `action:email`** (`callback_data: addcrm:{{email}}` / `dismiss:{{email}}`). The
   full signup record is **not** in the callback payload — `Lookup Signup` re-reads it from the Signups
   sheet by email. This is why the email is the matching key everywhere.
-- **`Add to CRM (Entries)`** (appendOrUpdate, match `email`, `defineBelow`) writes a new contact as:
+- **`Add Contact to CRM`** (appendOrUpdate, match `email`, `defineBelow`) writes a new contact as:
   `status='lead'`, `groups='website-waitlist'`, `association=source`, `last_topic='Waitlist signup'`,
   `notes=use_case`, `contact_created_at`/`contact_updated_at=now`. Upsert on email → no duplicates.
 - The confirm nodes (`editMessageText`) re-stamp `original_text` with the decision. **They do not clear
@@ -284,11 +284,11 @@ copy/layout/images, edit the website lib + `public/email/` — never this repo.
 
 ### Node / credential map (for binding on import)
 
-- **Google Sheets OAuth** → `CRM Lookup`, `Append to Signups`, `Lookup Signup`, `Add to CRM (Entries)`,
-  `Mark Promoted`, `Mark Dismissed`. Entries-doc nodes: `CRM Lookup`, `Add to CRM (Entries)`. All others
+- **Google Sheets OAuth** → `CRM Lookup`, `Append to Signups`, `Lookup Signup`, `Add Contact to CRM`,
+  `Mark Promoted`, `Mark Dismissed`. Entries-doc nodes: `CRM Lookup`, `Add Contact to CRM`. All others
   → Signups doc.
-- **Telegram Bot** → `Notify (Telegram)`, `Telegram Trigger`, `Confirm Added`, `Confirm Dismissed`.
-  Set `YOUR_CHAT_ID` on `Notify (Telegram)`.
+- **Telegram Bot** → `Send Signup Alert`, `Telegram Trigger`, `Confirm Added`, `Confirm Dismissed`.
+  Set `YOUR_CHAT_ID` on `Send Signup Alert`.
 - **Gmail OAuth** → `Send Confirmation Email`.
 - After activating, copy the Webhook **Production URL** into the sender's own config, and grab the
   **Form Trigger** URL to share/bookmark. The variable this used to name, `N8N_WAITLIST_WEBHOOK_URL`,

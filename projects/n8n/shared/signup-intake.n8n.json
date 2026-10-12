@@ -3,78 +3,97 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Signup Intake → CRM triage\n\nA generic **intake door** for inbound people. Two ways in, one pipeline, a human in the loop.\n\n**Teaching idea:** n8n is useful far beyond any one product. This flow shows how *any* organisation (or a single person) can capture inbound interest — **with or without a website** — and route it to a human, without writing a backend.\n\n**Two doors:**\n1. **Signup Webhook** — for senders that *have* a site (a serverless function on your site POSTs here, setting its own `source`).\n2. **Hosted Signup Form** — n8n renders a public form page for you. No website, no code. Bookmark / share / QR the form URL.\n\nBoth land in the **Signups** sheet (NOT the CRM). The CRM (**Entries**) is only *read* — unless you tap **Add to CRM** in Telegram.",
-        "height": 420,
-        "width": 460,
-        "color": 4
+        "content": "## Take signups into Google Sheets with a Telegram triage step\n\nA generic intake door for inbound people, with or without a website. Every signup is stored, checked against your contact book, mailed a confirmation and announced on Telegram, where one tap marks it promoted or dismissed. It shows how anyone can capture inbound interest without writing a backend.\n\n### How it works\n1. Takes a signup from a webhook your site posts to, or from a form page n8n hosts for you.\n2. Shapes both into one record and looks the address up in the contact book.\n3. Appends the signup to its own sheet and writes the contact row.\n4. Sends a confirmation email whose text is rendered by your site.\n5. Alerts you on Telegram with the contact's current record and two buttons.\n6. Marks the signup promoted or dismissed when you tap one.\n\n### Setup steps\n- [ ] Give the signups sheet these headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`\n- [ ] Connect a Google Sheets credential and pick the signups sheet or the contact book in each Sheets node\n- [ ] Connect a Telegram bot credential and set your chat ID in **Send Signup Alert**\n- [ ] Set the URL in **Render Email** to your confirmation-email endpoint and connect Gmail in **Send Confirmation Email**\n- [ ] Activate, then give the webhook's production URL to your site, or share the form URL\n\n[Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/shared/README.md)",
+        "height": 760,
+        "width": 480
       },
-      "id": "a1b2c3d4-0010-4010-8010-000000000010",
+      "id": "a1b2c3d4-0061-4061-8061-000000000061",
       "name": "Overview",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -460,
-        120
+        -220
       ]
     },
     {
       "parameters": {
-        "content": "### Door 1 — site senders\n\n`POST /webhook/signup-intake`\n\nBody: `{ email, name, use_case, signup_source }`\n\nThe sender (e.g. promptpotter-web) sets `signup_source`. Responds immediately, then processes async.",
-        "height": 260,
-        "width": 300,
-        "color": 7
-      },
-      "id": "a1b2c3d4-0011-4011-8011-000000000011",
-      "name": "Door 1 label",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        40,
-        -120
-      ]
-    },
-    {
-      "parameters": {
-        "content": "### Door 2 — no website needed\n\nThe **Form Trigger** makes n8n host a public signup page. The form URL is your shareable / bookmarkable link — that's the whole 'no website' trick.\n\nField labels here MUST match the keys read in *Normalize (Form)*.",
-        "height": 260,
-        "width": 300,
-        "color": 7
-      },
-      "id": "a1b2c3d4-0012-4012-8012-000000000012",
-      "name": "Door 2 label",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        40,
-        600
-      ]
-    },
-    {
-      "parameters": {
-        "content": "### Human in the loop\n\nTelegram tells you about each signup and whether they're **already in the CRM** — and if so, a compact preview of their current record (status · groups, last topic, since when).\n\nButtons:\n• **✅ Add to CRM** → writes them into *Entries* + marks the Signups row `promoted`.\n• **🗑 Dismiss** → marks the row `dismissed`.\n\nAfter a tap, the message KEEPS the signup details, stamps your decision underneath (`✅ ADDED TO CRM` / `🗑 DISMISSED`), and the buttons are REMOVED entirely — nothing left to re-press.\n\nThe **Telegram Trigger** below catches the button taps (callback queries).\n\n⚠ Set your chat ID + bind the Telegram credential on import.",
-        "height": 320,
-        "width": 320,
-        "color": 6
-      },
-      "id": "a1b2c3d4-0013-4013-8013-000000000013",
-      "name": "HITL label",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        2000,
-        60
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## Bind on import\n\nThe JSON ships with placeholders. Two SEPARATE spreadsheets are used:\n\n• **CRM Lookup** + **Add to CRM (Entries)** → your CRM doc (`YOUR_ENTRIES_SPREADSHEET_ID`), `Entries` tab.\n• **Append to Signups / Lookup Signup / Mark Promoted / Mark Dismissed** → the Signups doc (`YOUR_SIGNUPS_SPREADSHEET_ID`).\n\nAfter importing:\n1. On each Google Sheets node bind the *Google Sheets OAuth* credential + re-pick the correct document (per above).\n2. In the Signups doc, the tab is `Sheet1` — give it headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`.\n3. **Render Email** (HTTP Request) — set its URL to your confirmation-email endpoint (`YOUR_CONFIRMATION_EMAIL_ENDPOINT`).\n4. **Gmail node** (*Send Confirmation Email*) — bind the Gmail OAuth credential.\n5. **Telegram nodes** — bind the bot credential, set `YOUR_CHAT_ID`.\n6. **Activate**, then copy the Webhook **Production URL** into your sender's own config, and grab the **Form Trigger** URL to share/bookmark.",
-        "height": 420,
+        "content": "## Take a signup from a site\n\n`POST /webhook/signup-intake` with `{ email, name, use_case, signup_source }`. Answers at once, then processes.",
+        "height": 460,
         "width": 460,
-        "color": 3
+        "color": 7
       },
-      "id": "a1b2c3d4-0014-4014-8014-000000000014",
-      "name": "Setup",
+      "id": "a1b2c3d4-0062-4062-8062-000000000062",
+      "name": "Site section",
       "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
       "position": [
-        -460,
+        60,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Take a signup from a hosted form\n\nn8n hosts the page, so no website is needed. The field labels must match the keys the shaping node reads.",
+        "height": 260,
+        "width": 460,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0063-4063-8063-000000000063",
+      "name": "Form section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        60,
         600
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Triage and store\n\nOne record from either door, a lookup in the contact book, a row in the signups sheet and the contact row.",
+        "height": 460,
+        "width": 840,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0064-4064-8064-000000000064",
+      "name": "Triage section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Mail and alert\n\nTwo parallel branches. The mail text comes from your site, and a failure there never blocks the Telegram alert.",
+        "height": 520,
+        "width": 400,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0065-4065-8065-000000000065",
+      "name": "Mail section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1460,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Act on a button tap\n\nThe alert buttons arrive here. The signup row is marked promoted or dismissed; the message keeps its details and loses its buttons.",
+        "height": 500,
+        "width": 1800,
+        "color": 7
+      },
+      "id": "a1b2c3d4-0066-4066-8066-000000000066",
+      "name": "Button section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        60,
+        880
       ]
     },
     {
@@ -148,7 +167,7 @@
         "options": {}
       },
       "id": "a1b2c3d4-0003-4003-8003-000000000003",
-      "name": "Normalize (Web)",
+      "name": "Shape Web Signup",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
@@ -224,7 +243,7 @@
         "options": {}
       },
       "id": "a1b2c3d4-0005-4005-8005-000000000005",
-      "name": "Normalize (Form)",
+      "name": "Shape Form Signup",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
@@ -419,7 +438,7 @@
         }
       },
       "id": "a1b2c3d4-000a-400a-800a-00000000000a",
-      "name": "Notify (Telegram)",
+      "name": "Send Signup Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
@@ -431,7 +450,9 @@
           "id": "CREDENTIAL_ID_TELEGRAM",
           "name": "Telegram Bot"
         }
-      }
+      },
+      "notes": "Set your chat ID here after import.",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -522,7 +543,7 @@
         "options": {}
       },
       "id": "a1b2c3d4-000d-400d-800d-00000000000d",
-      "name": "Action?",
+      "name": "Route Button Tap",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
@@ -604,12 +625,12 @@
         "options": {}
       },
       "id": "a1b2c3d4-000f-400f-800f-00000000000f",
-      "name": "Add to CRM (Entries)",
+      "name": "Add Contact to CRM",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1060,
-        980
+        1280,
+        620
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -818,21 +839,6 @@
           "name": "Gmail OAuth"
         }
       }
-    },
-    {
-      "parameters": {
-        "content": "## Confirmation email\n\nThe branded confirmation email is **not** built in this workflow — its HTML/copy lives on the website (single source of truth, alongside the brand images) and is rendered by an endpoint: `…/api/account-open-email`.\n\n*Render Email* (HTTP Request) POSTs `first_name` + `use_case` and gets back `{ subject, html, text }`; *Send Confirmation Email* (Gmail) sends it to the signup's address. Runs on a **parallel branch** to the Telegram alert — *Render Email* uses an error output and Gmail is *continue on error*, so a render/bounce failure never blocks your operator notification.\n\n⚠ Both nodes ship **disabled**. Before enabling: deploy the endpoint and confirm it answers, then bind the **Gmail OAuth** credential. Neither has been exercised, and failure here is silent by design — the run still succeeds, the mail just never arrives.",
-        "height": 300,
-        "width": 320,
-        "color": 4
-      },
-      "id": "a1b2c3d4-0042-4042-8042-000000000042",
-      "name": "Email label",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        1620,
-        -200
-      ]
     }
   ],
   "connections": {
@@ -851,14 +857,14 @@
       "main": [
         [
           {
-            "node": "Normalize (Web)",
+            "node": "Shape Web Signup",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize (Web)": {
+    "Shape Web Signup": {
       "main": [
         [
           {
@@ -873,14 +879,14 @@
       "main": [
         [
           {
-            "node": "Normalize (Form)",
+            "node": "Shape Form Signup",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize (Form)": {
+    "Shape Form Signup": {
       "main": [
         [
           {
@@ -928,12 +934,12 @@
       "main": [
         [
           {
-            "node": "Add to CRM (Entries)",
+            "node": "Add Contact to CRM",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Notify (Telegram)",
+            "node": "Send Signup Alert",
             "type": "main",
             "index": 0
           },
@@ -960,14 +966,14 @@
       "main": [
         [
           {
-            "node": "Action?",
+            "node": "Route Button Tap",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Action?": {
+    "Route Button Tap": {
       "main": [
         [
           {
