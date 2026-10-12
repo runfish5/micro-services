@@ -60,6 +60,27 @@ brand-new, not-yet-approved signup that they are in. See `CLAUDE.md` § Flow C.
 and bot credential already bound (and the live webhook path) — import that one to
 skip the re-typing; bind the Google Sheets credential once after import.
 
+**Site forms (Door 3).** A third webhook, `POST /webhook/reach`, takes what a website's
+forms say: a contact message, or a newsletter request with **double opt-in**.
+
+- A **contact message** is stored in a `Messages` tab, one row per message, and the sender is
+  added to the contact book (`Entries`) in the group `contact`.
+- A **newsletter request** mails one confirmation link, from a no-reply address on your own
+  domain through a transactional mail API, and waits as `pending` in a `Subscribers` tab. The link opens a page on your own site; pressing the button there confirms,
+  and the address joins `Entries` in the group `newsletter`. The same token unsubscribes.
+- Nothing pings Telegram. The **morning briefing** has a `SITE INBOX` section that prints
+  yesterday's messages in full and who asked, confirmed or left. This workflow renders that
+  section itself; the briefing calls it by id (one line in its `Plugins` node).
+- This door answers only after the row is written (and, for a newsletter request, after the
+  mail is sent), so the site can tell a visitor honestly whether it worked.
+
+Your site needs two things: a server-side forwarder that POSTs
+`{ kind, email, name, message, path, token, ts }` here, and a page for the mailed link that
+POSTs `{ kind: 'confirm' | 'unsubscribe', token }` when its button is pressed. Setup steps are
+on the red sticky note beside the flow; the design notes are in [`CLAUDE.md`](CLAUDE.md).
+
+No workflow *sends* a newsletter yet. This is the list and its consent record.
+
 **Sender:** the PromptPotter app, on the first `/auth/me` of a new account
 (`N8N_SIGNUP_WEBHOOK_URL`). The old sender, `promptpotter-web` `/api/waitlist`,
 now sits in that repo's `internal/parked-waitlist/`.

@@ -67,6 +67,7 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | deal-finder | `12_steward/workflows/subworkflows/deal-finder.json` | menu-handler (via Config registry) |
 | - | price-checker | `12_steward/workflows/subworkflows/price-checker.json` | deal-finder, daily-briefing |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` | daily-briefing (Plugins registry) and menu-handler (Config `task`) — **must stay active** or both callers fail |
+| `G766da6yCLuQS50T` | Signup Intake → CRM triage (its `Called` trigger) | `shared/signup-intake.n8n.json` | daily-briefing (Plugins registry, key `reach`) — the site-forms section (live 2026-10-12) |
 
 ### Support Workflows
 
@@ -94,6 +95,7 @@ workflow holds a workflow id in a registry node and knows nothing else about the
 | Edge | Why it is allowed |
 |------|-------------------|
 | `05_daily-briefing` → `16` | The briefing is a renderer with a `Plugins` registry. It has no knowledge of commitments; swapping the id swaps the plugin. Removing the registry line removes the dependency. |
+| `05_daily-briefing` → `shared/signup-intake` | The same registry, one more line (`reach`). The intake door owns the `Messages` and `Subscribers` tabs and renders its own section; the briefing only prints what comes back. |
 | `12_steward` → `16` | menu-handler dispatches every agent by id from its `Config` registry. The `task` entry is one more row in a list that already points at 12's own subworkflows. |
 
 The test for a future exception is the same: if the dependency is a **line in a registry**, the
