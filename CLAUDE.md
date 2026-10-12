@@ -86,7 +86,7 @@ projects/n8n/
 ├── 17_site-forms/                   - Website contact form + double opt-in newsletter intake (one authenticated webhook)
 ├── 18_account-trail/                - What each app account did, told by the app, printed by the briefing
 ├── 19_records-store/                - One keep/read/drop store other workflows call (Google Sheets or your own server)
-├── 20_bot-detector/                 - Bot or human per visitor per day: features, a rule engine, a hand-filled column
+├── 20_bot-detector/                 - Bot, human or unsure per visitor per day: features and a rule engine
 └── shared/                          - Cross-project workflows: gdrive-recursion, signup-intake
 ```
 

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Tell bots from people among your website visitors\n\nA small bot detector you own. One side records what each visitor did; the other side judges it. The judgement sits in a column beside a column you fill in by hand, so you can see how often the engine is right.\n\n### How it works\n1. Every night, reads the last two days of the `visits` table from the records store.\n2. **Build Visitor Features** turns them into one row per visitor per day: views, clicks, pace, browser, country, the site's flag. It judges nothing.\n3. **Predict Bot or Human** is the engine: a list of rules, each moving a score and naming itself. It writes `predicted`, `score` and `reason`.\n4. Keeps each row in the `verdicts` table. A row never holds a full address: a hash and the network stand in for it.\n5. Renders a BOTS section when the morning briefing calls it.\n\nWrite `bot` or `human` in a row's `actual` column. A later run keeps it, and the briefing counts how often `predicted` agreed.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in the three store nodes. It must hold the `visits` table `visit-log` writes.\n2. With the Google Sheets store, add a `verdicts` tab: `at`, the fields of one row, then `actual`.\n3. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'bots', order: 38, workflowId: '<this id>', enabled: true, ...ctx }`.",
+        "content": "## Tell bots from people among your website visitors\n\nA small bot detector you own. One side records what each visitor did; the other side judges it. The judgement sits in a column beside a column you fill in by hand, so you can see how often the engine is right.\n\n### How it works\n1. Every night, reads yesterday from the `visits` table of the records store.\n2. **Build Visitor Features** turns it into one row per visitor: views, clicks, pace, browser, country, the site's flag. It judges nothing.\n3. **Predict Bot or Human** is the engine: a list of rules, each moving a score and naming itself. It writes `predicted`, `score` and `reason`.\n4. Keeps each row in the `verdicts` table, then drops verdicts older than 90 days. A row never holds a full address: a hash and the network stand in for it.\n5. Renders a BOTS section when the morning briefing calls it.\n\nA visitor the rules cannot place stays `unsure`. If you ever write `bot` or `human` in a row's `actual` column, the briefing counts how often `predicted` agreed.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in the four store nodes. It must hold the `visits` table `visit-log` writes.\n2. With the Google Sheets store, add a `verdicts` tab: `at`, the fields of one row, then `actual`.\n3. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'bots', order: 38, workflowId: '<this id>', enabled: true, ...ctx }`.",
         "height": 760,
         "width": 480
       },
@@ -34,9 +34,9 @@
     },
     {
       "parameters": {
-        "content": "## Judge and keep the verdict\n\nThe engine is one node. A row is keyed, so a later run updates it and keeps what you wrote by hand.",
+        "content": "## Judge and keep the verdict\n\nThe engine is one node. A verdict is kept once and leaves after 90 days, like the visits it came from.",
         "height": 240,
-        "width": 512,
+        "width": 736,
         "color": 7
       },
       "id": "d0f4b5a3-18a1-4c00-9a01-000000000003",
@@ -175,7 +175,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// One row per visitor per day: everything recorded, nothing judged.\n// The verdict is the next node's business, so a new engine reads the same row.\nconst visits = $input.all().map((i) => i.json).filter((r) => r && r.ip && Number.isFinite(Date.parse(r.ts)));\n\n// A verdict outlives the visit rows, so it carries no address: a short hash to\n// tell visitors apart, and the network the address sits in.\nconst hash = (s) => { let h = 0x811c9dc5; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, '0'); };\nconst net = (ip) => (ip.includes(':') ? ip.split(':').slice(0, 3).join(':') + '::' : ip.split('.').slice(0, 3).join('.') + '.x');\n\nconst groups = new Map();\nfor (const v of visits) {\n  const day = new Date(Date.parse(v.ts)).toISOString().slice(0, 10);\n  const key = day + '|' + hash(v.ip);\n  if (!groups.has(key)) groups.set(key, { day, ip: v.ip, rows: [] });\n  groups.get(key).rows.push(v);\n}\n\nconst out = [];\nfor (const [key, g] of groups) {\n  const rows = g.rows.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));\n  const views = rows.filter((r) => r.event === 'pageview');\n  const clicks = rows.filter((r) => r.event !== 'pageview');\n  const times = views.map((r) => Date.parse(r.ts));\n  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 1000);\n  out.push({ json: {\n    id: key,\n    day: g.day,\n    visitor: hash(g.ip),\n    net: net(g.ip),\n    country: rows[0].country || '',\n    city: rows[0].city || '',\n    ua: String(rows[0].ua || '').slice(0, 300),\n    flag: (rows.find((r) => r.flag) || {}).flag || '',\n    agents: new Set(rows.map((r) => String(r.ua || ''))).size,\n    events: rows.length,\n    views: views.length,\n    clicks: clicks.length,\n    paths: new Set(views.map((r) => r.path)).size,\n    first_path: rows[0].path || '',\n    referrer: String(rows[0].referrer || '').slice(0, 200),\n    span_s: Math.round((Date.parse(rows.at(-1).ts) - Date.parse(rows[0].ts)) / 1000),\n    fastest_gap_s: gaps.length ? Math.round(Math.min(...gaps) * 10) / 10 : '',\n    sign_in: clicks.some((r) => /sign.?in|log.?in/i.test(String(r.target || '') + ' ' + String(r.path || ''))),\n  } });\n}\nreturn out;"
+        "jsCode": "// One row per visitor per day: everything recorded, nothing judged.\n// The verdict is the next node's business, so a new engine reads the same row.\nconst visits = $input.all().map((i) => i.json).filter((r) => r && r.ip && Number.isFinite(Date.parse(r.ts)));\n\n// A verdict outlives the visit rows, so it carries no address: a short hash to\n// tell visitors apart, and the network the address sits in.\nconst hash = (s) => { let h = 0x811c9dc5; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, '0'); };\nconst net = (ip) => (ip.includes(':') ? ip.split(':').slice(0, 3).join(':') + '::' : ip.split('.').slice(0, 3).join('.') + '.x');\n\n// Yesterday only: a whole day, judged once.\nconst yesterday = new Date(Date.now() - 86400e3).toISOString().slice(0, 10);\nconst groups = new Map();\nfor (const v of visits) {\n  const day = new Date(Date.parse(v.ts)).toISOString().slice(0, 10);\n  const key = day + '|' + hash(v.ip);\n  if (day !== yesterday) continue;\n  if (!groups.has(key)) groups.set(key, { day, ip: v.ip, rows: [] });\n  groups.get(key).rows.push(v);\n}\n\nconst out = [];\nfor (const [key, g] of groups) {\n  const rows = g.rows.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));\n  const views = rows.filter((r) => r.event === 'pageview');\n  const clicks = rows.filter((r) => r.event !== 'pageview');\n  const times = views.map((r) => Date.parse(r.ts));\n  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 1000);\n  out.push({ json: {\n    id: key,\n    day: g.day,\n    visitor: hash(g.ip),\n    net: net(g.ip),\n    country: rows[0].country || '',\n    city: rows[0].city || '',\n    ua: String(rows[0].ua || '').slice(0, 300),\n    flag: (rows.find((r) => r.flag) || {}).flag || '',\n    agents: new Set(rows.map((r) => String(r.ua || ''))).size,\n    events: rows.length,\n    views: views.length,\n    clicks: clicks.length,\n    paths: new Set(views.map((r) => r.path)).size,\n    first_path: rows[0].path || '',\n    referrer: String(rows[0].referrer || '').slice(0, 200),\n    span_s: Math.round((Date.parse(rows.at(-1).ts) - Date.parse(rows[0].ts)) / 1000),\n    fastest_gap_s: gaps.length ? Math.round(Math.min(...gaps) * 10) / 10 : '',\n    sign_in: clicks.some((r) => /sign.?in|log.?in/i.test(String(r.target || '') + ' ' + String(r.path || ''))),\n  } });\n}\nreturn out;"
       },
       "id": "d0f4b5a3-18a1-4c00-9a01-000000000012",
       "name": "Build Visitor Features",
@@ -213,7 +213,6 @@
           "value": {
             "op": "keep",
             "table": "verdicts",
-            "key": "id",
             "row": "={{ $json }}"
           },
           "matchingColumns": [],
@@ -287,7 +286,97 @@
         1568,
         160
       ],
-      "notes": "op: keep\ntable: verdicts\nkey: id\nrow: ={{ $json }}",
+      "notes": "op: keep\ntable: verdicts\nrow: ={{ $json }}",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "drop",
+            "table": "verdicts",
+            "before": "={{ $now.minus({ days: 90 }).toUTC().toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000015",
+      "name": "Drop Old Verdicts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        160
+      ],
+      "executeOnce": true,
+      "notes": "op: drop\ntable: verdicts\nbefore: ={{ $now.minus({ days: 90 }).toUTC().toISO() }}",
       "notesInFlow": false
     },
     {
@@ -447,6 +536,17 @@
         [
           {
             "node": "Keep Verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep Verdict": {
+      "main": [
+        [
+          {
+            "node": "Drop Old Verdicts",
             "type": "main",
             "index": 0
           }
