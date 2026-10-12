@@ -28,8 +28,8 @@ Resolves folder paths to Google Drive IDs. n8n requires IDs, not paths.
 
 Generic signup / waitlist **intake door**. Two ways in (a webhook for senders
 that have a site, and an n8n-hosted form for those that don't) → checks the CRM
-(`Entries`) to see if the person is already known → logs them to a separate
-`Signups` sheet (`Sheet1` tab) → Telegram notification with one-tap **Add to CRM**
+(`Entries`) to see if the person is already known → keeps them in the `signups`
+table of a records store ([`19_records-store`](../19_records-store/README.md)) → Telegram notification with one-tap **Add to CRM**
 / **Dismiss**. After you tap, the message keeps the signup details, stamps your
 decision, and the buttons are removed.
 
@@ -56,7 +56,7 @@ Signing up is the grant, so the sentence is true for every new account. If your 
 is gated behind an approval, disable this branch until the approval exists.
 
 **Import note:** the committed JSON ships with placeholders. A gitignored
-`signup-intake.local.n8n.json` sits alongside it with the real sheet IDs, chat ID
+`signup-intake.local.n8n.json` sits alongside it with the real sheet and store IDs, chat ID
 and bot credential already bound (and the live webhook path) — import that one to
 skip the re-typing; bind the Google Sheets credential once after import.
 

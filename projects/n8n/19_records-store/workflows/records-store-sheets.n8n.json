@@ -1,0 +1,559 @@
+{
+  "name": "Records Store (Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Keep website records in a Google Sheet\n\nOne small store that other workflows call to keep, read and drop rows. This one keeps each table as a tab of one spreadsheet.\n\n### How it works\n**Three operations, one contract.** `keep` adds a row, or writes its fields over the row whose `key` field has the same value. `read` returns one item per row. `drop` removes rows added before a time; a row with a key has no age and stays.\n\n**The header row decides the columns.** A field is written under the column of the same name. A field with no column stops the run, so nothing is dropped quietly. The store stamps the `at` column itself.\n\nRows are appended through the Sheets API, which does not lose rows when two arrive together.\n\n### Setup steps\n1. Bind your **Google Sheets** credential on the four request nodes.\n2. In **Set Store Config**, set `spreadsheet_id`.\n3. Give each table a tab of the same name. Row 1 holds `at` and one column per field.\n4. Activate, then select this workflow in each caller's store node.",
+        "height": 640,
+        "width": 480
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read the tab, then act on it\n\nKeep reads only the header unless it must find a key.",
+        "height": 680,
+        "width": 736,
+        "color": 7
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000002",
+      "name": "Read section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Keep one row",
+        "height": 200,
+        "width": 736,
+        "color": 7
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000003",
+      "name": "Keep section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Drop rows past their time",
+        "height": 296,
+        "width": 1184,
+        "color": 7
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000004",
+      "name": "Drop section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "op"
+            },
+            {
+              "name": "table"
+            },
+            {
+              "name": "key"
+            },
+            {
+              "name": "row",
+              "type": "object"
+            },
+            {
+              "name": "since"
+            },
+            {
+              "name": "before"
+            }
+          ]
+        }
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000010",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        368
+      ],
+      "notes": "op: keep | read | drop\ntable: lower-case name\nkey: the row field that identifies it, or empty to always add\nrow: object (keep)\nsince: ISO time (read)\nbefore: ISO time (drop)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c9e3a4f2-18a1-4c00-9a01-000000000090",
+              "name": "spreadsheet_id",
+              "value": "YOUR_SPREADSHEET_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000011",
+      "name": "Set Store Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Set Store Config').first().json.spreadsheet_id }}/values/{{ encodeURIComponent($('When Called').first().json.table + ($('When Called').first().json.op === 'keep' && !$('When Called').first().json.key ? '!1:1' : '')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000020",
+      "name": "Read Tab",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        368
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c9e3a4f2-18a1-4c00-9a01-000000000080",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "keep",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "keep"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c9e3a4f2-18a1-4c00-9a01-000000000081",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c9e3a4f2-18a1-4c00-9a01-000000000082",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "drop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "drop"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000012",
+      "name": "Route by Operation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1104,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Where the row goes: over the row that holds the same key, else at the end.\nconst call = $('When Called').first().json;\nconst cfg = $('Set Store Config').first().json;\nconst values = $input.first().json.values || [];\nconst header = (values[0] || []).map(String);\nif (!header.includes('at')) throw new Error('Tab ' + call.table + ' needs a header row with an at column');\n\nconst row = { ...call.row, at: $now.toUTC().toISO() };\nconst missing = Object.keys(row).filter((f) => !header.includes(f));\nif (missing.length) throw new Error('Tab ' + call.table + ' has no column ' + missing.join(', '));\n\nconst base = 'https://sheets.googleapis.com/v4/spreadsheets/' + cfg.spreadsheet_id + '/values/' + encodeURIComponent(call.table);\nlet at = -1;\nif (call.key) {\n  const col = header.indexOf(call.key);\n  if (col < 0) throw new Error('Tab ' + call.table + ' has no column ' + call.key);\n  at = values.findIndex((r, i) => i > 0 && String(r[col] ?? '') === String(row[call.key] ?? ''));\n}\n// A keyed row keeps the fields this call does not name.\nconst kept = at > 0 ? Object.fromEntries(header.map((h, i) => [h, values[at][i] ?? ''])) : {};\nconst whole = { ...kept, ...row };\nconst cell = (v) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : v);\nconst cells = header.map((h) => cell(whole[h]));\nreturn [{ json: {\n  row: whole,\n  method: at > 0 ? 'PUT' : 'POST',\n  url: at > 0\n    ? base + encodeURIComponent('!A' + (at + 1)) + '?valueInputOption=RAW'\n    : base + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS',\n  body: { values: [cells] },\n} }];"
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000030",
+      "name": "Place Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000021",
+      "name": "Write Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1568,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Place Row').first().json.row }];"
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000031",
+      "name": "Return Kept Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per row, named by the header. A short row reads as empty cells.\nconst call = $('When Called').first().json;\nconst values = $input.first().json.values || [];\nconst header = (values[0] || []).map(String);\nconst since = call.since ? Date.parse(call.since) : NaN;\nconst at = header.indexOf('at');\nreturn values.slice(1)\n  .filter((r) => !Number.isFinite(since) || Date.parse(String(r[at] ?? '')) >= since)\n  .map((r) => ({ json: Object.fromEntries(header.map((h, i) => [h, r[i] ?? ''])) }));"
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000032",
+      "name": "Return Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Set Store Config').first().json.spreadsheet_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "sheets.properties"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000022",
+      "name": "Get Tab Ids",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        560
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rows added before the time go, bottom first so the row numbers stay true.\n// A row with a key is the newest word on its subject and has no age.\nconst call = $('When Called').first().json;\nconst values = $('Read Tab').first().json.values || [];\nconst header = (values[0] || []).map(String);\nconst tab = ($input.first().json.sheets || []).map((s) => s.properties).find((p) => p.title === call.table);\nif (!tab) throw new Error('No tab named ' + call.table);\nconst before = Date.parse(call.before);\nif (!Number.isFinite(before)) throw new Error('drop needs a before time');\nconst at = header.indexOf('at');\nconst key = call.key ? header.indexOf(call.key) : -1;\nconst rows = values.map((r, i) => i)\n  .filter((i) => i > 0 && Date.parse(String(values[i][at] ?? '')) < before && !(key >= 0 && String(values[i][key] ?? '')))\n  .sort((a, b) => b - a);\nreturn [{ json: {\n  dropped: rows.length,\n  requests: rows.map((i) => ({ deleteDimension: { range: { sheetId: tab.sheetId, dimension: 'ROWS', startIndex: i, endIndex: i + 1 } } })),\n} }];"
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000033",
+      "name": "Plan Deletes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9e3a4f2-18a1-4c00-9a01-000000000070",
+              "leftValue": "={{ $json.dropped }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000013",
+      "name": "If Rows To Drop",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Set Store Config').first().json.spreadsheet_id }}:batchUpdate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $json.requests }) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000023",
+      "name": "Delete Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        496
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { dropped: $('Plan Deletes').first().json.dropped } }];"
+      },
+      "id": "c9e3a4f2-18a1-4c00-9a01-000000000034",
+      "name": "Return Dropped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Set Store Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Store Config": {
+      "main": [
+        [
+          {
+            "node": "Read Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Tab": {
+      "main": [
+        [
+          {
+            "node": "Route by Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Operation": {
+      "main": [
+        [
+          {
+            "node": "Place Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Tab Ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Place Row": {
+      "main": [
+        [
+          {
+            "node": "Write Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Row": {
+      "main": [
+        [
+          {
+            "node": "Return Kept Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tab Ids": {
+      "main": [
+        [
+          {
+            "node": "Plan Deletes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Deletes": {
+      "main": [
+        [
+          {
+            "node": "If Rows To Drop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Rows To Drop": {
+      "main": [
+        [
+          {
+            "node": "Delete Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Dropped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Rows": {
+      "main": [
+        [
+          {
+            "node": "Return Dropped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}

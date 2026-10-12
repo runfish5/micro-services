@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Take website forms into Google Sheets, with a double opt-in newsletter\n\nOne webhook for a site's contact form and newsletter band. Messages and the subscriber list land in a sheet, senders join your contact book, and a morning briefing can print what came in.\n\n### How it works\n1. Checks every submission and answers the site only after the row is written, so the form can say honestly whether it worked.\n2. Stores a contact message as one row and adds the sender to the contact book.\n3. Mails one confirmation link for a newsletter request and holds the address as pending, with limits per address and per hour.\n4. Confirms or unsubscribes when the button behind that link is pressed on your site.\n5. Renders a briefing section of the last day's messages and list changes when another workflow calls it.\n\n### Setup steps\n- [ ] Create two tabs in one spreadsheet: `Messages` (ts, email, name, message, path) and `Subscribers` (email, state, token, requested_at, path, confirmed_at, unsubscribed_at, mails)\n- [ ] Connect a Google Sheets credential and pick that spreadsheet, and your contact sheet, in each Sheets node\n- [ ] Create a Header Auth credential named `X-Forms-Secret` with a long random value, bind it to **When Form Is Sent**, and have your site send the same header\n- [ ] Create a Header Auth credential for your mail service (`Authorization: Bearer <key>`) and bind it to **Send Confirmation Mail**\n- [ ] Fill in **Set Site Config**: site name, the page the mailed link opens, the sender address\n\n[Project page and the site side](https://github.com/runfish5/micro-services/blob/main/projects/n8n/17_site-forms/README.md)",
+        "content": "## Take website forms into a records store, with a double opt-in newsletter\n\nOne webhook for a site's contact form and newsletter band. Messages and the subscriber list land in a records store, senders join your contact book, and a morning briefing can print what came in.\n\n### How it works\n1. Checks every submission and answers the site only after the row is written, so the form can say honestly whether it worked.\n2. Stores a contact message as one row and adds the sender to the contact book.\n3. Mails one confirmation link for a newsletter request and holds the address as pending, with limits per address and per hour.\n4. Confirms or unsubscribes when the button behind that link is pressed on your site.\n5. Renders a briefing section of the last day's messages and list changes when another workflow calls it.\n\n### Setup steps\n- [ ] Import a records store (`19_records-store`) and select it in each store node. With the Google Sheets store, create two tabs: `messages` (at, ts, email, name, message, path) and `subscribers` (at, email, state, token, requested_at, path, confirmed_at, unsubscribed_at, mails)\n- [ ] Connect a Google Sheets credential and pick your contact sheet in the two contact nodes\n- [ ] Create a Header Auth credential named `X-Forms-Secret` with a long random value, bind it to **When Form Is Sent**, and have your site send the same header\n- [ ] Create a Header Auth credential for your mail service (`Authorization: Bearer <key>`) and bind it to **Send Confirmation Mail**\n- [ ] Fill in **Set Site Config**: site name, the page the mailed link opens, the sender address\n\n[Project page and the site side](https://github.com/runfish5/micro-services/blob/main/projects/n8n/17_site-forms/README.md)",
         "height": 944,
         "width": 480
       },
@@ -236,43 +236,92 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID/values/Messages:append",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "keep",
+            "table": "messages",
+            "row": "={{ ((r) => ({ ts: r.received_at, email: r.email, name: r.name, message: r.message, path: r.path }))($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
             {
-              "name": "valueInputOption",
-              "value": "RAW"
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
             },
             {
-              "name": "insertDataOption",
-              "value": "INSERT_ROWS"
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
             }
-          ]
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ values: [[ $json.received_at, $json.email, $json.name, $json.message, $json.path ]] }) }}",
         "options": {}
       },
+      "name": "Keep Message",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "e03650a6-47dd-438d-ace2-f49763f1d603",
-      "name": "Append Message Row",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
       "position": [
         1584,
         96
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "notes": "A raw append with INSERT_ROWS, not the Sheets node: two messages arriving together would otherwise overwrite one another. RAW keeps a message that starts with = from running as a formula."
+      "notes": "op: keep\ntable: messages\nrow: ={{ ((r) => ({ ts: r.received_at, email: r.email, name: r.name, message: r.message, path: r.path }))($json) }}",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -307,33 +356,92 @@
     },
     {
       "parameters": {
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Subscribers",
-          "mode": "name"
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "subscribers"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
+      "name": "Get Subscriber List",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "f14cc7f9-f57a-496d-a81b-f7c9c418705a",
-      "name": "Get Subscriber List in Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         1584,
         384
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "notes": "op: read\ntable: subscribers",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -440,51 +548,93 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Subscribers",
-          "mode": "name"
-        },
-        "columns": {
+        "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email": "={{ $('Validate Form').first().json.email }}",
-            "state": "pending",
-            "token": "={{ $('Validate Form').first().json.token }}",
-            "requested_at": "={{ $('Validate Form').first().json.received_at }}",
-            "path": "={{ $('Validate Form').first().json.path }}",
-            "mails": "={{ $('Plan Confirmation Mail').first().json.mails }}"
+            "op": "keep",
+            "table": "subscribers",
+            "key": "email",
+            "row": "={{ { email: $('Validate Form').first().json.email, state: 'pending', token: $('Validate Form').first().json.token, requested_at: $('Validate Form').first().json.received_at, path: $('Validate Form').first().json.path, mails: $('Plan Confirmation Mail').first().json.mails } }}"
           },
-          "matchingColumns": [
-            "email"
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
           ],
-          "schema": []
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
-        "options": {
-          "cellFormat": "RAW"
-        }
+        "options": {}
       },
+      "name": "Keep Pending Subscriber",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "f11409ce-dceb-4f2b-a215-8445d1ef57b8",
-      "name": "Upsert Subscriber in Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         2704,
         384
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "notes": "confirmed_at and unsubscribed_at are left out on purpose: asking again must not erase when an address joined or left."
+      "notes": "op: keep\ntable: subscribers\nkey: email\nrow: ={{ { email: $('Validate Form').first().json.email, state: 'pending', token: $('Validate Form').first().json.token, requested_at: $('Validate Form').first().json.received_at, path: $('Validate Form').first().json.path, mails: $('Plan Confirmation Mail').first().json.mails } }}\nconfirmed_at and unsubscribed_at are left out on purpose: asking again must not erase when an address joined or left.",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -503,7 +653,7 @@
     },
     {
       "parameters": {
-        "content": "## Confirm or unsubscribe by token\n\nThe token finds its one row. A confirm link works once and expires; an unsubscribe link always works. An unknown or spent token is answered 422, as is any submission that failed the check.",
+        "content": "## Confirm or unsubscribe by token\n\nThe token finds its one row in the list. A confirm link works once and expires; an unsubscribe link always works. An unknown or spent token is answered 422, as is any submission that failed the check.",
         "height": 416,
         "width": 1552,
         "color": 7
@@ -519,45 +669,96 @@
     },
     {
       "parameters": {
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Subscribers",
-          "mode": "name"
-        },
-        "filtersUI": {
-          "values": [
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "subscribers"
+          },
+          "matchingColumns": [],
+          "schema": [
             {
-              "lookupColumn": "token",
-              "lookupValue": "={{ $json.token }}"
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
             }
-          ]
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
+      "name": "Get Subscribers for Token",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "ba16204d-761f-4672-aef3-bffe3d3127e5",
-      "name": "Find Subscriber by Token",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         1584,
         704
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "notes": "op: read\ntable: subscribers",
+      "notesInFlow": false
     },
     {
       "parameters": {
-        "jsCode": "// What a token may change on the one Subscribers row that owns it.\n//   confirm      pending -> confirmed, while the request is younger than\n//                confirm_within_days. Already confirmed is a quiet yes. An\n//                unsubscribed row is not revived by an old link: subscribing\n//                again starts from the form and gets a fresh token.\n//   unsubscribe  anything -> unsubscribed, at any age, and repeating it is a\n//                quiet yes.\n// 'changed' is false on a repeat, so the contact book is written once.\nconst cfg = $('Set Site Config').first().json;\nconst form = $('Validate Form').first().json;\nconst row = $input.first().json || {};\n\nconst invalid = [{ json: { valid: false, changed: false } }];\nif (!row.email || String(row.token || '') !== form.token) return invalid;\n\nconst DAY = 86400e3;\nconst asked = Date.parse(String(row.requested_at || ''));\nconst now = $now.toISO();\nlet state = String(row.state || '');\nlet confirmed_at = String(row.confirmed_at || '');\nlet unsubscribed_at = String(row.unsubscribed_at || '');\nlet mails = Number(row.mails) || 0;\nlet changed = false;\n\nif (form.kind === 'confirm') {\n  if (state === 'unsubscribed') return invalid;\n  if (state !== 'confirmed') {\n    if (!(Date.now() - asked < cfg.confirm_within_days * DAY)) return invalid;\n    state = 'confirmed'; confirmed_at = now; mails = 0; changed = true;\n  }\n} else if (state !== 'unsubscribed') {\n  state = 'unsubscribed'; unsubscribed_at = now; changed = true;\n}\n\nreturn [{\n  json: { valid: true, changed, token: form.token, email: String(row.email).trim().toLowerCase(), state, confirmed_at, unsubscribed_at, mails },\n}];"
+        "jsCode": "// What a token may change on the one subscriber row that owns it.\n//   confirm      pending -> confirmed, while the request is younger than\n//                confirm_within_days. Already confirmed is a quiet yes. An\n//                unsubscribed row is not revived by an old link: subscribing\n//                again starts from the form and gets a fresh token.\n//   unsubscribe  anything -> unsubscribed, at any age, and repeating it is a\n//                quiet yes.\n// 'changed' is false on a repeat, so the contact book is written once.\nconst cfg = $('Set Site Config').first().json;\nconst form = $('Validate Form').first().json;\nconst row = $input.all().map((i) => i.json).find((r) => String(r.token || '') === form.token) || {};\n\nconst invalid = [{ json: { valid: false, changed: false } }];\nif (!row.email || String(row.token || '') !== form.token) return invalid;\n\nconst DAY = 86400e3;\nconst asked = Date.parse(String(row.requested_at || ''));\nconst now = $now.toISO();\nlet state = String(row.state || '');\nlet confirmed_at = String(row.confirmed_at || '');\nlet unsubscribed_at = String(row.unsubscribed_at || '');\nlet mails = Number(row.mails) || 0;\nlet changed = false;\n\nif (form.kind === 'confirm') {\n  if (state === 'unsubscribed') return invalid;\n  if (state !== 'confirmed') {\n    if (!(Date.now() - asked < cfg.confirm_within_days * DAY)) return invalid;\n    state = 'confirmed'; confirmed_at = now; mails = 0; changed = true;\n  }\n} else if (state !== 'unsubscribed') {\n  state = 'unsubscribed'; unsubscribed_at = now; changed = true;\n}\n\nreturn [{\n  json: { valid: true, changed, token: form.token, email: String(row.email).trim().toLowerCase(), state, confirmed_at, unsubscribed_at, mails },\n}];"
       },
       "id": "8ce2851a-4e56-4f39-ab03-2a6eb9a4e015",
       "name": "Decide Token Change",
@@ -604,49 +805,93 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Subscribers",
-          "mode": "name"
-        },
-        "columns": {
+        "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "token": "={{ $json.token }}",
-            "state": "={{ $json.state }}",
-            "confirmed_at": "={{ $json.confirmed_at }}",
-            "unsubscribed_at": "={{ $json.unsubscribed_at }}",
-            "mails": "={{ $json.mails }}"
+            "op": "keep",
+            "table": "subscribers",
+            "key": "email",
+            "row": "={{ ((r) => ({ email: r.email, token: r.token, state: r.state, confirmed_at: r.confirmed_at, unsubscribed_at: r.unsubscribed_at, mails: r.mails }))($json) }}"
           },
-          "matchingColumns": [
-            "token"
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
           ],
-          "schema": []
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
-        "options": {
-          "cellFormat": "RAW"
-        }
+        "options": {}
       },
+      "name": "Keep Subscriber Change",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "4165eb4e-3d25-4439-ad9a-0b3ec7fce3ef",
-      "name": "Update Subscriber in Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         2256,
         688
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      }
+      "notes": "op: keep\ntable: subscribers\nkey: email\nrow: ={{ ((r) => ({ email: r.email, token: r.token, state: r.state, confirmed_at: r.confirmed_at, unsubscribed_at: r.unsubscribed_at, mails: r.mails }))($json) }}",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -893,68 +1138,186 @@
     },
     {
       "parameters": {
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Messages",
-          "mode": "name"
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "messages"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
+      "name": "Get Messages",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "96105dc6-a51a-4420-a462-9d5f03d8ee0f",
-      "name": "Get Messages in Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         800,
         1136
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "notes": "op: read\ntable: messages",
+      "notesInFlow": false
     },
     {
       "parameters": {
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Subscribers",
-          "mode": "name"
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "subscribers"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "66973ba4-ed4f-49ad-a3f3-837753292d12",
       "name": "Get Subscribers for Briefing",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "id": "66973ba4-ed4f-49ad-a3f3-837753292d12",
       "position": [
         1024,
         1136
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
-          "name": "Google Sheets OAuth"
-        }
-      },
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "notes": "op: read\ntable: subscribers",
+      "notesInFlow": false
     },
     {
       "parameters": {
-        "jsCode": "// Briefing plugin: the SITE INBOX section.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally, and everything\n// printed here was typed by a stranger.\n//\n// Nothing pings when a form is sent; this section is the only place a message\n// or a signup is announced, so it prints the message itself, not a count.\nconst MAX_MSGS = 5;      // each can run to MSG_CHARS; the 4096 cap is shared\nconst MSG_CHARS = 400;\nconst MAX_SUBS = 10;\n\nconst input = $('When Called for Briefing').first().json;\nconst tz = input.tz || 'UTC';\nconst since = Date.now() - (Number(input.window_hours) || 24) * 3600e3;\n\nconst ts = (v) => { const n = Date.parse(String(v || '')); return Number.isFinite(n) ? n : null; };\nconst fresh = (v) => { const n = ts(v); return n !== null && n >= since; };\nconst hhmm = (v) => new Date(ts(v)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });\nconst flat = (v) => String(v ?? '').replace(/\\s+/g, ' ').trim();\n\nconst messages = $('Get Messages in Sheets').all().map((i) => i.json).filter((r) => r && r.email && fresh(r.ts));\nconst subs = $('Get Subscribers for Briefing').all().map((i) => i.json).filter((r) => r && r.email);\n\nmessages.sort((a, b) => ts(b.ts) - ts(a.ts));\nconst msgItems = messages.slice(0, MAX_MSGS).map((m) => {\n  const who = flat(m.name) ? flat(m.name) + ' <' + flat(m.email) + '>' : flat(m.email);\n  const body = flat(m.message);\n  const text = body.length > MSG_CHARS ? body.slice(0, MSG_CHARS) + '…' : body;\n  return who + ' · ' + hhmm(m.ts) + ' · ' + (flat(m.path) || '/') + '\\n    ' + text;\n});\nif (messages.length > MAX_MSGS) msgItems.push('+' + (messages.length - MAX_MSGS) + ' more in the Messages tab');\n\n// One row per address, so one line per address: the latest thing that happened.\nconst events = [];\nfor (const s of subs) {\n  const from = flat(s.path) ? ' · from ' + flat(s.path) : '';\n  if (s.state === 'unsubscribed' && fresh(s.unsubscribed_at)) events.push({ at: ts(s.unsubscribed_at), text: flat(s.email) + ' · unsubscribed' });\n  else if (s.state === 'confirmed' && fresh(s.confirmed_at)) events.push({ at: ts(s.confirmed_at), text: flat(s.email) + ' · confirmed' + from });\n  else if (s.state === 'pending' && fresh(s.requested_at)) events.push({ at: ts(s.requested_at), text: flat(s.email) + ' · asked, not confirmed yet' + from });\n}\nevents.sort((a, b) => b.at - a.at);\nconst subItems = events.slice(0, MAX_SUBS).map((e) => e.text);\nif (events.length > MAX_SUBS) subItems.push('+' + (events.length - MAX_SUBS) + ' more in the Subscribers tab');\n\nconst count = (state) => subs.filter((s) => s.state === state).length;\nconst totals = count('confirmed') + ' confirmed · ' + count('pending') + ' pending · ' + count('unsubscribed') + ' unsubscribed';\nif (subItems.length) subItems.push('List: ' + totals);\n\n// Always exactly one item: zero items is indistinguishable from a crash.\nreturn [{\n  json: {\n    key: 'reach',\n    icon: '📬',\n    title: 'SITE INBOX',\n    blocks: [\n      { heading: 'Messages', items: msgItems },\n      { heading: 'Newsletter', items: subItems },\n    ],\n    empty: 'Nothing new · list: ' + totals,\n  },\n}];"
+        "jsCode": "// Briefing plugin: the SITE INBOX section.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally, and everything\n// printed here was typed by a stranger.\n//\n// Nothing pings when a form is sent; this section is the only place a message\n// or a signup is announced, so it prints the message itself, not a count.\nconst MAX_MSGS = 5;      // each can run to MSG_CHARS; the 4096 cap is shared\nconst MSG_CHARS = 400;\nconst MAX_SUBS = 10;\n\nconst input = $('When Called for Briefing').first().json;\nconst tz = input.tz || 'UTC';\nconst since = Date.now() - (Number(input.window_hours) || 24) * 3600e3;\n\nconst ts = (v) => { const n = Date.parse(String(v || '')); return Number.isFinite(n) ? n : null; };\nconst fresh = (v) => { const n = ts(v); return n !== null && n >= since; };\nconst hhmm = (v) => new Date(ts(v)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });\nconst flat = (v) => String(v ?? '').replace(/\\s+/g, ' ').trim();\n\nconst messages = $('Get Messages').all().map((i) => i.json).filter((r) => r && r.email && fresh(r.ts));\nconst subs = $('Get Subscribers for Briefing').all().map((i) => i.json).filter((r) => r && r.email);\n\nmessages.sort((a, b) => ts(b.ts) - ts(a.ts));\nconst msgItems = messages.slice(0, MAX_MSGS).map((m) => {\n  const who = flat(m.name) ? flat(m.name) + ' <' + flat(m.email) + '>' : flat(m.email);\n  const body = flat(m.message);\n  const text = body.length > MSG_CHARS ? body.slice(0, MSG_CHARS) + '…' : body;\n  return who + ' · ' + hhmm(m.ts) + ' · ' + (flat(m.path) || '/') + '\\n    ' + text;\n});\nif (messages.length > MAX_MSGS) msgItems.push('+' + (messages.length - MAX_MSGS) + ' more in the messages table');\n\n// One row per address, so one line per address: the latest thing that happened.\nconst events = [];\nfor (const s of subs) {\n  const from = flat(s.path) ? ' · from ' + flat(s.path) : '';\n  if (s.state === 'unsubscribed' && fresh(s.unsubscribed_at)) events.push({ at: ts(s.unsubscribed_at), text: flat(s.email) + ' · unsubscribed' });\n  else if (s.state === 'confirmed' && fresh(s.confirmed_at)) events.push({ at: ts(s.confirmed_at), text: flat(s.email) + ' · confirmed' + from });\n  else if (s.state === 'pending' && fresh(s.requested_at)) events.push({ at: ts(s.requested_at), text: flat(s.email) + ' · asked, not confirmed yet' + from });\n}\nevents.sort((a, b) => b.at - a.at);\nconst subItems = events.slice(0, MAX_SUBS).map((e) => e.text);\nif (events.length > MAX_SUBS) subItems.push('+' + (events.length - MAX_SUBS) + ' more in the subscribers table');\n\nconst count = (state) => subs.filter((s) => s.state === state).length;\nconst totals = count('confirmed') + ' confirmed · ' + count('pending') + ' pending · ' + count('unsubscribed') + ' unsubscribed';\nif (subItems.length) subItems.push('List: ' + totals);\n\n// Always exactly one item: zero items is indistinguishable from a crash.\nreturn [{\n  json: {\n    key: 'reach',\n    icon: '📬',\n    title: 'SITE INBOX',\n    blocks: [\n      { heading: 'Messages', items: msgItems },\n      { heading: 'Newsletter', items: subItems },\n    ],\n    empty: 'Nothing new · list: ' + totals,\n  },\n}];"
       },
       "id": "22daa031-edcb-45cd-ab95-52af63a130b5",
       "name": "Build Briefing Section",
@@ -1004,21 +1367,21 @@
       "main": [
         [
           {
-            "node": "Append Message Row",
+            "node": "Keep Message",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get Subscriber List in Sheets",
+            "node": "Get Subscriber List",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Find Subscriber by Token",
+            "node": "Get Subscribers for Token",
             "type": "main",
             "index": 0
           }
@@ -1032,7 +1395,7 @@
         ]
       ]
     },
-    "Append Message Row": {
+    "Keep Message": {
       "main": [
         [
           {
@@ -1054,7 +1417,7 @@
         ]
       ]
     },
-    "Get Subscriber List in Sheets": {
+    "Get Subscriber List": {
       "main": [
         [
           {
@@ -1109,14 +1472,14 @@
       "main": [
         [
           {
-            "node": "Upsert Subscriber in Sheets",
+            "node": "Keep Pending Subscriber",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upsert Subscriber in Sheets": {
+    "Keep Pending Subscriber": {
       "main": [
         [
           {
@@ -1127,7 +1490,7 @@
         ]
       ]
     },
-    "Find Subscriber by Token": {
+    "Get Subscribers for Token": {
       "main": [
         [
           {
@@ -1153,7 +1516,7 @@
       "main": [
         [
           {
-            "node": "Update Subscriber in Sheets",
+            "node": "Keep Subscriber Change",
             "type": "main",
             "index": 0
           }
@@ -1167,7 +1530,7 @@
         ]
       ]
     },
-    "Update Subscriber in Sheets": {
+    "Keep Subscriber Change": {
       "main": [
         [
           {
@@ -1270,14 +1633,14 @@
       "main": [
         [
           {
-            "node": "Get Messages in Sheets",
+            "node": "Get Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Messages in Sheets": {
+    "Get Messages": {
       "main": [
         [
           {

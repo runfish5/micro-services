@@ -18,8 +18,8 @@ Manual Trigger   ┘
 |---------|--------|----------|
 | Calendar | Google Calendar | — |
 | Prices | `price-checker` subworkflow | `12_steward` |
-| Site | `Visits` tab | `15_site-visits` |
-| Signups | `Sheet1` (Signups) | `shared/signup-intake` — active, but only 1 row has ever been written |
+| Site | `visits` table (records store) | `15_site-visits` |
+| Signups | `signups` table (records store) | `shared/signup-intake` — active, but only 1 row has ever been written |
 
 Keep it that way. **Logic that produces data belongs in the owning project; this workflow only
 formats.** The moment the briefing starts computing something nobody else can see, that thing
@@ -94,9 +94,8 @@ concatenation are the ones that get cut, so put anything actionable early in the
 
 ## Two different spreadsheets
 
-`Get Signups` and `Get Visits` read the **same** document (the site's inbox). `Get Commitments`
-reads the **Billing_Ledger** document. Two different `documentId` values live in this workflow —
-check which one you are pointing at before copying a node.
+`Get Signups` and `Get Visits` call the records store (`19_records-store`); neither holds a
+`documentId`. `Get Commitments` reads the **Billing_Ledger** document.
 
 ## Never commit personal data in this file
 
@@ -145,12 +144,12 @@ describes a state that has since moved on.
 
 ## Open thread — `/visits`
 
-The site digest ends with "→ full detail in the Visits sheet" rather than "→ /visits" because
+The site digest ends with "→ full detail in the visits table" rather than "→ /visits" because
 that command does not exist yet. The digest names only the 3 most engaged visitors; there is no
 way to ask for the rest from Telegram.
 
 Intended fix: a `/visits` agent built as `12_steward/CLAUDE.md` § "Adding a New Agent" describes.
-A subworkflow reads the `Visits` tab and returns `{chatId, response}`; add an entry in the
+A subworkflow reads the `visits` table and returns `{chatId, response}`; add an entry in the
 menu-handler **Config** registry and the key in the Classifier Output Parser `route_type` enum.
 Then swap the closing line in `Format Message`.
 

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Visit Log\n\nIntake door for website visit telemetry. The site's `/api/track` beacon POSTs one event per pageview / click; this appends it to the **Visits** tab.\n\n**Grain:** one row per event, keyed by (ts, ip, event, path, target).\n\n**Flow:** Webhook → Respond 204 → Append to Visits\n\nThe 7 AM `daily briefing` reads this tab and digests the last 24 h.\n\n⚠️ The append is a raw HTTP call, NOT the Google Sheets node, so it can pass **insertDataOption=INSERT_ROWS**. That makes concurrent appends atomic server-side. The Sheets node cannot set it and silently loses rows when two visits overlap — verified: 2/8 survived without it, 16/16 with it.\n\n⚠️ *Save successful production executions* is set to **none** — one execution per pageview would otherwise bury the execution list.",
+        "content": "## Log website visits to a records store\n\nIntake door for website visit telemetry. A site's beacon POSTs one event per pageview or click, and each becomes one row of the `visits` table.\n\n### How it works\n1. **Visit Webhook** takes the event and **Respond OK** answers 204 at once, so the page never waits on storage.\n2. **Keep Visit** hands the row to the records store. Where rows live is that workflow's business.\n\nOne row is one event: `ts, ip, country, city, event, path, target, referrer, ua, flag`. `flag` is the site's own word on a caller it took for a crawler; such a row is kept, and each reader decides what to do with it. The morning briefing reads the same table and digests the last 24 hours.\n\n*Save successful production executions* is set to **none**: one execution per pageview would otherwise bury the execution list.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in **Keep Visit**. With the Google Sheets store, create a `visits` tab with the header `at` followed by the ten fields above.\n2. Activate, then give the webhook's Production URL to your site's beacon.",
         "height": 460,
         "width": 380
       },
@@ -11,7 +11,10 @@
       "name": "Overview",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -24,7 +27,10 @@
       "name": "Visit Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [420, 300],
+      "position": [
+        420,
+        300
+      ],
       "webhookId": "c1d2e3f4-0002-4002-8002-000000000002"
     },
     {
@@ -38,37 +44,99 @@
       "name": "Respond OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [640, 300]
+      "position": [
+        640,
+        300
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SIGNUPS_SPREADSHEET_ID/values/Visits:append",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "valueInputOption", "value": "RAW" },
-            { "name": "insertDataOption", "value": "INSERT_ROWS" }
-          ]
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ values: [[ $('Visit Webhook').item.json.body.ts, $('Visit Webhook').item.json.body.ip, $('Visit Webhook').item.json.body.country, $('Visit Webhook').item.json.body.city, $('Visit Webhook').item.json.body.event, $('Visit Webhook').item.json.body.path, $('Visit Webhook').item.json.body.target, $('Visit Webhook').item.json.body.referrer, $('Visit Webhook').item.json.body.ua ]] }) }}",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "keep",
+            "table": "visits",
+            "row": "={{ (({ ts, ip, country, city, event, path, target, referrer, ua, flag }) => ({ ts, ip, country, city, event, path, target, referrer, ua, flag: flag || '' }))($('Visit Webhook').item.json.body) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
+      "name": "Keep Visit",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "c1d2e3f4-0004-4004-8004-000000000004",
-      "name": "Append to Visits",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [860, 300],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      }
+      "position": [
+        860,
+        300
+      ],
+      "notes": "op: keep\ntable: visits\nrow: ={{ (({ ts, ip, country, city, event, path, target, referrer, ua, flag }) => ({ ts, ip, country, city, event, path, target, referrer, ua, flag: flag || '' }))($('Visit Webhook').item.json.body) }}",
+      "notesInFlow": false
     }
   ],
   "connections": {
@@ -87,7 +155,7 @@
       "main": [
         [
           {
-            "node": "Append to Visits",
+            "node": "Keep Visit",
             "type": "main",
             "index": 0
           }

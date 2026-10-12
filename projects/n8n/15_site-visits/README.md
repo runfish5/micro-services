@@ -1,7 +1,7 @@
 # 15 - Site Visits
 
 Intake door for website visit telemetry. The website beacon reports one event per
-pageview and per click; this workflow appends each one to a `Visits` sheet that the
+pageview and per click; this workflow keeps each one as a row of the `visits` table, which the
 morning briefing digests.
 
 ## What It Does
@@ -11,7 +11,7 @@ Visit Webhook (POST /webhook/visit-log)
    ▼
 Respond OK (204, responseNode — the site is never held open)
    ▼
-Append to Visits (Google Sheets, append, autoMapInputData, cellFormat RAW)
+Keep Visit (records store, keep)
 ```
 
 **Grain:** one row per tracked event, keyed by `(ts, ip, event, path, target)`. A
@@ -20,8 +20,8 @@ grouping by IP happens at read time, in the briefing.
 
 ## The store
 
-A `Visits` tab in the **same spreadsheet as `Signups`** (the site's inbox document).
-Columns, in order:
+The `visits` table of a records store ([`19_records-store`](../19_records-store/README.md)): a tab
+of a spreadsheet or a file on your own server, by the store **Keep Visit** points at. Fields:
 
 | Column | Source | Notes |
 |--------|--------|-------|
@@ -33,12 +33,13 @@ Columns, in order:
 | `target` | client | for clicks: the link/button label and its href |
 | `referrer` | client | pageviews only |
 | `ua` | server | browser user-agent |
+| `flag` | server | empty, or the site's word on a caller it took for a crawler: `bot-ua`, `stale-browser` |
 
-`cellFormat` is **RAW** on the append node. That is deliberate and load-bearing: a
-visitor can put anything in a link label, and under the default `USER_ENTERED` a
-`target` of `=1+1` would be stored as a live formula. RAW makes every value text.
+The Google Sheets store writes every value **RAW**. That is deliberate and load-bearing: a
+visitor can put anything in a link label, and under `USER_ENTERED` a `target` of `=1+1` would be
+stored as a live formula. Why that store appends over raw HTTP is in its README.
 
-The same document also holds `Messages` and `Subscribers`, written by
+The same store also holds `messages` and `subscribers`, written by
 [`17_site-forms`](../17_site-forms/README.md). A visit row has no email and a form row has no IP,
 so the two cannot be joined to a person; what links them is the `path` each form row records.
 
@@ -49,72 +50,40 @@ the browser only knows about the site's own origin, so the webhook URL stays pri
 and the IP, geo and user-agent are stamped server-side where they cannot be spoofed
 by the payload.
 
-## What never reaches the sheet
+## What never reaches the store
 
-Dropped by the website before a row is written, so every reader of this tab sees the same
-filtered set rather than each one re-deriving it:
+Dropped by the website before a row is written, so every reader of this table sees the same
+set rather than each one re-deriving it:
 
 - **Loopback and private addresses** — local development.
-- **Anything naming itself a bot** — `bot`, `crawl`, `headless`, `curl` and the like in the
-  user-agent.
-- **Browsers years out of date** — Chrome or Firefox below a floor version (130 when written).
-  The crawlers that do not name themselves wear an old desktop browser: in the first two months
-  that was 64 of the 125 addresses that were not the owner, mostly from data centres, landing on
-  the legal pages. The floor is a constant in the website's `/api/track`; it wants raising now and
-  then, and a stale one only lets more through.
 - **The owner's own devices** — a browser that once opened the site with `?self=1` reports nothing
   from then on (`?self=0` undoes it). This is the only thing the site ever stores on a device, and
   only on one whose owner typed that parameter. It exists because the briefing's address list
   cannot recognise a phone: mobile carriers hand out a new address per session.
 
-Rows written before 2026-10-11 predate the last two rules. Anything computed over older rows has
-to filter them itself.
+Rows written before 2026-10-11 predate the own-devices rule and carry no flag. Anything computed
+over older rows has to filter them itself.
+
+## What is flagged, not dropped
+
+The website names a caller it takes for a crawler in `flag` and keeps the row. The briefing leaves
+flagged rows out of its visitor counts; [`20_bot-detector`](../20_bot-detector/README.md) reads
+the flag as one more feature.
+
+- `bot-ua` — **anything naming itself a bot**: `bot`, `crawl`, `headless`, `curl` and the like in
+  the user-agent.
+- `stale-browser` — **browsers years out of date**: Chrome or Firefox below a floor version (130
+  when written). The crawlers that do not name themselves wear an old desktop browser: in the
+  first two months that was 64 of the 125 addresses that were not the owner, mostly from data
+  centres, landing on the legal pages. The floor is a constant in the website's `/api/track`; it
+  wants raising now and then, and a stale one only flags fewer.
+
+Rows from 2026-10-11 until the flag shipped hold no such callers at all: they were dropped then.
 
 ## Reader
 
-The `daily briefing` workflow reads this tab at 7 AM, groups the last 24 hours by IP,
+The `daily briefing` workflow reads this table at 7 AM, groups the last 24 hours by IP,
 and renders a per-visitor digest into the Telegram message.
-
-## Why the append is a raw HTTP call, not the Google Sheets node
-
-**This is the load-bearing detail of the whole project. Do not "simplify" it back to the
-Sheets node.**
-
-Concurrent appends to a spreadsheet are only safe if Google is told to *insert* rows rather
-than compute a free slot. That is the `insertDataOption=INSERT_ROWS` parameter on
-`spreadsheets.values.append`. Google then serialises the inserts server-side and every writer
-gets its own row.
-
-**The n8n Google Sheets node never sends that parameter.** Its default path reads the sheet to
-find the first empty row and then writes there, so two overlapping visits both target the same
-row and one is silently overwritten — the API reports success for both. Its `useAppend` option
-gets closer (it calls `values.append`) but still leaves `insertDataOption` at Google's default
-of `OVERWRITE`, so it only narrows the window instead of closing it.
-
-So `Append to Visits` is an **HTTP Request node** calling the API directly with the same
-`googleSheetsOAuth2Api` credential:
-
-```
-POST https://sheets.googleapis.com/v4/spreadsheets/{id}/values/Visits:append
-     ?valueInputOption=RAW&insertDataOption=INSERT_ROWS
-body: { "values": [[ ts, ip, country, city, event, path, target, referrer, ua ]] }
-```
-
-Measured on this exact setup, firing truly parallel visits at the live webhook:
-
-| Write path | Result |
-|------------|--------|
-| Sheets node, default | **2 of 8 landed** — 6 silently lost |
-| Sheets node, `useAppend: true` | 7 of 8 landed — 1 silently lost |
-| HTTP + `insertDataOption=INSERT_ROWS` | **16 of 16, 12 of 12, 10 of 10 — zero lost** |
-
-`valueInputOption=RAW` is the second half of the contract: a visitor controls the link label, and
-under `USER_ENTERED` a `target` of `=1+1` would be stored as a live formula.
-
-Because the race is prevented rather than detected, this workflow needs **no lock, no retry, no
-read-back verification, and no database**. An earlier revision carried a
-`Verify Row Landed → Row Present? → Stop and Error` chain to catch losses; it was deleted once
-`INSERT_ROWS` made losses impossible. Four nodes total, and one of them is a sticky note.
 
 ## Executions are not saved
 
@@ -124,25 +93,21 @@ within a day. Failed executions are still saved, so the alerting safety net is i
 
 ## Retention — `visits-prune.n8n.json`
 
-A second workflow in this project deletes `Visits` rows older than **90 days**, daily at 03:00.
+A second workflow in this project drops `visits` rows older than **90 days**, daily at 03:00.
 
 ```
-Daily 03:00 → Read Timestamps → Anything To Prune? → Delete Old Rows
+Daily at 3 → Drop Old Visits
 ```
 
 This is not housekeeping. The website's privacy policy *states* a 90-day window and the rows
 hold raw IP addresses, so without this workflow that published claim is simply false. Treat it
 like the alerting safety net: if you disable it, fix the policy the same day.
 
-- **No Code node.** The row arithmetic lives in the delete node's body expression, so a
-  task-runner outage cannot silently stop retention from being enforced.
-- Rows are deleted **bottom-up** so earlier indices stay valid mid-batch.
-- A row whose timestamp will not parse is **left alone** (`NaN` comparisons are false) rather
-  than guessed at — a malformed row is a bug to look at, not data to delete.
-- The `Anything To Prune?` gate keeps quiet days from firing an empty `batchUpdate`.
-
-Verified by injecting a row dated 100 days back, running the workflow, and confirming exactly
-that row was removed while the day's rows survived.
+- **Drop Old Visits** hands the store a time. The store counts a row's age from when it was kept.
+- With the HTTP store the drop is one request and **no Code node**, so a task-runner outage
+  cannot silently stop retention from being enforced.
+- A row whose time will not parse is **left alone** rather than guessed at — a malformed row is a
+  bug to look at, not data to delete.
 
 ## Privacy
 
@@ -171,14 +136,14 @@ single point where the address enters this pipeline, and it is one line.
 ## Import note
 
 Both workflows ship as committed JSON with placeholders, each with a gitignored
-`*.local.n8n.json` alongside carrying the real spreadsheet ID, sheet gid and Sheets
-credential — import those to skip the re-typing. After activating `visit-log`, copy its
+`*.local.n8n.json` alongside carrying the real store workflow id — import those to skip the
+re-typing. After activating `visit-log`, copy its
 webhook **Production URL** into the website's `N8N_VISITS_WEBHOOK_URL` environment variable,
 then redeploy the site: Vercel only picks up an env var on the next deployment.
 
-The `Visits` tab and its header row must exist before the first append — nothing creates
-them. The header row is the column contract:
+With the Google Sheets store, the `visits` tab and its header row must exist before the first
+row — nothing creates them. The header row is the column contract:
 
 ```
-ts | ip | country | city | event | path | target | referrer | ua
+at | ts | ip | country | city | event | path | target | referrer | ua | flag
 ```

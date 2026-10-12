@@ -1,0 +1,485 @@
+{
+  "name": "Records Store (HTTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Keep website records on your own server\n\nOne small store that other workflows call to keep, read and drop rows. This one talks to a records API on a server you run.\n\n### How it works\n**Three operations, one contract.** `keep` adds a row, or writes its fields over the row whose `key` field has the same value. `read` returns one item per row, each with the time it was kept as `at`. `drop` removes rows added before a time; a row with a key has no age and stays.\n\nA caller never knows where rows live. Point its **Execute Workflow** node at this workflow or at the Google Sheets store: both take the same inputs and return the same items.\n\nEach request is tried five times, five seconds apart, so a short outage of the server costs nothing.\n\n### Setup steps\n1. Create a **Header Auth** credential: name `Authorization`, value `Bearer <your token>`. Bind it on the four request nodes.\n2. In **Set Store Config**, set `records_url` to the API's address without a trailing slash.\n3. Activate, then select this workflow in each caller's store node.\n\nThe API: `POST {url}/{table}` with `{ row, key }`, `GET {url}/{table}?since=`, `DELETE {url}/{table}?before=`.",
+        "height": 660,
+        "width": 480
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Send one operation to the API\n\nThe caller picks keep, read or drop. Rows come back flat, one item each.",
+        "height": 680,
+        "width": 1856,
+        "color": 7
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000002",
+      "name": "Call section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "op"
+            },
+            {
+              "name": "table"
+            },
+            {
+              "name": "key"
+            },
+            {
+              "name": "row",
+              "type": "object"
+            },
+            {
+              "name": "since"
+            },
+            {
+              "name": "before"
+            }
+          ]
+        }
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000010",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        336
+      ],
+      "notes": "op: keep | read | drop\ntable: lower-case name\nkey: the row field that identifies it, or empty to always add\nrow: object (keep)\nsince: ISO time (read)\nbefore: ISO time (drop)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b8d2f3e1-18a1-4c00-9a01-000000000090",
+              "name": "records_url",
+              "value": "YOUR_RECORDS_API_URL",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000011",
+      "name": "Set Store Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b8d2f3e1-18a1-4c00-9a01-000000000080",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "keep",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "keep"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b8d2f3e1-18a1-4c00-9a01-000000000081",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b8d2f3e1-18a1-4c00-9a01-000000000082",
+                    "leftValue": "={{ $('When Called').first().json.op }}",
+                    "rightValue": "drop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "drop"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000012",
+      "name": "Route by Operation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1024,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b8d2f3e1-18a1-4c00-9a01-000000000070",
+              "leftValue": "={{ $json.key }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000013",
+      "name": "If Row Has Key",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Set Store Config').first().json.records_url }}/{{ $('When Called').first().json.table }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000023",
+      "name": "Find Kept Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        112
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_RECORDS_TOKEN",
+          "name": "Records token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// A keyed row keeps the fields this call does not name.\nconst call = $('When Called').first().json;\nconst kept = ($input.first().json.records || [])\n  .find((r) => r.key === String(call.row[call.key] ?? ''));\nreturn [{ json: { row: { ...(kept ? kept.row : {}), ...call.row } } }];"
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000031",
+      "name": "Merge Into Kept Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Set Store Config').first().json.records_url }}/{{ $('When Called').first().json.table }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ row: $json.row, key: $('When Called').first().json.key ? String($json.row[$('When Called').first().json.key] ?? '') : '' }) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000020",
+      "name": "Keep Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        192
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_RECORDS_TOKEN",
+          "name": "Records token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Set Store Config').first().json.records_url }}/{{ $('When Called').first().json.table }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "since",
+              "value": "={{ $('When Called').first().json.since || '' }}"
+            }
+          ]
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000021",
+      "name": "Read Records",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        368
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_RECORDS_TOKEN",
+          "name": "Records token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $('Set Store Config').first().json.records_url }}/{{ $('When Called').first().json.table }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "before",
+              "value": "={{ $('When Called').first().json.before }}"
+            }
+          ]
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000022",
+      "name": "Drop Old Records",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        528
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_RECORDS_TOKEN",
+          "name": "Records token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per row. The store's time comes back as 'at' beside the row's own fields.\nconst answer = $input.first().json;\nconst records = Array.isArray(answer.records) ? answer.records : [answer];\nreturn records.map((r) => ({ json: { ...r.row, at: r.at } }));"
+      },
+      "id": "b8d2f3e1-18a1-4c00-9a01-000000000030",
+      "name": "Return Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        336
+      ]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Set Store Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Store Config": {
+      "main": [
+        [
+          {
+            "node": "Route by Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Operation": {
+      "main": [
+        [
+          {
+            "node": "If Row Has Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drop Old Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Row Has Key": {
+      "main": [
+        [
+          {
+            "node": "Find Kept Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keep Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Kept Row": {
+      "main": [
+        [
+          {
+            "node": "Merge Into Kept Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Into Kept Row": {
+      "main": [
+        [
+          {
+            "node": "Keep Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep Record": {
+      "main": [
+        [
+          {
+            "node": "Return Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Records": {
+      "main": [
+        [
+          {
+            "node": "Return Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}

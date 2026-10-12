@@ -3,10 +3,10 @@
 One webhook, `POST /webhook/reach`, for what a website's forms say: a contact message, or a
 newsletter request with **double opt-in**.
 
-- A **contact message** is stored in a `Messages` tab, one row per message, and the sender is
+- A **contact message** is stored in a `messages` table, one row per message, and the sender is
   added to the contact book (`Entries`) in the group `contact`.
 - A **newsletter request** mails one confirmation link, from a no-reply address on your own
-  domain through a transactional mail API, and waits as `pending` in a `Subscribers` tab. The
+  domain through a transactional mail API, and waits as `pending` in a `subscribers` table. The
   link opens a page on your own site; pressing the button there confirms, and the address joins
   `Entries` in the group `newsletter`. The same token unsubscribes.
 - Nothing pings Telegram. The **morning briefing** has a `SITE INBOX` section that prints
@@ -35,13 +35,13 @@ The forwarder mints the token for a newsletter request; the workflow refuses a r
 one. Setup steps are on the yellow sticky note in the workflow; the design notes are in
 [`CLAUDE.md`](CLAUDE.md).
 
-| Tab | Grain | Columns |
-|-----|-------|---------|
-| `Messages` | one row per contact-form message, append-only | `ts, email, name, message, path` |
-| `Subscribers` | one row per address: the consent record | `email, state, token, requested_at, path, confirmed_at, unsubscribed_at, mails` |
+| Table | Grain | Fields |
+|-------|-------|--------|
+| `messages` | one row per contact-form message, append-only | `ts, email, name, message, path` |
+| `subscribers` | one row per address, keyed on `email`: the consent record | `email, state, token, requested_at, path, confirmed_at, unsubscribed_at, mails` |
 
-Both tabs sit in the document that [`15_site-visits`](../15_site-visits/README.md) writes
-`Visits` to. The contact book is the `Entries` sheet of [`02_smart-table-fill`](../02_smart-table-fill/).
+Both tables sit in the records store ([`19_records-store`](../19_records-store/README.md)) that
+[`15_site-visits`](../15_site-visits/README.md) keeps `visits` in. The contact book is the `Entries` sheet of [`02_smart-table-fill`](../02_smart-table-fill/).
 
 ## If your site is on Vercel: the sender in six steps
 

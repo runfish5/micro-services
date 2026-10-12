@@ -1,0 +1,485 @@
+{
+  "name": "Bot Detector",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Tell bots from people among your website visitors\n\nA small bot detector you own. One side records what each visitor did; the other side judges it. The judgement sits in a column beside a column you fill in by hand, so you can see how often the engine is right.\n\n### How it works\n1. Every night, reads the last two days of the `visits` table from the records store.\n2. **Build Visitor Features** turns them into one row per visitor per day: views, clicks, pace, browser, country, the site's flag. It judges nothing.\n3. **Predict Bot or Human** is the engine: a list of rules, each moving a score and naming itself. It writes `predicted`, `score` and `reason`.\n4. Keeps each row in the `verdicts` table. A row never holds a full address: a hash and the network stand in for it.\n5. Renders a BOTS section when the morning briefing calls it.\n\nWrite `bot` or `human` in a row's `actual` column. A later run keeps it, and the briefing counts how often `predicted` agreed.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in the three store nodes. It must hold the `visits` table `visit-log` writes.\n2. With the Google Sheets store, add a `verdicts` tab: `at`, the fields of one row, then `actual`.\n3. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'bots', order: 38, workflowId: '<this id>', enabled: true, ...ctx }`.",
+        "height": 760,
+        "width": 480
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Record what each visitor did\n\nOne row per visitor per day. Nothing is judged here.",
+        "height": 240,
+        "width": 736,
+        "color": 7
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000002",
+      "name": "Record section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Judge and keep the verdict\n\nThe engine is one node. A row is keyed, so a later run updates it and keeps what you wrote by hand.",
+        "height": 240,
+        "width": 512,
+        "color": 7
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000003",
+      "name": "Judge section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Render the briefing section\n\nCalled by the morning briefing with a date. Counts yesterday.",
+        "height": 240,
+        "width": 736,
+        "color": 7
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000004",
+      "name": "Briefing section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 4
+            }
+          ]
+        }
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000010",
+      "name": "Daily at 4",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "visits",
+            "since": "={{ $now.minus({ hours: 49 }).toUTC().toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000011",
+      "name": "Get Visits",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        160
+      ],
+      "alwaysOutputData": true,
+      "notes": "op: read\ntable: visits\nsince: ={{ $now.minus({ hours: 49 }).toUTC().toISO() }}",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// One row per visitor per day: everything recorded, nothing judged.\n// The verdict is the next node's business, so a new engine reads the same row.\nconst visits = $input.all().map((i) => i.json).filter((r) => r && r.ip && Number.isFinite(Date.parse(r.ts)));\n\n// A verdict outlives the visit rows, so it carries no address: a short hash to\n// tell visitors apart, and the network the address sits in.\nconst hash = (s) => { let h = 0x811c9dc5; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, '0'); };\nconst net = (ip) => (ip.includes(':') ? ip.split(':').slice(0, 3).join(':') + '::' : ip.split('.').slice(0, 3).join('.') + '.x');\n\nconst groups = new Map();\nfor (const v of visits) {\n  const day = new Date(Date.parse(v.ts)).toISOString().slice(0, 10);\n  const key = day + '|' + hash(v.ip);\n  if (!groups.has(key)) groups.set(key, { day, ip: v.ip, rows: [] });\n  groups.get(key).rows.push(v);\n}\n\nconst out = [];\nfor (const [key, g] of groups) {\n  const rows = g.rows.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));\n  const views = rows.filter((r) => r.event === 'pageview');\n  const clicks = rows.filter((r) => r.event !== 'pageview');\n  const times = views.map((r) => Date.parse(r.ts));\n  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 1000);\n  out.push({ json: {\n    id: key,\n    day: g.day,\n    visitor: hash(g.ip),\n    net: net(g.ip),\n    country: rows[0].country || '',\n    city: rows[0].city || '',\n    ua: String(rows[0].ua || '').slice(0, 300),\n    flag: (rows.find((r) => r.flag) || {}).flag || '',\n    agents: new Set(rows.map((r) => String(r.ua || ''))).size,\n    events: rows.length,\n    views: views.length,\n    clicks: clicks.length,\n    paths: new Set(views.map((r) => r.path)).size,\n    first_path: rows[0].path || '',\n    referrer: String(rows[0].referrer || '').slice(0, 200),\n    span_s: Math.round((Date.parse(rows.at(-1).ts) - Date.parse(rows[0].ts)) / 1000),\n    fastest_gap_s: gaps.length ? Math.round(Math.min(...gaps) * 10) / 10 : '',\n    sign_in: clicks.some((r) => /sign.?in|log.?in/i.test(String(r.target || '') + ' ' + String(r.path || ''))),\n  } });\n}\nreturn out;"
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000012",
+      "name": "Build Visitor Features",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// The engine: reads one visitor's row, writes predicted, score and reason.\n// Swap this node to try another engine; write its answer to a column of its\n// own and the two can be compared against 'actual'.\n//\n// score is how bot-like, 0 to 1. Each rule that fires moves it and names itself.\nconst RULES = [\n  // flag is the site's own word, set where the visit was recorded.\n  { why: 'names itself a bot', move: +0.7, when: (v) => v.flag === 'bot-ua' },\n  { why: 'browser years out of date', move: +0.5, when: (v) => v.flag === 'stale-browser' },\n  { why: 'no browser named', move: +0.5, when: (v) => !/mozilla\\//i.test(v.ua) },\n  { why: 'pages under a second apart', move: +0.4, when: (v) => v.fastest_gap_s !== '' && v.fastest_gap_s < 1 },\n  { why: 'more pages than a person reads', move: +0.3, when: (v) => v.paths >= 15 },\n  { why: 'several browsers from one address', move: +0.2, when: (v) => v.agents > 1 },\n  { why: 'one view and gone', move: +0.15, when: (v) => v.events === 1 },\n  { why: 'clicked', move: -0.25, when: (v) => v.clicks > 0 },\n  { why: 'pressed sign-in', move: -0.3, when: (v) => v.sign_in },\n  { why: 'read several pages at a human pace', move: -0.15, when: (v) => v.paths >= 2 && v.fastest_gap_s !== '' && v.fastest_gap_s >= 3 },\n];\nconst START = 0.3;\nconst BOT_FROM = 0.7;\nconst HUMAN_TO = 0.3;\n\nreturn $input.all().map((item) => {\n  const v = item.json;\n  const fired = RULES.filter((r) => r.when(v));\n  const score = Math.min(1, Math.max(0, fired.reduce((s, r) => s + r.move, START)));\n  return { json: {\n    ...v,\n    predicted: score >= BOT_FROM ? 'bot' : score <= HUMAN_TO ? 'human' : 'unsure',\n    score: Math.round(score * 100) / 100,\n    reason: fired.map((r) => r.why).join('; '),\n  } };\n});"
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000013",
+      "name": "Predict Bot or Human",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "keep",
+            "table": "verdicts",
+            "key": "id",
+            "row": "={{ $json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000014",
+      "name": "Keep Verdict",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        160
+      ],
+      "notes": "op: keep\ntable: verdicts\nkey: id\nrow: ={{ $json }}",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000020",
+      "name": "When Called for Briefing",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        432
+      ],
+      "notes": "date: the briefing's day, ISO"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "read",
+            "table": "verdicts",
+            "since": "={{ $now.minus({ hours: 49 }).toUTC().toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000021",
+      "name": "Get Verdicts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        432
+      ],
+      "alwaysOutputData": true,
+      "notes": "op: read\ntable: verdicts\nsince: ={{ $now.minus({ hours: 49 }).toUTC().toISO() }}",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin: the BOTS section. Yesterday's verdicts, counted.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally.\nconst MAX_LINES = 5;\nconst input = $('When Called for Briefing').first().json;\nconst day = new Date(Date.parse(input.date || new Date().toISOString()) - 86400e3).toISOString().slice(0, 10);\nconst rows = $input.all().map((i) => i.json).filter((r) => r && r.id && r.day === day);\n\nconst of = (p) => rows.filter((r) => r.predicted === p);\nconst line = (r) => [r.net, r.country, r.views + ' view' + (Number(r.views) === 1 ? '' : 's'), r.reason || 'no rule fired'].filter(Boolean).join(' · ');\nconst judged = rows.filter((r) => r.actual === 'bot' || r.actual === 'human');\nconst right = judged.filter((r) => r.actual === r.predicted).length;\n\nconst blocks = [];\nif (rows.length) blocks.push({ heading: 'Yesterday', items: [of('human').length + ' human · ' + of('bot').length + ' bot · ' + of('unsure').length + ' unsure'] });\nfor (const [heading, p] of [['Bots', 'bot'], ['Unsure', 'unsure']]) {\n  const some = of(p).sort((a, b) => Number(b.score) - Number(a.score));\n  const items = some.slice(0, MAX_LINES).map(line);\n  if (some.length > MAX_LINES) items.push('+' + (some.length - MAX_LINES) + ' more');\n  if (items.length) blocks.push({ heading, items });\n}\nif (judged.length) blocks.push({ heading: 'Checked by hand', items: [right + ' of ' + judged.length + ' predicted right'] });\n\n// Always exactly one item: zero items is indistinguishable from a crash.\nreturn [{ json: { key: 'bots', icon: '🤖', title: 'BOTS', blocks, empty: 'No visitors to judge' } }];"
+      },
+      "id": "d0f4b5a3-18a1-4c00-9a01-000000000022",
+      "name": "Build Briefing Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        432
+      ]
+    }
+  ],
+  "connections": {
+    "Daily at 4": {
+      "main": [
+        [
+          {
+            "node": "Get Visits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Visits": {
+      "main": [
+        [
+          {
+            "node": "Build Visitor Features",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Visitor Features": {
+      "main": [
+        [
+          {
+            "node": "Predict Bot or Human",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Predict Bot or Human": {
+      "main": [
+        [
+          {
+            "node": "Keep Verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called for Briefing": {
+      "main": [
+        [
+          {
+            "node": "Get Verdicts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Verdicts": {
+      "main": [
+        [
+          {
+            "node": "Build Briefing Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}

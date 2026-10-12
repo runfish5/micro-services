@@ -41,8 +41,8 @@ last two sections of the message:
 
 | Node | Reads | Renders |
 |------|-------|---------|
-| `Get Visits` | `Visits` tab — written by [15_site-visits](../15_site-visits/) | a summary: visitor/view/click totals, sign-in presses, bounces, where visitors came from, top pages, countries, and the 3 most engaged visitors |
-| `Get Signups` | `Sheet1` — written by [shared/signup-intake](../shared/) (active; exactly one row so far) | one line per new signup: name and use case |
+| `Get Visits` | `visits` table of the records store — written by [15_site-visits](../15_site-visits/) | a summary: visitor/view/click totals, sign-in presses, bounces, where visitors came from, top pages, countries, and the 3 most engaged visitors |
+| `Get Signups` | `signups` table of the records store — written by [shared/signup-intake](../shared/) (active; exactly one row so far) | one line per new signup: name and use case |
 
 Both sections are filtered to the last 24 hours and **render nothing when empty**, so a
 quiet day produces exactly the old calendar + price message.

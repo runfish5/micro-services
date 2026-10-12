@@ -1,0 +1,147 @@
+{
+  "name": "Account Trail",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Print what each app account did in the morning briefing\n\nWhat each account did in an app, printed in the morning briefing as the **APP** section.\n\n### How it works\n**The app tells; this workflow never asks.** The app POSTs the whole last day every half hour and this workflow keeps the newest in its static data. A day with no send shows as *Stale*, not as a quiet day.\n\n### Setup steps\n1. Create a **Header Auth** credential: name `X-Trail-Secret`, value a long random string. Bind it on **When Trail Is Sent**.\n2. Give the app this webhook's Production URL and the same secret.\n3. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'app', order: 37, workflowId: '<this id>', enabled: true, ...ctx }`.\n\nBody: `{ as_of, accounts: [{ who, rows }], unreadable }`. A row is `YYYY-MM-DD HH:MM:SS what subject` in UTC.",
+        "height": 560,
+        "width": 480
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Keep what the app tells\n\nOnly a sender holding the shared secret gets in. Each send replaces the last.",
+        "height": 240,
+        "width": 512,
+        "color": 7
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000006",
+      "name": "Receive section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Render the briefing section\n\nCalled by the morning briefing with a time zone. Prints what was last kept.",
+        "height": 240,
+        "width": 512,
+        "color": 7
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000007",
+      "name": "Briefing section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "account-trail",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000002",
+      "name": "When Trail Is Sent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        576,
+        160
+      ],
+      "webhookId": "account-trail",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_TRAIL_SECRET",
+          "name": "Trail shared secret"
+        }
+      },
+      "notes": "Body: as_of, accounts [{ who, rows }], unreadable.\nAnswers 200 only once the trail is kept."
+    },
+    {
+      "parameters": {
+        "jsCode": "// The app sends the whole last day each time, so only the newest is kept.\nconst body = $input.first().json.body || {};\nif (!body.as_of || !Array.isArray(body.accounts)) {\n  throw new Error('Not a trail: as_of and accounts are required');\n}\n$getWorkflowStaticData('global').trail = {\n  as_of: body.as_of,\n  accounts: body.accounts,\n  unreadable: Array.isArray(body.unreadable) ? body.unreadable : [],\n};\nreturn [{ json: { ok: true } }];"
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000003",
+      "name": "Keep Latest Trail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000004",
+      "name": "When Called for Briefing",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        432
+      ],
+      "notes": "tz: IANA time zone"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin: the APP section. What each account did, as the app last told it.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally.\nconst MAX_ACCOUNTS = 8;\nconst MAX_ROWS = 6;        // per account; the newest are kept\nconst STALE_AFTER_H = 2;   // the app tells every half hour\n\nconst tz = $('When Called for Briefing').first().json.tz || 'UTC';\nconst told = $getWorkflowStaticData('global').trail;\nconst section = (blocks, empty) => [{ json: { key: 'app', icon: '🏺', title: 'APP', blocks, empty } }];\n// Always exactly one item: zero items is indistinguishable from a crash.\nif (!told) return section([], 'The app has not told anything yet');\n\nconst clock = (ms, withDay) => new Date(ms).toLocaleString('en-GB', {\n  ...(withDay ? { day: '2-digit', month: 'short' } : {}),\n  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,\n});\n// A row is \"YYYY-MM-DD HH:MM:SS what subject\", in UTC.\nconst line = (row) => {\n  const text = String(row ?? '');\n  const at = Date.parse(text.slice(0, 10) + 'T' + text.slice(11, 19) + 'Z');\n  return Number.isFinite(at) ? clock(at) + ' ' + text.slice(20) : text;\n};\n\nconst blocks = [];\nconst age = Date.now() - Date.parse(told.as_of);\nif (!(age < STALE_AFTER_H * 3600e3)) {\n  blocks.push({ heading: 'Stale', items: ['Last told ' + (Number.isFinite(age) ? clock(Date.now() - age, true) : 'at an unreadable time')] });\n}\nconst accounts = told.accounts.filter((a) => a && Array.isArray(a.rows) && a.rows.length);\nfor (const a of accounts.slice(0, MAX_ACCOUNTS)) {\n  const items = a.rows.slice(-MAX_ROWS).map(line);\n  if (a.rows.length > MAX_ROWS) items.unshift('+' + (a.rows.length - MAX_ROWS) + ' earlier');\n  blocks.push({ heading: String(a.who || '?'), items });\n}\nif (accounts.length > MAX_ACCOUNTS) {\n  blocks.push({ heading: 'More', items: accounts.slice(MAX_ACCOUNTS).map((a) => String(a.who || '?') + ' · ' + a.rows.length) });\n}\nif (told.unreadable.length) blocks.push({ heading: 'Could not read', items: told.unreadable.map(String) });\n\nreturn section(blocks, 'Nobody did anything');"
+      },
+      "id": "a7c1e2d0-18a1-4c00-9a01-000000000005",
+      "name": "Build Briefing Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        432
+      ]
+    }
+  ],
+  "connections": {
+    "When Trail Is Sent": {
+      "main": [
+        [
+          {
+            "node": "Keep Latest Trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called for Briefing": {
+      "main": [
+        [
+          {
+            "node": "Build Briefing Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}

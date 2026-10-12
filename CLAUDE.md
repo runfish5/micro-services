@@ -81,9 +81,12 @@ projects/n8n/
 ├── 12_steward/                      - Personal assistant: briefing, dispatch, subworkflows
 ├── 13_n8n-ops-center/               - Workflow monitoring (committed, not imported), heartbeat docs
 ├── 14_db-janitor/                   - DB growth guard: stops workflows that fill n8n's own database
-├── 15_site-visits/                  - Website visit telemetry intake (beacon → Visits sheet)
+├── 15_site-visits/                  - Website visit telemetry intake (beacon → visits table)
 ├── 16_commitments-ledger/           - Our own record of what we signed up for; reconciles against 04's Billing_Ledger
 ├── 17_site-forms/                   - Website contact form + double opt-in newsletter intake (one authenticated webhook)
+├── 18_account-trail/                - What each app account did, told by the app, printed by the briefing
+├── 19_records-store/                - One keep/read/drop store other workflows call (Google Sheets or your own server)
+├── 20_bot-detector/                 - Bot or human per visitor per day: features, a rule engine, a hand-filled column
 └── shared/                          - Cross-project workflows: gdrive-recursion, signup-intake
 ```
 

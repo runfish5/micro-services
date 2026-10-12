@@ -51,6 +51,8 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | ZZ_db-guard-test [sandbox] | `14_db-janitor/workflows/db-guard-sandbox-writer.json` (drill target; unpublished except during a drill) |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` (one workflow: generate 06:30 + digest + tap) |
 | `ykuOczmIegskR6jb` | Site Forms | `17_site-forms/workflows/site-forms.n8n.json` (`.local` variant alongside): **active**; webhook path `reach`, header auth. Sender = the website's `/api/reach` |
+| `g7CQZpGssKXuJ8m0` | Account Trail | `18_account-trail/workflows/account-trail.n8n.json` (`.local` variant alongside): **active**; webhook path `account-trail`, header auth. Sender = the PromptPotter app's admin bot, every half hour |
+| `E88YP0uFpCZIqykR` | Bot Detector | `20_bot-detector/workflows/bot-detector.n8n.json` (`.local` variant alongside): **active**; daily at 04:00 |
 | `G766da6yCLuQS50T` | Signup Intake → CRM triage | `shared/signup-intake.n8n.json` (`.local` variant alongside) — **active**; live webhook path is `promptpotter-waitlist`, NOT the committed `signup-intake`. Sender = the PromptPotter app; auto-writes the CRM row; account email on |
 
 ### Subworkflows
@@ -69,6 +71,9 @@ Canonical registry of infrastructure assets and workflows. Update when adding ne
 | - | price-checker | `12_steward/workflows/subworkflows/price-checker.json` | deal-finder, daily-briefing |
 | `49JyBpZtRzBZyMmW` | commitments | `16_commitments-ledger/workflows/commitments.json` | daily-briefing (Plugins registry) and menu-handler (Config `task`) — **must stay active** or both callers fail |
 | `ykuOczmIegskR6jb` | Site Forms (its `When Called for Briefing` trigger) | `17_site-forms/workflows/site-forms.n8n.json` | daily-briefing (Plugins registry, key `reach`): the `SITE INBOX` section. **Must stay active** or the section fails |
+| `g7CQZpGssKXuJ8m0` | Account Trail (its `When Called for Briefing` trigger) | `18_account-trail/workflows/account-trail.n8n.json` | daily-briefing (Plugins registry, key `app`): the `APP` section. **Must stay active** or the section fails |
+| `E88YP0uFpCZIqykR` | Bot Detector (its `When Called for Briefing` trigger) | `20_bot-detector/workflows/bot-detector.n8n.json` | daily-briefing (Plugins registry, key `bots`): the `BOTS` section. **Must stay active** or the section fails |
+| `V6hII7rSZbceuOiv` | Records Store (HTTP) | `19_records-store/workflows/records-store-http.n8n.json` (`.local` variant alongside) | visit-log, visits-prune, daily-briefing, Site Forms, Signup Intake, Bot Detector: every read and write of `visits`, `messages`, `subscribers`, `signups`, `verdicts`. **Must stay active** or all six fail |
 
 ### Support Workflows
 
@@ -96,7 +101,10 @@ workflow holds a workflow id in a registry node and knows nothing else about the
 | Edge | Why it is allowed |
 |------|-------------------|
 | `05_daily-briefing` → `16` | The briefing is a renderer with a `Plugins` registry. It has no knowledge of commitments; swapping the id swaps the plugin. Removing the registry line removes the dependency. |
-| `05_daily-briefing` → `17` | The same registry, one more line (`reach`). Site Forms owns the `Messages` and `Subscribers` tabs and renders its own section; the briefing only prints what comes back. |
+| `05_daily-briefing` → `17` | The same registry, one more line (`reach`). Site Forms owns the `messages` and `subscribers` tables and renders its own section; the briefing only prints what comes back. |
+| `05_daily-briefing` → `18` | The same registry, one more line (`app`). Account Trail keeps what the app last told it and renders its own section. |
+| `05_daily-briefing` → `20` | The same registry, one more line (`bots`). Bot Detector owns the `verdicts` table and renders its own section. |
+| `15`, `17`, `20`, `05`, `shared/signup-intake` → `19` | One store node per read or write. Which records store that node selects decides where every row lives. |
 | `12_steward` → `16` | menu-handler dispatches every agent by id from its `Config` registry. The `task` entry is one more row in a list that already points at 12's own subworkflows. |
 
 The test for a future exception is the same: if the dependency is a **line in a registry**, the

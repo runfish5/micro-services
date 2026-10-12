@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Take signups into Google Sheets with a Telegram triage step\n\nA generic intake door for inbound people, with or without a website. Every signup is stored, checked against your contact book, mailed a confirmation and announced on Telegram, where one tap marks it promoted or dismissed. It shows how anyone can capture inbound interest without writing a backend.\n\n### How it works\n1. Takes a signup from a webhook your site posts to, or from a form page n8n hosts for you.\n2. Shapes both into one record and looks the address up in the contact book.\n3. Appends the signup to its own sheet and writes the contact row.\n4. Sends a confirmation email whose text is rendered by your site.\n5. Alerts you on Telegram with the contact's current record and two buttons.\n6. Marks the signup promoted or dismissed when you tap one.\n\n### Setup steps\n- [ ] Give the signups sheet these headers: `email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`\n- [ ] Connect a Google Sheets credential and pick the signups sheet or the contact book in each Sheets node\n- [ ] Connect a Telegram bot credential and set your chat ID in **Send Signup Alert**\n- [ ] Set the URL in **Render Email** to your confirmation-email endpoint and connect Gmail in **Send Confirmation Email**\n- [ ] Activate, then give the webhook's production URL to your site, or share the form URL\n\n[Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/shared/README.md)",
+        "content": "## Take signups into a records store with a Telegram triage step\n\nA generic intake door for inbound people, with or without a website. Every signup is stored, checked against your contact book, mailed a confirmation and announced on Telegram, where one tap marks it promoted or dismissed. It shows how anyone can capture inbound interest without writing a backend.\n\n### How it works\n1. Takes a signup from a webhook your site posts to, or from a form page n8n hosts for you.\n2. Shapes both into one record and looks the address up in the contact book.\n3. Keeps the signup in a records store, one row per address, and writes the contact row.\n4. Sends a confirmation email whose text is rendered by your site.\n5. Alerts you on Telegram with the contact's current record and two buttons.\n6. Marks the signup promoted or dismissed when you tap one.\n\n### Setup steps\n- [ ] Import a records store (`19_records-store`) and select it in the three store nodes. With the Google Sheets store, give a `signups` tab these headers: `at  email  first_name  surname  use_case  source  signup_timestamp  known_in_crm  status`\n- [ ] Connect a Google Sheets credential and pick the contact book in the two contact nodes\n- [ ] Connect a Telegram bot credential and set your chat ID in **Send Signup Alert**\n- [ ] Set the URL in **Render Email** to your confirmation-email endpoint and connect Gmail in **Send Confirmation Email**\n- [ ] Activate, then give the webhook's production URL to your site, or share the form URL\n\n[Project page](https://github.com/runfish5/micro-services/blob/main/projects/n8n/shared/README.md)",
         "height": 760,
         "width": 480
       },
@@ -50,7 +50,7 @@
     },
     {
       "parameters": {
-        "content": "## Triage and store\n\nOne record from either door, a lookup in the contact book, a row in the signups sheet and the contact row.",
+        "content": "## Triage and store\n\nOne record from either door, a lookup in the contact book, a row in the signups table and the contact row.",
         "height": 460,
         "width": 840,
         "color": 7
@@ -370,40 +370,93 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Sheet1",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "email"
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "keep",
+            "table": "signups",
+            "key": "email",
+            "row": "={{ $json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
           ],
-          "schema": []
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
+      "name": "Keep Signup",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "id": "a1b2c3d4-0009-4009-8009-000000000009",
-      "name": "Append to Signups",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
       "position": [
         1280,
         420
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      }
+      "notes": "op: keep\ntable: signups\nkey: email\nrow: ={{ $json }}",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -553,45 +606,6 @@
     },
     {
       "parameters": {
-        "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Sheet1",
-          "mode": "name"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "email",
-              "lookupValue": "={{ $('Parse Callback').item.json.email }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "a1b2c3d4-000e-400e-800e-00000000000e",
-      "name": "Lookup Signup",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        840,
-        980
-      ],
-      "alwaysOutputData": true,
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      }
-    },
-    {
-      "parameters": {
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
@@ -641,69 +655,93 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "op": "keep",
+            "table": "signups",
+            "key": "email",
+            "row": "={{ { email: $('Parse Callback').item.json.email, status: 'promoted' } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
             {
-              "id": "fp-email",
-              "name": "email",
-              "value": "={{ $('Parse Callback').item.json.email }}",
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
               "type": "string"
             },
             {
-              "id": "fp-status",
-              "name": "status",
-              "value": "promoted",
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
               "type": "string"
             }
-          ]
-        },
-        "options": {}
-      },
-      "id": "a1b2c3d4-0024-4024-8024-000000000024",
-      "name": "Flag Promoted",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1280,
-        980
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Sheet1",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "email"
           ],
-          "schema": []
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0020-4020-8020-000000000020",
       "name": "Mark Promoted",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "id": "a1b2c3d4-0020-4020-8020-000000000020",
       "position": [
-        1500,
+        840,
         980
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      }
+      "notes": "op: keep\ntable: signups\nkey: email\nrow: ={{ { email: $('Parse Callback').item.json.email, status: 'promoted' } }}",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -718,7 +756,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1720,
+        1060,
         980
       ],
       "credentials": {
@@ -730,44 +768,93 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
+        "workflowId": {
           "__rl": true,
-          "value": "YOUR_SIGNUPS_SPREADSHEET_ID",
-          "mode": "id"
+          "value": "YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YOUR_RECORDS_STORE_WORKFLOW_ID",
+          "cachedResultName": "Records Store (Google Sheets)"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Sheet1",
-          "mode": "name"
-        },
-        "columns": {
+        "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email": "={{ $('Parse Callback').item.json.email }}",
-            "status": "dismissed"
+            "op": "keep",
+            "table": "signups",
+            "key": "email",
+            "row": "={{ { email: $('Parse Callback').item.json.email, status: 'dismissed' } }}"
           },
-          "matchingColumns": [
-            "email"
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "op",
+              "displayName": "op",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "table",
+              "displayName": "table",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "row",
+              "displayName": "row",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "since",
+              "displayName": "since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "before",
+              "displayName": "before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
           ],
-          "schema": []
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0022-4022-8022-000000000022",
       "name": "Mark Dismissed",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "id": "a1b2c3d4-0022-4022-8022-000000000022",
       "position": [
         840,
         1240
       ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
-          "name": "Google Sheets OAuth"
-        }
-      }
+      "notes": "op: keep\ntable: signups\nkey: email\nrow: ={{ { email: $('Parse Callback').item.json.email, status: 'dismissed' } }}",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -923,14 +1010,14 @@
       "main": [
         [
           {
-            "node": "Append to Signups",
+            "node": "Keep Signup",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Append to Signups": {
+    "Keep Signup": {
       "main": [
         [
           {
@@ -977,7 +1064,7 @@
       "main": [
         [
           {
-            "node": "Lookup Signup",
+            "node": "Mark Promoted",
             "type": "main",
             "index": 0
           }
@@ -985,28 +1072,6 @@
         [
           {
             "node": "Mark Dismissed",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lookup Signup": {
-      "main": [
-        [
-          {
-            "node": "Flag Promoted",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Flag Promoted": {
-      "main": [
-        [
-          {
-            "node": "Mark Promoted",
             "type": "main",
             "index": 0
           }
