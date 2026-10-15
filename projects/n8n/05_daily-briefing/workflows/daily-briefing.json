@@ -390,6 +390,7 @@
           "value": "={{ $json.workflowId }}",
           "mode": "id"
         },
+        "mode": "each",
         "options": {}
       },
       "type": "n8n-nodes-base.executeWorkflow",
@@ -596,6 +597,11 @@
         ]
       ]
     }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
   },
   "pinData": {},
   "meta": {

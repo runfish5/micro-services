@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Log website visits to a records store\n\nIntake door for website visit telemetry. A site's beacon POSTs one event per pageview or click, and each becomes one row of the `visits` table.\n\n### How it works\n1. **Visit Webhook** takes the event and **Respond OK** answers 204 at once, so the page never waits on storage.\n2. **Keep Visit** hands the row to the records store. Where rows live is that workflow's business.\n\nOne row is one event: `ts, ip, country, city, event, path, target, referrer, ua, flag`. `flag` is the site's own word on a caller it took for a crawler; such a row is kept, and each reader decides what to do with it. The morning briefing reads the same table and digests the last 24 hours.\n\n*Save successful production executions* is set to **none**: one execution per pageview would otherwise bury the execution list.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in **Keep Visit**. With the Google Sheets store, create a `visits` tab with the header `at` followed by the ten fields above.\n2. Activate, then give the webhook's Production URL to your site's beacon.",
+        "content": "## Log website visits to a records store\n\nIntake door for website visit telemetry. A site's beacon POSTs one event per pageview or click, and each becomes one row of the `visits` table.\n\n### How it works\n1. **Visit Webhook** takes the event and **Respond OK** answers 204 at once, so the page never waits on storage.\n2. **Keep Visit** hands the row to the records store. Where rows live is that workflow's business.\n3. **Decide Live Alert** sends one Telegram line per visitor per day (🆕 new, 🤖 bot) and one more when a new visitor clicks a link (🙋 likely human). Your own networks are skipped.\n\nOne row is one event: `ts, ip, country, city, event, path, target, referrer, ua, flag`. `flag` is the site's own word on a caller it took for a crawler; such a row is kept, and each reader decides what to do with it. The morning briefing reads the same table and digests the last 24 hours.\n\n*Save successful production executions* is set to **none**: one execution per pageview would otherwise bury the execution list.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in **Keep Visit**. With the Google Sheets store, create a `visits` tab with the header `at` followed by the ten fields above.\n2. Activate, then give the webhook's Production URL to your site's beacon.",
         "height": 460,
         "width": 380
       },
@@ -137,6 +137,43 @@
       ],
       "notes": "op: keep\ntable: visits\nrow: ={{ (({ ts, ip, country, city, event, path, target, referrer, ua, flag }) => ({ ts, ip, country, city, event, path, target, referrer, ua, flag: flag || '' }))($('Visit Webhook').item.json.body) }}",
       "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// One live Telegram line per visitor per day, and one more when a new visitor\n// turns out human. A first look only: the Bot Detector judges the whole day overnight.\n// Your own networks, as address prefixes. Set in the n8n UI, never in the public copy.\nconst SELF_NETS = ['YOUR_HOME_NET_PREFIX.'];\nconst v = $('Visit Webhook').first().json.body || {};\nconst ip = String(v.ip || '');\nif (!ip || SELF_NETS.some((net) => ip.startsWith(net))) return [];\n\n// Who was already announced today; yesterday's list is dropped on the first event of a day.\nconst day = String(v.ts || new Date().toISOString()).slice(0, 10);\nconst memory = $getWorkflowStaticData('global');\nif (!memory.told || memory.told.day !== day) memory.told = { day, visitors: {} };\nconst was = memory.told.visitors[ip] || '';\n\nconst where = [v.city, v.country].filter(Boolean).join(', ') || 'unknown place';\nconst ua = String(v.ua || '');\nconst bot = Boolean(v.flag) || !/mozilla\\//i.test(ua);\n// A link click is stored as \"label → href\"; a bare control has no arrow and went nowhere.\nconst [label, href] = String(v.target || '').split(' → ');\nconst clicked = v.event !== 'pageview' && Boolean(href);\nlet from = '';\ntry { from = v.referrer ? new URL(v.referrer).hostname.replace(/^www\\./, '') : ''; } catch { from = String(v.referrer).slice(0, 40); }\n\nlet text = '';\nif (!was && bot) {\n  const name = (ua.match(/[\\w.-]*(bot|crawler|spider|indexer|fetcher)[\\w./-]*/i) || [])[0] || v.flag || 'no browser named';\n  text = `🤖 Bot · ${name} · ${where} · ${v.path || '/'}`;\n  memory.told.visitors[ip] = 'bot';\n} else if (!was) {\n  text = `🆕 New visitor · ${where} · ${v.path || '/'}` + (from ? ` · from ${from}` : '');\n  memory.told.visitors[ip] = 'new';\n} else if (was === 'new' && clicked) {\n  text = `🙋 Likely human · ${where} · clicked “${label.trim()}”`;\n  memory.told.visitors[ip] = 'human';\n}\nreturn text ? [{ json: { text } }] : [];\n"
+      },
+      "id": "c1d2e3f4-0005-4005-8005-000000000005",
+      "name": "Decide Live Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c1d2e3f4-0006-4006-8006-000000000006",
+      "name": "Send Live Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1080,
+        500
+      ],
+      "webhookId": "c1d2e3f4-0006-4006-8006-000000000016",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram account"
+        }
+      }
     }
   ],
   "connections": {
@@ -156,6 +193,22 @@
         [
           {
             "node": "Keep Visit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Decide Live Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Live Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Live Alert",
             "type": "main",
             "index": 0
           }

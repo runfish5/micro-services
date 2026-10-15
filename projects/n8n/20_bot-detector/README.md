@@ -16,7 +16,8 @@ When Called for Briefing → Get Verdicts → Build Briefing Section
   `human`, between them `unsure`.
 - **Keep Verdict** keeps the row in the `verdicts` table, once. **Drop Old Verdicts** removes
   those older than 90 days, the window the visits themselves are kept for.
-- The morning briefing prints a `BOTS` section: yesterday's counts, the bots and the unsure ones.
+- The morning briefing prints a `BOTS` section: yesterday's counts, then every likely human,
+  unknown and bot visitor with the pages they looked at.
 
 ## One row of `verdicts`
 
@@ -28,6 +29,7 @@ When Called for Briefing → Get Verdicts → Build Briefing Section
 | `flag` | the site's own word on the caller, set where the visit was recorded |
 | `events`, `views`, `clicks`, `paths` | counts for the day; `paths` is distinct pages |
 | `first_path`, `referrer` | where the visit began and what sent it |
+| `pages` | the distinct pages viewed, in order (`/ → /benchmarks`) |
 | `span_s`, `fastest_gap_s` | first to last event, and the shortest time between two pages |
 | `sign_in` | pressed a sign-in link |
 | `predicted`, `score`, `reason` | the engine's answer, and every rule that fired |
