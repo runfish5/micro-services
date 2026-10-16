@@ -69,6 +69,7 @@
       ],
       "id": "b1000000-0000-4000-8000-000000000003",
       "name": "Get Tasks",
+      "executeOnce": true,
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
