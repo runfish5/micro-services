@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS guard.state (
   hard_ticks integer NOT NULL DEFAULT 0                     -- checks in a row at or above the hard stop
 );
 INSERT INTO guard.state (id) VALUES (true) ON CONFLICT DO NOTHING;
+-- Fingerprint of the code that started last. The start message compares against it, so a
+-- changed guard does not look like a routine redeploy.
+ALTER TABLE guard.state ADD COLUMN IF NOT EXISTS code_hash text;
 
 CREATE TABLE IF NOT EXISTS guard.event (
   id          bigserial PRIMARY KEY,

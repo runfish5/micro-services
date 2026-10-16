@@ -38,6 +38,7 @@ window. With SMTP variables set it is also an email; subjects start with `[db-gu
 | `the guard is blind` | The check itself failed. Nothing is watching the database. Sent at most every 30 minutes. | Read the error in the message. Run `scripts/db-guard.sh preflight`; if that fails too, Postgres is the problem. |
 | `could not switch off: <workflow>` | The n8n API refused the switch-off. The message carries the HTTP status. | Unpublish the workflow by hand. `401`/`403` means the API key is wrong or lacks the right. |
 | `n8n is not ready` / `n8n is ready again` | `/healthz/readiness` did not answer 200 on two checks in a row. | Check the Postgres service first, then primary and worker. |
+| `started` | Every deploy, so every push to `main`. Names the commit and a fingerprint of `service/` and `sql/`, compared with the last start (`guard.state.code_hash`). | Nothing if it says `unchanged`. On `GUARD CODE CHANGED`: open the commit link; if nobody meant to change `projects/n8n/14_db-janitor`, treat the guard as compromised and stop the service. The message comes from the code it describes, so a hostile change could fake it: the commit link is the part to trust. |
 | `the guard cannot start` | A variable of the service is wrong; the message says which. | Fix the variable in Railway. |
 | Heartbeat: `the growth guard does not answer` / `has not checked the database` | From outside: the guard service is down or hangs. | Open the deploy log of the service in Railway. |
 

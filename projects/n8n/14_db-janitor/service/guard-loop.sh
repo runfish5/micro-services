@@ -191,8 +191,40 @@ until sql_file "$SQL_DIR/guard.sql" >/dev/null 2>"$STATE_DIR/err"; do
   sleep 10 & wait $!
 done
 log "guard installed, mode=$MODE, every ${INTERVAL}s"
+
+# Every push redeploys the guard, so "started" alone says nothing about WHAT started. The
+# message names the commit (Railway sets RAILWAY_GIT_* for GitHub deploys) and a fingerprint
+# of everything in the image that runs: service/ and sql/. A fingerprint that differs from
+# the last start is called out, because a change to the guard should never pass as routine.
+code_hash=$(cd "$here/.." && find service sql -type f | sort | xargs sha256sum | sha256sum | cut -c1-12)
+prev_hash=$(timeout 60 psql "$DATABASE_URL" -X -q -At -v ON_ERROR_STOP=1 -v h="$code_hash" 2>/dev/null <<'SQL'
+WITH old AS (SELECT code_hash FROM guard.state WHERE id),
+     upd AS (UPDATE guard.state SET code_hash = :'h' WHERE id RETURNING 1)
+SELECT coalesce((SELECT code_hash FROM old), '');
+SQL
+) || prev_hash="?"
+if [ -n "${RAILWAY_GIT_COMMIT_SHA:-}" ]; then
+  subject_line=$(printf '%s' "${RAILWAY_GIT_COMMIT_MESSAGE:-}" | head -n1 | cut -c1-90)
+  commit_note="Commit ${RAILWAY_GIT_COMMIT_SHA:0:7} \"$subject_line\" by ${RAILWAY_GIT_AUTHOR:-unknown}"
+  if [ -n "${RAILWAY_GIT_REPO_OWNER:-}" ] && [ -n "${RAILWAY_GIT_REPO_NAME:-}" ]; then
+    commit_note="$commit_note
+https://github.com/$RAILWAY_GIT_REPO_OWNER/$RAILWAY_GIT_REPO_NAME/commit/$RAILWAY_GIT_COMMIT_SHA"
+  fi
+else
+  commit_note="Commit unknown (not a GitHub deploy)."
+fi
+case "$prev_hash" in
+  "$code_hash") code_note="Guard code $code_hash, unchanged since the last start." ;;
+  "")           code_note="Guard code $code_hash, first recorded start." ;;
+  "?")          code_note="Guard code $code_hash. Could not read the last fingerprint." ;;
+  *)            code_note="⚠️ GUARD CODE CHANGED: $prev_hash -> $code_hash. If you did not change projects/n8n/14_db-janitor in this commit, check it now." ;;
+esac
+log "code $code_hash (previous: ${prev_hash:-none}), commit ${RAILWAY_GIT_COMMIT_SHA:-unknown}"
+
 # One message per start: it proves the alert channel works, and a restart never goes unseen.
-tell "[db-guard] started" "DB guard started in mode $MODE. It checks the database every ${INTERVAL} seconds."
+tell "[db-guard] started" "DB guard started in mode $MODE. It checks the database every ${INTERVAL} seconds.
+$code_note
+$commit_note"
 
 while true; do
   tick
