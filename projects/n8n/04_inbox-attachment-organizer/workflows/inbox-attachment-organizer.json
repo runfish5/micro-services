@@ -447,7 +447,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
-        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Get Email With Attachments').first().json.id }} \n📧 {{ $('Classify Email').item.json.output.type_of_document }} (no-log){{ $('Classify Email').item.json.output.type_of_document === 'actionable' ? '\\n' + ($('Classify Email').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('Classify Email').item.json.output.message + ' ' + $('Classify Email').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('Classify Email').item.json.output.message : '' }} ",
+        "text": "=⚡ ACTION\n{{ ($('Set Run Config').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nFrom: {{ ($('Build Email Context').first().json.contact_email || '').replace(/[*_`\\[]/g, '·') }}\n{{ ($('Classify Email').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\nhttps://mail.google.com/mail/u/0/#all/{{ $('Set Run Config').first().json.email_ID }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -455,8 +455,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2768,
-        32
+        2048,
+        -16
       ],
       "id": "bedab3b3-5cf1-4bf7-b91a-77d7b2456d60",
       "name": "Send Category Message",
@@ -470,7 +470,7 @@
           "name": "n8n_house_bot"
         }
       },
-      "disabled": true
+      "notes": "Fires for actionable emails with requires_action (Route by Email Category, output 1). Free text: Markdown characters are replaced, or Telegram rejects the message (400, can't parse entities)."
     },
     {
       "parameters": {
@@ -908,7 +908,7 @@
             {
               "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
               "name": "Message",
-              "value": "=EMAIL: completed\n---\nTitle ✍: {{ ($('Set Run Config').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nContact 📤: `{{ $('Build Email Context').first().json.contact_email }}`\nFinished 🗄️: {{ $('Classify Email').item.json.output.type_of_document }}\n<mail-summary>\n{{ ($('Classify Email').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\n</mail-summary>",
+              "value": "={{ $('Classify Email').item.json.output.requires_action ? '⚡ ACTION: money' : 'EMAIL: completed' }}\n---\nTitle ✍: {{ ($('Set Run Config').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nContact 📤: `{{ $('Build Email Context').first().json.contact_email }}`\nFinished 🗄️: {{ $('Classify Email').item.json.output.type_of_document }}\n<mail-summary>\n{{ ($('Classify Email').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\n</mail-summary>",
               "type": "string"
             }
           ]
@@ -928,7 +928,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n        \"classification_rationale\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n\t\t},\t\n        \"type_of_document\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The action category of this email. financial = involves money (invoices, receipts, payment confirmations, billing). actionable = needs human response, not financial. informational = FYI only. Other = none of the above.\",\n            \"enum\" : [\"financial\", \"actionable\", \"informational\", \"Other\"]\n\t\t},\n        \"requires_action\": {\n        \"type\": \"boolean\",\n        \"description\": \"Should the owner look at this soon (within days)? True if: unexpected outcome, problem, decision needed, upcoming deadline, or noteworthy update. False for: routine confirmations.\"\n        },\n        \"message\": {\n            \"type\": \"string\",\n\t\t\t\"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n        },\n        \"contact_name_extracted\": {\n          \"type\": \"string\",\n          \"description\": \"Full name of the contact person if clearer than email headers. Must be a legal person. Leave empty if only company name available or uncertain.\"\n        },\n        \"extract_depth\": {\n            \"type\": \"integer\",\n            \"enum\": [1, 2, 3],\n\t\t\t\"description\": \"1 = shallow (automated notifications, receipts, brief — only identity). 2 = medium (normal correspondence — adds relationship context). 3 = deep (rich biographical content — all fields).\"\n        },\n        \"body_core\": {\n            \"type\": \"string\",\n            \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n       }\n\t},\n\t\"required\": [\n      \"classification_rationale\",\n      \"body_core\",\n      \"type_of_document\",\n      \"message\",\n      \"requires_action\",\n      \"extract_depth\"\n\t]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"classification_rationale\": {\n      \"type\": \"string\",\n      \"description\": \"The logical reasoning and accounting principles used to determine the appropriate classification of this transaction\"\n    },\n    \"type_of_document\": {\n      \"type\": \"string\",\n      \"description\": \"The action category of this email. financial = involves money (invoices, receipts, payment confirmations, billing). actionable = needs human response, not financial. informational = FYI only. Other = none of the above.\",\n      \"enum\": [\n        \"financial\",\n        \"actionable\",\n        \"informational\",\n        \"Other\"\n      ]\n    },\n    \"requires_action\": {\n      \"type\": \"boolean\",\n      \"description\": \"Should the owner see this today? True if: interview invitation or scheduling request, reply or decision expected within about 3 days, fixed appointment, or a money problem (failed payment, reminder, overdue, debt collection, tax or benefits office). False for: routine confirmations, rejections, paid invoices.\"\n    },\n    \"message\": {\n      \"type\": \"string\",\n      \"description\": \"One sentence summary, purpose: Concise, actionable message for Telegram (max 100 chars)\"\n    },\n    \"contact_name_extracted\": {\n      \"type\": \"string\",\n      \"description\": \"Full name of the contact person if clearer than email headers. Must be a legal person. Leave empty if only company name available or uncertain.\"\n    },\n    \"extract_depth\": {\n      \"type\": \"integer\",\n      \"enum\": [\n        1,\n        2,\n        3\n      ],\n      \"description\": \"1 = shallow (automated notifications, receipts, brief — only identity). 2 = medium (normal correspondence — adds relationship context). 3 = deep (rich biographical content — all fields).\"\n    },\n    \"body_core\": {\n      \"type\": \"string\",\n      \"description\": \"Core content only. Strip: email footers, newsletter promos, legal disclaimers, company registration info, repeated contact blocks, social media links, marketing content. Keep: main message, key facts, dates, amounts, tracking numbers, addresses.\"\n    }\n  },\n  \"required\": [\n    \"classification_rationale\",\n    \"body_core\",\n    \"type_of_document\",\n    \"message\",\n    \"requires_action\",\n    \"extract_depth\"\n  ]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -1007,7 +1007,7 @@
     },
     {
       "parameters": {
-        "content": "## File invoice emails to Google Drive and Google Sheets\n\n### How it works\n1. The workflow picks up each new email, skips promotions and tags it `inProgress`.\n2. It converts every attachment to text with the any-file2json-converter subworkflow.\n3. An LLM classifies the email as financial, actionable, informational or other.\n4. For a financial email, a second LLM extracts the invoice data from each document.\n5. It files the document to a dated Drive folder such as `Accounting/2026/05_May/Expense/` and writes one row per invoice to `Billing_Ledger`.\n6. It sends a Telegram report and tags the email `n8n`, so an email left on `inProgress` marks a failed run.\n\n### Setup steps\n- [ ] Import and publish the subworkflows any-file2json-converter, gdrive-recursion, record-search and smart-CRM-fill, then select each one in the node that calls it\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`. In **Set Run Config** set `label_ID` to the ID of `inProgress` and set your `owner_name`; select your labels in **Add n8n Label** and **Add gdr Label**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`, and select `Billing_Ledger` in **Upsert Ledger Row in Sheets**\n- [ ] In **Find or Create Drive Folder** set `root_folder_id` to the ID of your `/Accounting` folder; `root_path` stays `/Accounting`\n- [ ] Connect a Telegram bot and set the chat ID in **Send Completion Message**, or disable that node\n- [ ] Publish and send yourself an invoice. After the first run, import gmail-processor-datesize to catch up mail already in the inbox\n\n### Customization\nWithout a contact sheet, disable the three nodes in *Look up and enrich contact*. For other document types, extend **Classifier Output Schema**.\n\n📂 [Setup guide, docs and source on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)",
+        "content": "## File invoice emails to Google Drive and Google Sheets\n\n### How it works\n1. The workflow picks up each new email, skips promotions and tags it `inProgress`.\n2. It converts every attachment to text with the any-file2json-converter subworkflow.\n3. An LLM classifies the email as financial, actionable, informational or other.\n4. For a financial email, a second LLM extracts the invoice data from each document.\n5. It files the document to a dated Drive folder such as `Accounting/2026/05_May/Expense/` and writes one row per invoice to `Billing_Ledger`.\n6. An actionable email needing a reply soon goes to Telegram at once.\n7. It sends a Telegram report and tags the email `n8n`, so an email left on `inProgress` marks a failed run.\n\n### Setup steps\n- [ ] Import and publish the subworkflows any-file2json-converter, gdrive-recursion, record-search and smart-CRM-fill, then select each one in the node that calls it\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`. In **Set Run Config** set `label_ID` to the ID of `inProgress` and set your `owner_name`; select your labels in **Add n8n Label** and **Add gdr Label**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`, and select `Billing_Ledger` in **Upsert Ledger Row in Sheets**\n- [ ] In **Find or Create Drive Folder** set `root_folder_id` to the ID of your `/Accounting` folder; `root_path` stays `/Accounting`\n- [ ] Connect a Telegram bot and set the chat ID in **Send Completion Message** and **Send Category Message**, or disable both\n- [ ] Publish and send yourself an invoice. After the first run, import gmail-processor-datesize to catch up mail already in the inbox\n\n### Customization\nWithout a contact sheet, disable the three nodes in *Look up and enrich contact*. For other document types, extend **Classifier Output Schema**.\n\n📂 [Setup guide, docs and source on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)",
         "height": 912,
         "width": 480
       },
@@ -1100,7 +1100,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=# Role\nYou are an email classifier for {{ $('Set Run Config').first().json.owner_name }}'s inbox.\n\n## Context\n- INBOX OWNER: {{ $('Set Run Config').first().json.owner_name }} ({{ $('Build Email Context').first().json.owner_email }})\n- EMAIL DIRECTION: {{ $('Build Email Context').first().json.direction }}\n- CONTACT: {{ $('Build Email Context').first().json.contact_name }} <{{ $('Build Email Context').first().json.contact_email }}>\n\n## TASK\nClassify the email and extract key information. The contact has already been identified above.\n\n## Category Rules\n- financial: ANY email involving money (invoices, receipts, payment confirmations, billing statements, refunds, subscription charges). If money is mentioned, classify as financial.\n- actionable: Needs human response but no money involved (meeting requests, decisions, deadlines).\n- informational: No action needed (newsletters, marketing, shipping updates, routine confirmations without financial content).\n- Other: None of the above.\n\n## EXTRACT DEPTH\nSet extract_depth based on how much personal detail the email reveals about the sender:\n- 1: Automated notifications, receipts, shipping updates, brief confirmations — no personal details\n- 2: Normal correspondence discussing topics, meetings, plans — mentions context but not biographical data\n- 3: Rich biographical content — contains addresses, phone numbers, job titles, company names, birthdays, interests, expertise, or other personal/professional profile data"
+              "message": "=# Role\nYou are an email classifier for {{ $('Set Run Config').first().json.owner_name }}'s inbox.\n\n## Context\n- INBOX OWNER: {{ $('Set Run Config').first().json.owner_name }} ({{ $('Build Email Context').first().json.owner_email }})\n- EMAIL DIRECTION: {{ $('Build Email Context').first().json.direction }}\n- CONTACT: {{ $('Build Email Context').first().json.contact_name }} <{{ $('Build Email Context').first().json.contact_email }}>\n\n## TASK\nClassify the email and extract key information. The contact has already been identified above.\n\n## Category Rules\n- financial: ANY email involving money (invoices, receipts, payment confirmations, billing statements, refunds, subscription charges). If money is mentioned, classify as financial.\n- actionable: Needs human response but no money involved (meeting requests, decisions, deadlines). Includes job interview invitations, requests to pick or confirm a time slot, assessments with a deadline, job offers, requests for documents or references. Rejections and automatic 'we received your application' receipts are informational.\n- informational: No action needed (newsletters, marketing, shipping updates, routine confirmations without financial content).\n- Other: None of the above.\n\n## EXTRACT DEPTH\nSet extract_depth based on how much personal detail the email reveals about the sender:\n- 1: Automated notifications, receipts, shipping updates, brief confirmations — no personal details\n- 2: Normal correspondence discussing topics, meetings, plans — mentions context but not biographical data\n- 3: Rich biographical content — contains addresses, phone numbers, job titles, company names, birthdays, interests, expertise, or other personal/professional profile data\n\n## requires_action\nTrue when the owner should see the email today: a reply, confirmation or decision expected within about 3 days, a fixed appointment, or a money problem (failed or declined payment, payment reminder, overdue amount, debt collection, blocked account or card, request from a tax office, unemployment insurance or bank). When unsure for a real person writing about a job application or about money, choose true."
             }
           ]
         },
@@ -1192,6 +1192,38 @@
                       "operation": "equals"
                     },
                     "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.type_of_document }}",
+                    "rightValue": "actionable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8c1e4a2b-6d3f-4b9e-a5c7-2f0d9e1b3a64"
+                  },
+                  {
+                    "leftValue": "={{ $json.output.requires_action }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "9d2f5b3c-7e4a-4c0f-b6d8-3a1e0f2c4b75"
                   }
                 ],
                 "combinator": "and"
@@ -1516,7 +1548,7 @@
           {
             "node": "Merge All Branches",
             "type": "main",
-            "index": 1
+            "index": 2
           }
         ]
       ]
@@ -1728,9 +1760,9 @@
             "index": 0
           },
           {
-            "node": "Send Category Message",
+            "node": "Merge All Branches",
             "type": "main",
-            "index": 0
+            "index": 1
           },
           {
             "node": "Route by Email Category",
@@ -1774,6 +1806,13 @@
         [
           {
             "node": "Filter by Sender Whitelist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Category Message",
             "type": "main",
             "index": 0
           }

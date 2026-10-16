@@ -1,6 +1,6 @@
 # Main Flow (37 Nodes)
 
-> **Version 2.3.0** | Last verified against the workflow JSON: 2026-10-05
+> **Version 2.3.1** | Last verified against the workflow JSON: 2026-10-15
 
 ## Overview
 
@@ -47,7 +47,7 @@ Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI C
                                       Tag 'gdr' ──→ Prepare Ledger Row ──→ Sheets ──→ Send Completion Message
                                                                                                    │
   Contact branch ───────────→ Merge[0] ────────────────────────────────────────────────────────────┤
-  [disabled] Send Category Message → Merge[1] ─────────────────────────────────────────────────────┤
+  Classify Email (direct) ──→ Merge[1] ───────────────────────────────────────────────────────────────────────┤
                                                                                                    ↓
                                                                                      Merge All Branches (3 inputs)
                                                                                                    ↓
@@ -75,8 +75,9 @@ Email → Tag 'inProgress' → Download Attachments → Text Extraction → AI C
     │     ├─ financial → [disabled] Filter by Sender Whitelist → Prepare Attachments → Extract Invoice Data → If Has Attachments
     │     │     ├─ Yes → Upload File to Drive → Add gdr Label → Prepare Ledger Row → Upsert Ledger Row in Sheets → Send Completion Message → Merge[2]
     │     │     └─ No  → Prepare Ledger Row → Upsert Ledger Row in Sheets → Send Completion Message → Merge[2]
-    │     └─ fallback (non-financial) → Merge[2]
-    ├→ [disabled] Send Category Message (Telegram) → Merge[1]
+    │     ├─ actionable + requires_action → Send Category Message (Telegram) → Merge[2]
+    │     └─ fallback → Merge[2]
+    ├→ Merge[1] (direct)
     └→ Look Up Contact → Prepare Contact Input → Update Contact Record → Merge[0]
     ↓
   Merge All Branches (3 inputs) → Add n8n Label → Remove inProgress Label
@@ -110,7 +111,7 @@ START: When Email Received
         └→ Build Email Context
    *11    └→ Classify Email
               │
-              ├→ [disabled] Send Category Message (Telegram) ──→ Merge[1]
+              ├→ Merge[1] (direct)
               ├→ Contact branch
               │     └→ Look Up Contact
               │        └→ Prepare Contact Input
@@ -139,7 +140,10 @@ START: When Email Received
                     │                       └→ Build Report Message
                     │                          └→ Send Completion Message ──→ Merge[2]
                     │
-                    └─ FALLBACK (output 1, non-financial):
+                    ├─ ACTIONABLE + requires_action (output 1):
+                    │  └→ Send Category Message (Telegram) ──→ Merge[2]
+                    │
+                    └─ FALLBACK (output 2):
                        └→ Merge[2]
 
   ──→ Merge All Branches (3 inputs) → Add n8n Label → Remove inProgress Label (also removes INBOX when archive_when_filed is on and Add gdr Label ran)
@@ -237,5 +241,6 @@ Each Execute Workflow node lists the inputs it passes in its Notes (the restore 
 - The folder structure makes manual file browsing intuitive
 - **Three Gmail labels**: `inProgress` is a temporary canary applied at start and removed on success (emails still carrying it indicate failed processing). `n8n` is a permanent success marker applied once after the Merge convergence. `gdr` marks emails whose attachments were saved to Google Drive (attachment branch only).
 - **Merge convergence**: All three output branches (contact, notify, financial/fallback) feed into the 3-input `Merge All Branches` node. `Add n8n Label` and `Remove inProgress Label` execute exactly once after it, regardless of which branches were active.
+- **Action alert**: an `actionable` email with `requires_action` leaves `Route by Email Category` on output 1 and goes straight to Telegram (`Send Category Message`, then Merge[2]). A financial email with `requires_action` (failed payment, reminder, debt collection) starts its report with `⚡ ACTION: money`. Fallback is output 2.
 - Financial documents without attachments still get logged via the "No" branch (LLM extracts data from email body)
 - Filter by Sender Whitelist is disabled by default; before enabling it, edit its sender array (a red warning sticky marks it), or every financial email is dropped

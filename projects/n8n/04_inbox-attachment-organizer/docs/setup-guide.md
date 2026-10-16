@@ -31,7 +31,7 @@ Follow [credentials-guide.md](../../credentials-guide.md):
 
 - **Google OAuth** (Gmail, Drive, Sheets): select it in every Gmail, Drive and Sheets node
 - **LLM API key**: select it in the model nodes `Classifier LLM` and `Extractor LLM`, and in the model nodes of the converter (one of them must be vision-capable)
-- **Telegram bot**: select it in `Send Completion Message` and enter your chat ID. To run without Telegram, disable that node
+- **Telegram bot**: select it in `Send Completion Message` and `Send Category Message` and enter your chat ID. To run without Telegram, disable both nodes
 
 ### 3. Create Gmail Labels
 

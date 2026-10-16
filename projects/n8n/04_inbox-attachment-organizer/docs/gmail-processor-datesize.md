@@ -96,7 +96,7 @@ broken, or not yet switched on goes through it. Those emails are one Gmail searc
 
 Running it twice is safe: every email the organizer finishes is labelled `n8n`, so the next run
 only picks up what is still missing. A failed email keeps `inProgress` and is picked up again.
-Every filed invoice sends a Telegram report, so a large run is noisy.
+Every filed invoice sends a Telegram report, and every actionable email that needs a reply sends an alert, old or not, so a large run is noisy.
 
 **Want a way back first?** Run [`gmail-backup`](gmail-backup.md) before the first click. It is a
 separate workflow and optional: the organizer never deletes or edits an email, it only sets
