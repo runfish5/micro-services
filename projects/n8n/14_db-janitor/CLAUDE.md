@@ -38,6 +38,23 @@ Every 2 minutes one Postgres function measures the volume and the bytes each wor
   workflow.
 - Read-only checks: `scripts/db-guard.sh status` and `preflight`.
 
+## Integrity check on start: a first instance, not the design
+
+Since 2026-10-16 the `started` message names the deployed commit and flags a changed guard
+(`GUARD CODE CHANGED`, runbook: `docs/runbook.md`). For now this covers **only the database
+guard**, and that is by far not sufficient:
+
+- It watches one service out of six, and the one least likely to be the target.
+- The message is written by the code it describes, so a hostile change can fake it.
+- It says nothing about the Linux box (potter-box): whether it is up, on power, reachable, and
+  whether its own protections still hold.
+
+**Long term this becomes one check for everything that keeps the setup safe:** Linux up and
+reachable, every security feature still switched on (guard mode, battery alert, backups,
+heartbeat, alert channels), and every deploy announced with what changed. It should run from
+somewhere the checked systems cannot rewrite. The guard is a fine place for the first instance and
+a poor illustration of the whole; do not grow it into that check.
+
 ## Cost review due December 2026 – January 2027
 
 The guard is a sixth Railway service. Measured before deploying: 9 MB memory (peak 15 MB), about
