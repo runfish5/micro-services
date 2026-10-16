@@ -436,7 +436,7 @@
     },
     {
       "parameters": {
-        "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "model": "openai/gpt-oss-120b",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
