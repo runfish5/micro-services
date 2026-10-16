@@ -32,7 +32,7 @@ labels, archives, whitelists or filters. All of that is the target's job, so eac
 down in exactly one place.
 
 The target receives the message item as-is (`id`, `threadId`, `labels`) and fetches the full
-email itself. `inbox-attachment-organizer` does this already, starting at `Set File ID`.
+email itself. `inbox-attachment-organizer` does this already, starting at `Set Run Config`.
 
 ## Configuration
 
@@ -83,10 +83,10 @@ broken, or not yet switched on goes through it. Those emails are one Gmail searc
 |---|---|
 | `-label:n8n` | never seen: arrived while the organizer wasn't running |
 | `label:inProgress` | started, then died: the organizer sets this label at the start of a run and removes it at the end |
-| `-label:gdr` | already filed to Drive. `save doc to folder` is a plain upload, so a re-run would store the file twice |
-| `-category:promotions` | the live trigger drops promotions (`Stop promotions`) before the organizer, and the called path skips that node, so the query does it instead |
+| `-label:gdr` | already filed to Drive. `Upload File to Drive` is a plain upload, so a re-run would store the file twice |
+| `-category:promotions` | the live trigger drops promotions (`Skip Promotions`) before the organizer, and the called path skips that node, so the query does it instead |
 | `-in:draft` | a draft is not mail yet. The live trigger never sees one, and Gmail gives it a new id on every edit |
-| `-{subject:"n8n workflow failure alert" ...}` | the error handler's own alert emails. The live trigger ignores them too (`Gmail Trigger` → Search). If the organizer processed them, a failing run would answer its own alert, once a minute |
+| `-{subject:"n8n workflow failure alert" ...}` | the error handler's own alert emails. The live trigger ignores them too (`When Email Received` → Search). If the organizer processed them, a failing run would answer its own alert, once a minute |
 
 **How to run it**
 

@@ -42,7 +42,7 @@ Run it, then inspect:
 
 With the default Config, run it until **Summarize Run** shows `left_for_next_run: 0`, then once more.
 That last run should find only the emails that failed before (`found` near zero). If the same
-emails keep coming back, the organizer isn't reaching `Tag n8n` for them. Open one of their
+emails keep coming back, the organizer isn't reaching `Add n8n Label` for them. Open one of their
 executions.
 
 ## 5. Reset Config after testing

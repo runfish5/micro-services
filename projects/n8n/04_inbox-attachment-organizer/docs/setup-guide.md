@@ -23,15 +23,15 @@ Only if you want to process mail that is already in the mailbox (step 8):
 
 **Publish** workflows 2 to 5 after importing them: a workflow can only be called once it is published. Leave the organizer unpublished until step 7, because publishing it starts the Gmail trigger. If Publish does not work, see [troubleshooting.md](../../troubleshooting.md).
 
-The organizer also has a contact branch (`Call 'record-search'` → `Prepare Contact Input` → `Call 'smart-CRM-fill'`) that keeps a contact sheet up to date. It needs the workflows and the sheet of project 02: see [Contact branch](#contact-branch-optional). **To run without it, disable those three nodes.**
+The organizer also has a contact branch (`Look Up Contact` → `Prepare Contact Input` → `Update Contact Record`) that keeps a contact sheet up to date. It needs the workflows and the sheet of project 02: see [Contact branch](#contact-branch-optional). **To run without it, disable those three nodes.**
 
 ### 2. Set Up Credentials
 
 Follow [credentials-guide.md](../../credentials-guide.md):
 
 - **Google OAuth** (Gmail, Drive, Sheets): select it in every Gmail, Drive and Sheets node
-- **LLM API key**: select it in the model nodes `Any LM` and `any LM1`, and in the model nodes of the converter (one of them must be vision-capable)
-- **Telegram bot**: select it in `Telegram & done` and enter your chat ID. To run without Telegram, disable that node
+- **LLM API key**: select it in the model nodes `Classifier LLM` and `Extractor LLM`, and in the model nodes of the converter (one of them must be vision-capable)
+- **Telegram bot**: select it in `Send Completion Message` and enter your chat ID. To run without Telegram, disable that node
 
 ### 3. Create Gmail Labels
 
@@ -42,9 +42,9 @@ The organizer uses three Gmail labels:
 - `gdr`: an attachment was saved to Google Drive
 
 1. In the Gmail sidebar, click **+ Create new label** three times: `inProgress`, `n8n`, `gdr`
-2. In **Tag n8n**, select `n8n` in the label list. In **Tag gdr**, select `gdr`
+2. In **Add n8n Label**, select `n8n` in the label list. In **Add gdr Label**, select `gdr`
 3. `inProgress` is entered as an ID. To read it, add a temporary Gmail node (Resource **Label**, Operation **Get Many**), execute it, copy the `id` of `inProgress` (it starts with `Label_`) and delete the node
-4. In **Set File ID**, paste that ID into `label_ID`. `Tag inProgress` and `Remove inProgress` read it from there
+4. In **Set Run Config**, paste that ID into `label_ID`. `Add inProgress Label` and `Remove inProgress Label` read it from there
 
 ### 4. Create the Billing_Ledger Google Sheet
 
@@ -56,7 +56,7 @@ Create a Google Sheet named **Billing_Ledger** in your Drive accounting folder (
 accounting_category	invoice_status	invoice_number	attachment_count	email_id	counterparty_name	invoice_date	subtotal_amount	currency_code	payment_method	due_date_or_payment_terms	payment_reference	date_paid	tax_amount	discount_amount	purchase_order_number
 ```
 
-Then select this sheet in the node **insert doc record**.
+Then select this sheet in the node **Upsert Ledger Row in Sheets**.
 
 | Field | Filled by | Description |
 |-------|-----------|-------------|
@@ -97,9 +97,9 @@ Then, in the workflow `gdrive-recursion`, select this sheet in the nodes **Cache
 
 | Node | Field | Set to |
 |---|---|---|
-| **Set File ID** | `owner_name`, `company_name` | your name and company (the classifier uses them to tell sender from recipient) |
-| **Call 'gdrive-recursion'** | `root_folder_id` | the ID of your `/Accounting` folder: the last part of its URL, `https://drive.google.com/drive/folders/<ID>` |
-| **Call 'gdrive-recursion'**, **Create Attachment Profile** | workflow | your imported `gdrive-recursion` and `any-file2json-converter` |
+| **Set Run Config** | `owner_name`, `company_name` | your name and company (the classifier uses them to tell sender from recipient) |
+| **Find or Create Drive Folder** | `root_folder_id` | the ID of your `/Accounting` folder: the last part of its URL, `https://drive.google.com/drive/folders/<ID>` |
+| **Find or Create Drive Folder**, **Convert Attachments to Text** | workflow | your imported `gdrive-recursion` and `any-file2json-converter` |
 | `gdrive-recursion` → **Recurse (Call Self)** | workflow | `gdrive-recursion` itself |
 | Workflow settings (⋯ → Settings) | Error workflow | your error workflow, if you have one ([error handler](../../10_error-handler/workflows/010-error-handler.json)) |
 
@@ -113,7 +113,7 @@ The folders are created on demand in this structure:
           └─ Expense/
 ```
 
-To use another root folder name, change `root_path` in **Call 'gdrive-recursion'** and the `folder-path` field in **input folder lookup**. A ready-made folder tree to upload is in [templates/drive-folder-structure/](../templates/drive-folder-structure/); it is optional.
+To use another root folder name, change `root_path` in **Find or Create Drive Folder** and the `folder-path` field in **Build Folder Path**. A ready-made folder tree to upload is in [templates/drive-folder-structure/](../templates/drive-folder-structure/); it is optional.
 
 ### 7. Test and Activate
 
@@ -143,7 +143,7 @@ When the catch-up is done, the filed emails carry `n8n` and `gdr`. Two steps kee
    label:n8n label:gdr in:inbox
    ```
    The emails stay under All Mail with their labels; the documents are already in Drive and in the ledger.
-2. **New mail, automatically.** In the organizer, set `archive_when_filed` to `true` in **Set File ID**. From then on an email leaves the inbox as soon as its document is filed. Emails without a filed document stay in the inbox, and so does anything that failed.
+2. **New mail, automatically.** In the organizer, set `archive_when_filed` to `true` in **Set Run Config**. From then on an email leaves the inbox as soon as its document is filed. Emails without a filed document stay in the inbox, and so does anything that failed.
 
 ## 🌟 Use Cases
 
@@ -158,7 +158,7 @@ When the catch-up is done, the filed emails carry `n8n` and `gdr`. Two steps kee
 
 ## Contact branch (optional)
 
-The nodes `Call 'record-search'` → `Prepare Contact Input` → `Call 'smart-CRM-fill'` create or update one row per contact in a Google Sheet. They call two workflows of project 02:
+The nodes `Look Up Contact` → `Prepare Contact Input` → `Update Contact Record` create or update one row per contact in a Google Sheet. They call two workflows of project 02:
 
 - [record-search.json](../../02_smart-table-fill/workflows/subworkflows/record-search.json)
 - [smart-table-fill.n8n.json](../../02_smart-table-fill/workflows/smart-table-fill.n8n.json), shown on the canvas as `smart-CRM-fill`. It calls [contact-memory-update.json](../../02_smart-table-fill/workflows/subworkflows/contact-memory-update.json)

@@ -1,9 +1,9 @@
-// Clean Email object - Smart dual-extraction for n8n Code node
+// Clean Email Body - Smart dual-extraction for n8n Code node
 // Handles both Google One (text=footer only) and Digitec (text=HTML) cases
-// Copy this code into the "Clean Email object" Code node in inbox-attachment-organizer workflow
+// Copy this code into the "Clean Email Body" Code node in inbox-attachment-organizer workflow
 
 const items = $input.all();
-const gmail = $('Gmail').first().json;
+const gmail = $('Get Email With Attachments').first().json;
 
 // Helper: strip HTML tags and decode entities
 function stripHtml(str) {
@@ -123,7 +123,7 @@ if (rawEmailText.trim()) {
 
 // 4. Build attachment texts MAP
 const attachment_texts_map = {};
-const gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});
+const gmailBinaryKeys = Object.keys($('Get Email With Attachments').first().binary || {});
 const hasAttachments = gmailBinaryKeys.length > 0;
 
 for (let i = 0; i < items.length; i++) {

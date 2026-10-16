@@ -2,16 +2,16 @@
   "nodes": [
     {
       "parameters": {
-        "content": "Off by default. Enable to accept financial emails only from the senders in the array.",
-        "height": 80,
-        "width": 150,
-        "color": 7
+        "content": "## Sender whitelist\nOff by default. Before you enable it, edit this array, or every email is dropped.",
+        "height": 256,
+        "width": 176,
+        "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1856,
-        32
+        1872,
+        -96
       ],
       "id": "931680a0-7cc1-4776-b776-a1621bad2efe",
       "name": "Sticky Note17"
@@ -193,33 +193,19 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        2288,
+        2448,
         352
       ],
       "id": "976a53e1-32ad-48c3-a83e-e5de3412f66e",
-      "name": "insert doc record",
+      "name": "Upsert Ledger Row in Sheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
           "name": "Google Sheets OAuth 260203"
         }
-      }
-    },
-    {
-      "parameters": {
-        "content": "⚙️ insert doc record\n---\nMapping Column Mode: Auto-Map\nInput: Prepare Ledger Row (flat JSON)\nSheet: Billing_Ledger\n\nSchema: github.com/runfish5/micro-services\n  …/04_inbox-attachment-organizer/docs/setup-guide.md\n\nEasy setup — paste into Sheet row 1:\naccounting_category\tinvoice_status\tinvoice_number\tattachment_count\temail_id\tcounterparty_name\tinvoice_date\tsubtotal_amount\tcurrency_code\tpayment_method\tdue_date_or_payment_terms\tpayment_reference\tdate_paid\ttax_amount\tdiscount_amount\tpurchase_order_number",
-        "height": 80,
-        "width": 214,
-        "color": 5
       },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2256,
-        368
-      ],
-      "id": "174b6924-3db8-4f66-b933-58b8c935fe65",
-      "name": "Sticky Note27"
+      "notesInFlow": false,
+      "notes": "Sheet: Billing_Ledger. Columns auto-mapped from Prepare Ledger Row (flat JSON), matched on invoice_number.\nSchema and the header row to paste into row 1: docs/setup-guide.md (github.com/runfish5/micro-services, project 04)."
     },
     {
       "parameters": {
@@ -228,11 +214,11 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2928,
+        3120,
         16
       ],
       "id": "d0e654c0-25bf-4759-873a-981811d1a5fd",
-      "name": "Merge"
+      "name": "Merge All Branches"
     },
     {
       "parameters": {
@@ -260,34 +246,20 @@
         -112
       ],
       "id": "ee5a6c54-3ce6-4599-b07f-b659d7fe7b79",
-      "name": "Call 'smart-CRM-fill'"
-    },
-    {
-      "parameters": {
-        "content": "## After import\n1. Create the Gmail labels `inProgress`, `n8n`, `gdr`\n2. **Set File ID**: `label_ID` = ID of `inProgress`, and your `owner_name`\n3. **Tag n8n**, **Tag gdr**: select your labels",
-        "height": 150,
-        "width": 380,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -384,
-        -208
-      ],
-      "id": "83c13b8c-6e43-473e-852b-c6f69ca7939a",
-      "name": "Sticky Note29"
+      "name": "Update Contact Record",
+      "notesInFlow": false,
+      "notes": "Calls smart-CRM-fill. Inputs: none set, the current item is passed on."
     },
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Gmail').item.json.id }}",
+        "messageId": "={{ $('Get Email With Attachments').item.json.id }}",
         "labelIds": [
           "Label_83"
         ]
       },
       "id": "e08816fd-2e5f-43c6-a85c-5db8a6522631",
-      "name": "Tag gdr",
+      "name": "Add gdr Label",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
@@ -304,28 +276,12 @@
     },
     {
       "parameters": {
-        "content": "## Inputs\nnone set: the item and its file are passed on\n\n🔗 [any-file2json-converter source](https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json)",
-        "height": 80,
-        "width": 150,
-        "color": 5
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        992,
-        240
-      ],
-      "id": "80685f86-62bc-4221-8363-17008b6aac04",
-      "name": "Sticky Note28"
-    },
-    {
-      "parameters": {
-        "jsCode": "// GRAIN: one row per invoice, keyed by invoice_number.\n// Documents are evidence, rows are economic events. An invoice and its receipt\n// describe ONE transaction and collapse into ONE row; two orders make two rows.\n// Row count follows invoice_number -- never attachment count, never email count.\nconst docs  = $('Accountant-concierge-LM').all();\nconst email = $('email-info-hub').first().json;\n\n// Extractors emit several different \"I could not find one\" sentinels. All of them\n// mean \"no invoice number\", and none may be used as a grain key -- treating '-' as\n// a real key would collapse every unkeyed row in the sheet into one, because the\n// Sheets node below matches on invoice_number.\nconst SENTINEL = /^(-+|n\\/?a|unknown|none|null|nil|tbd|\\?+|x+)$/i;\nconst BLANK = (v) => v === undefined || v === null || String(v).trim() === '' ||\n                     SENTINEL.test(String(v).trim());\nconst pick  = (prev, next) => (!BLANK(prev) ? prev : (!BLANK(next) ? next : '-'));\n\n// Values we assign ourselves are namespaced so a human reading the ledger can always\n// tell them apart from something a supplier printed. '::' appears in no real invoice\n// number, so \"contains ::\" is a reliable filter for project-assigned keys.\nconst AUTOKEY_PREFIX = 'AUTOKEY::';\nconst slug = (v, fallback) => {\n  const s = String(v ?? '').trim().toUpperCase()\n    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');\n  return s || fallback;\n};\n\n// The Gmail message id is what makes two same-day documents from the same sender\n// distinct. Counterparty + date alone is NOT unique -- e.g. two separate Wise\n// notifications on 2026-02-18 would otherwise share a key and overwrite each other\n// under the appendOrUpdate below. Including the message id also means a re-run of\n// the SAME email reproduces the SAME key, so retries still update in place.\nlet msgId = '';\ntry { msgId = String($('Set File ID').first().json.email_ID ?? '').trim(); } catch (e) { msgId = ''; }\n\nconst groups = new Map();\n\nfor (let idx = 0; idx < docs.length; idx++) {\n  const out = docs[idx].json.output || {};\n  const inv = out.invoice_data || {};\n  const raw = String(inv.invoice_number ?? '').trim();\n  const keyed = !BLANK(raw);\n\n  // A document with no usable invoice number still deserves a row -- it just cannot\n  // share the invoice grain. Give it a synthetic key that is unique and stable, so it\n  // collides neither with a real invoice nor with another email's unkeyed row.\n  const key = keyed\n    ? raw.toUpperCase()\n    : AUTOKEY_PREFIX + slug(inv.counterparty_name, 'NO-PARTY') +\n      '::' + slug(inv.invoice_date, 'NO-DATE') +\n      '::' + slug(msgId, 'NO-MSG');\n\n  const p = groups.get(key) || {};\n  groups.set(key, {\n    // Every source document that fed this row, for n8n's paired-item lineage.\n    // Without it, downstream nodes resolving $('...').item throw, because this node\n    // is many-to-one and n8n cannot infer which document a row came from.\n    _src: [...(p._src || []), idx],\n    accounting_category:       pick(p.accounting_category,       out.accounting_category),\n    invoice_number:            p.invoice_number || (keyed ? raw : key),\n    counterparty_name:         pick(p.counterparty_name,         inv.counterparty_name),\n    invoice_date:              pick(p.invoice_date,              inv.invoice_date),\n    subtotal_amount:           pick(p.subtotal_amount,           inv.total_amount_due),\n    currency_code:             pick(p.currency_code,             inv.currency_code),\n    tax_amount:                pick(p.tax_amount,                inv.tax_amount),\n    discount_amount:           pick(p.discount_amount,           inv.discount_amount),\n    purchase_order_number:     pick(p.purchase_order_number,     inv.purchase_order_number),\n    due_date_or_payment_terms: pick(p.due_date_or_payment_terms, inv.due_date_or_payment_terms),\n    // Settlement fields normally arrive on the receipt, not the invoice.\n    payment_method:            pick(p.payment_method,            inv.payment_method),\n    payment_reference:         pick(p.payment_reference,         inv.payment_reference),\n    date_paid:                 pick(p.date_paid,                 inv.date_paid),\n  });\n}\n\nif (groups.size === 0) {\n  throw new Error(\n    'Prepare Ledger Row: Accountant-concierge-LM returned no documents, so there is ' +\n    'nothing to write at the invoice grain. Check the extractor output.'\n  );\n}\n\nconst attachmentCount = String(email.attachement_names?.length ?? 0);\n\nreturn [...groups.values()].map(({ _src, ...row }) => ({\n  json: {\n    ...row,\n    attachment_count: attachmentCount,\n    email_id: email.contact_email,\n  },\n  pairedItem: _src.map((i) => ({ item: i })),\n}));\n"
+        "jsCode": "// GRAIN: one row per invoice, keyed by invoice_number.\n// Documents are evidence, rows are economic events. An invoice and its receipt\n// describe ONE transaction and collapse into ONE row; two orders make two rows.\n// Row count follows invoice_number -- never attachment count, never email count.\nconst docs  = $('Extract Invoice Data').all();\nconst email = $('Build Email Context').first().json;\n\n// Extractors emit several different \"I could not find one\" sentinels. All of them\n// mean \"no invoice number\", and none may be used as a grain key -- treating '-' as\n// a real key would collapse every unkeyed row in the sheet into one, because the\n// Sheets node below matches on invoice_number.\nconst SENTINEL = /^(-+|n\\/?a|unknown|none|null|nil|tbd|\\?+|x+)$/i;\nconst BLANK = (v) => v === undefined || v === null || String(v).trim() === '' ||\n                     SENTINEL.test(String(v).trim());\nconst pick  = (prev, next) => (!BLANK(prev) ? prev : (!BLANK(next) ? next : '-'));\n\n// Values we assign ourselves are namespaced so a human reading the ledger can always\n// tell them apart from something a supplier printed. '::' appears in no real invoice\n// number, so \"contains ::\" is a reliable filter for project-assigned keys.\nconst AUTOKEY_PREFIX = 'AUTOKEY::';\nconst slug = (v, fallback) => {\n  const s = String(v ?? '').trim().toUpperCase()\n    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');\n  return s || fallback;\n};\n\n// The Gmail message id is what makes two same-day documents from the same sender\n// distinct. Counterparty + date alone is NOT unique -- e.g. two separate Wise\n// notifications on 2026-02-18 would otherwise share a key and overwrite each other\n// under the appendOrUpdate below. Including the message id also means a re-run of\n// the SAME email reproduces the SAME key, so retries still update in place.\nlet msgId = '';\ntry { msgId = String($('Set Run Config').first().json.email_ID ?? '').trim(); } catch (e) { msgId = ''; }\n\nconst groups = new Map();\n\nfor (let idx = 0; idx < docs.length; idx++) {\n  const out = docs[idx].json.output || {};\n  const inv = out.invoice_data || {};\n  const raw = String(inv.invoice_number ?? '').trim();\n  const keyed = !BLANK(raw);\n\n  // A document with no usable invoice number still deserves a row -- it just cannot\n  // share the invoice grain. Give it a synthetic key that is unique and stable, so it\n  // collides neither with a real invoice nor with another email's unkeyed row.\n  const key = keyed\n    ? raw.toUpperCase()\n    : AUTOKEY_PREFIX + slug(inv.counterparty_name, 'NO-PARTY') +\n      '::' + slug(inv.invoice_date, 'NO-DATE') +\n      '::' + slug(msgId, 'NO-MSG');\n\n  const p = groups.get(key) || {};\n  groups.set(key, {\n    // Every source document that fed this row, for n8n's paired-item lineage.\n    // Without it, downstream nodes resolving $('...').item throw, because this node\n    // is many-to-one and n8n cannot infer which document a row came from.\n    _src: [...(p._src || []), idx],\n    accounting_category:       pick(p.accounting_category,       out.accounting_category),\n    invoice_number:            p.invoice_number || (keyed ? raw : key),\n    counterparty_name:         pick(p.counterparty_name,         inv.counterparty_name),\n    invoice_date:              pick(p.invoice_date,              inv.invoice_date),\n    subtotal_amount:           pick(p.subtotal_amount,           inv.total_amount_due),\n    currency_code:             pick(p.currency_code,             inv.currency_code),\n    tax_amount:                pick(p.tax_amount,                inv.tax_amount),\n    discount_amount:           pick(p.discount_amount,           inv.discount_amount),\n    purchase_order_number:     pick(p.purchase_order_number,     inv.purchase_order_number),\n    due_date_or_payment_terms: pick(p.due_date_or_payment_terms, inv.due_date_or_payment_terms),\n    // Settlement fields normally arrive on the receipt, not the invoice.\n    payment_method:            pick(p.payment_method,            inv.payment_method),\n    payment_reference:         pick(p.payment_reference,         inv.payment_reference),\n    date_paid:                 pick(p.date_paid,                 inv.date_paid),\n  });\n}\n\nif (groups.size === 0) {\n  throw new Error(\n    'Prepare Ledger Row: Extract Invoice Data returned no documents, so there is ' +\n    'nothing to write at the invoice grain. Check the extractor output.'\n  );\n}\n\nconst attachmentCount = String(email.attachement_names?.length ?? 0);\n\nreturn [...groups.values()].map(({ _src, ...row }) => ({\n  json: {\n    ...row,\n    attachment_count: attachmentCount,\n    email_id: email.contact_email,\n  },\n  pairedItem: _src.map((i) => ({ item: i })),\n}));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2112,
+        2272,
         352
       ],
       "id": "cfe38e63-eeea-48e7-b614-a64f9c64a2f3",
@@ -333,34 +289,18 @@
     },
     {
       "parameters": {
-        "content": "⚙️ gdrive-recursion params\n---\ntarget_path: ={{ $json['folder-path'] }}\nroot_folder_id: GDRIVE_ROOT_FOLDER_ID\nroot_path: /Accounting",
-        "height": 80,
-        "width": 150,
-        "color": 5
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1520,
-        512
-      ],
-      "id": "0a008555-370c-48d8-ad8b-b501eaa650db",
-      "name": "Sticky Note26"
-    },
-    {
-      "parameters": {
         "operation": "removeLabels",
         "messageId": "={{ $json.id }}",
-        "labelIds": "={{ $('Set File ID').item.json.archive_when_filed && $('Tag gdr').isExecuted ? [$('Set File ID').item.json.label_ID, 'INBOX'] : $('Set File ID').item.json.label_ID }}"
+        "labelIds": "={{ $('Set Run Config').item.json.archive_when_filed && $('Add gdr Label').isExecuted ? [$('Set Run Config').item.json.label_ID, 'INBOX'] : $('Set Run Config').item.json.label_ID }}"
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3184,
+        3376,
         32
       ],
       "id": "0c7b9537-eb52-4f02-8d93-56bbc81921fb",
-      "name": "Remove inProgress",
+      "name": "Remove inProgress Label",
       "webhookId": "820e746b-7ddc-4017-baf8-a103673d9584",
       "credentials": {
         "gmailOAuth2": {
@@ -368,11 +308,11 @@
           "name": "Gmail OAuth 260203"
         }
       },
-      "notes": "Also takes a filed email out of the inbox when `archive_when_filed` is on in Set File ID. Runs last, so a failed email stays where it is."
+      "notes": "Also takes a filed email out of the inbox when `archive_when_filed` is on in Set Run Config. Runs last, so a failed email stays where it is."
     },
     {
       "parameters": {
-        "jsCode": "const whitelist = [\n    \"payments-noreply@google.com\",\n    \"noreply@notifications.digitec.ch\",\n    \"invoice+statements@mail.anthropic.com\",\n    \"uniqued4ve@gmail.com\"\n];\n\nconst senderEmail = $('Gmail').first().json.from.value[0].address.toLowerCase();\n\nif (whitelist.some(e => e.toLowerCase() === senderEmail)) {\n    return $input.all();\n} else {\n    return [];\n}"
+        "jsCode": "const whitelist = [\n    \"payments-noreply@google.com\",\n    \"noreply@notifications.digitec.ch\",\n    \"invoice+statements@mail.anthropic.com\",\n    \"uniqued4ve@gmail.com\"\n];\n\nconst senderEmail = $('Get Email With Attachments').first().json.from.value[0].address.toLowerCase();\n\nif (whitelist.some(e => e.toLowerCase() === senderEmail)) {\n    return $input.all();\n} else {\n    return [];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -381,7 +321,7 @@
         32
       ],
       "id": "c7b086ee-13f0-4315-854b-783cb9f236da",
-      "name": "sender_whitelist",
+      "name": "Filter by Sender Whitelist",
       "disabled": true
     },
     {
@@ -396,7 +336,7 @@
           "conditions": [
             {
               "id": "6bde56d4-3365-48dc-985c-215425097c74",
-              "leftValue": "={{ $('email-info-hub').item.json.attachement_names }}",
+              "leftValue": "={{ $('Build Email Context').item.json.attachement_names }}",
               "rightValue": "",
               "operator": {
                 "type": "array",
@@ -416,7 +356,7 @@
         288
       ],
       "id": "e88f6297-b187-430f-b1f6-fcb25238e400",
-      "name": "If"
+      "name": "If Has Attachments"
     },
     {
       "parameters": {
@@ -500,13 +440,14 @@
         512
       ],
       "id": "f47b7579-6cdc-47c7-83c3-69643855c151",
-      "name": "Call 'gdrive-recursion'",
-      "notes": "Set this as debugging folder destination: `\"/Accounting/2025/11_November/Expense\"`"
+      "name": "Find or Create Drive Folder",
+      "notesInFlow": false,
+      "notes": "Calls gdrive-recursion. Inputs:\ntarget_path: ={{ $json['folder-path'] }}\nroot_folder_id: GDRIVE_ROOT_FOLDER_ID\nroot_path: /Accounting\n\nTo debug, set target_path to \"/Accounting/2025/11_November/Expense\"."
     },
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID_1",
-        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Gmail').first().json.id }} \n📧 {{ $('subject-classifier-LM').item.json.output.type_of_document }} (no-log){{ $('subject-classifier-LM').item.json.output.type_of_document === 'actionable' ? '\\n' + ($('subject-classifier-LM').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('subject-classifier-LM').item.json.output.message + ' ' + $('subject-classifier-LM').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('subject-classifier-LM').item.json.output.message : '' }} ",
+        "text": "=https://mail.google.com/mail/u/0/#inbox/{{ $('Get Email With Attachments').first().json.id }} \n📧 {{ $('Classify Email').item.json.output.type_of_document }} (no-log){{ $('Classify Email').item.json.output.type_of_document === 'actionable' ? '\\n' + ($('Classify Email').item.json.output.requires_action ? (/urgent|deadline|overdue|immediately|asap|critical/i.test($('Classify Email').item.json.output.message + ' ' + $('Classify Email').item.json.output.classification_rationale) ? '🟠' : '🟡') : '🟢') + ' ' + $('Classify Email').item.json.output.message : '' }} ",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -514,11 +455,11 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2608,
+        2768,
         32
       ],
       "id": "bedab3b3-5cf1-4bf7-b91a-77d7b2456d60",
-      "name": "notify the category",
+      "name": "Send Category Message",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -538,13 +479,13 @@
             {
               "id": "42bc6d75-2bc9-4596-8dde-39a437b8d086",
               "name": "body_core",
-              "value": "={{ $('subject-classifier-LM').item.json.output.body_core }}",
+              "value": "={{ $('Classify Email').item.json.output.body_core }}",
               "type": "string"
             },
             {
               "id": "c53001df-d38b-4855-a247-dee7f28eab38",
               "name": "contact_email",
-              "value": "={{ $('email-info-hub').item.json.contact_email }}",
+              "value": "={{ $('Build Email Context').item.json.contact_email }}",
               "type": "string"
             },
             {
@@ -562,7 +503,7 @@
             {
               "id": "bb62a143-9b62-4977-bb96-42b8a7e821e6",
               "name": "contact_name",
-              "value": "={{ $('email-info-hub').item.json.contact_name }}",
+              "value": "={{ $('Build Email Context').item.json.contact_name }}",
               "type": "string"
             },
             {
@@ -574,32 +515,32 @@
             {
               "id": "837b8479-431a-4a77-84d6-64f9d52b8e39",
               "name": "subject",
-              "value": "={{ $('Gmail').item.json.subject }}",
+              "value": "={{ $('Get Email With Attachments').item.json.subject }}",
               "type": "string"
             },
             {
               "id": "5e2e6bab-9566-4f03-a8c1-f6094f17629f",
               "name": "direction",
-              "value": "={{ $('email-info-hub').item.json.direction }}",
+              "value": "={{ $('Build Email Context').item.json.direction }}",
               "type": "string"
             },
             {
               "id": "1f3607b9-1150-4ce3-bd86-0146eb9a88f4",
               "name": "owner_name",
-              "value": "={{ $('Set File ID').first().json.owner_name }}",
+              "value": "={{ $('Set Run Config').first().json.owner_name }}",
               "type": "string"
             },
             {
               "id": "extract-depth-flag",
               "name": "extract_depth",
-              "value": "={{ $('subject-classifier-LM').item.json.output.extract_depth }}",
+              "value": "={{ $('Classify Email').item.json.output.extract_depth }}",
               "type": "number"
             },
             {
               "id": "known-values-from-email",
               "name": "known_values",
               "type": "object",
-              "value": "={{ (d => $('email-info-hub').item.json.direction === 'outbound' ? { last_topic: $('Gmail').item.json.subject, last_contacted: d, last_being_contacted: null } : { last_topic: $('Gmail').item.json.subject, last_being_contacted: d, last_contacted: null })(String($('Gmail').item.json.date || '').slice(0, 10) || null) }}"
+              "value": "={{ (d => $('Build Email Context').item.json.direction === 'outbound' ? { last_topic: $('Get Email With Attachments').item.json.subject, last_contacted: d, last_being_contacted: null } : { last_topic: $('Get Email With Attachments').item.json.subject, last_being_contacted: d, last_contacted: null })(String($('Get Email With Attachments').item.json.date || '').slice(0, 10) || null) }}"
             }
           ]
         },
@@ -640,28 +581,29 @@
         -112
       ],
       "id": "26394bc8-49f9-4bea-b06d-47ed6bfcb624",
-      "name": "Call 'record-search'"
+      "name": "Look Up Contact",
+      "notesInFlow": false,
+      "notes": "Calls record-search. Inputs: none set, the current item is passed on."
     },
     {
       "parameters": {
-        "content": "## Update contact record\nOptional: disable these three nodes to run without the contact sheet.",
-        "height": 236,
-        "width": 632,
+        "content": "## Look up and enrich contact\nFinds the sender in the contact sheet and adds what the email reveals. Optional: disable these three nodes to run without it.",
+        "height": 192,
+        "width": 592,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2112,
-        -176
+        2128,
+        -208
       ],
       "id": "1058419a-8d56-4605-8d01-fe2ffea6673e",
-      "name": "Sticky Note25",
-      "disabled": true
+      "name": "Sticky Note25"
     },
     {
       "parameters": {
-        "jsCode": "const cleanedData = $('email-info-hub').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('subject-classifier-LM').item.json.output?.body_core || '';\nconst gmailBinary = $('Gmail').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments - still include email context for LLM\nif (attachmentNames.length === 0) {\n  return [{\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: 'No attachments found',\n      attachmentName: '',\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    }\n  }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
+        "jsCode": "const cleanedData = $('Build Email Context').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('Classify Email').item.json.output?.body_core || '';\nconst gmailBinary = $('Get Email With Attachments').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments - still include email context for LLM\nif (attachmentNames.length === 0) {\n  return [{\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: 'No attachments found',\n      attachmentName: '',\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    }\n  }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -685,7 +627,7 @@
             {
               "id": "e885d0fb-fab0-4703-985a-44236baddfa1",
               "name": "attachement_names",
-              "value": "={{ $('Gmail').first().binary ? Object.keys($('Gmail').first().binary) : [] }}",
+              "value": "={{ $('Get Email With Attachments').first().binary ? Object.keys($('Get Email With Attachments').first().binary) : [] }}",
               "type": "array"
             },
             {
@@ -729,22 +671,22 @@
         64
       ],
       "id": "f64b57eb-2933-49bc-833b-f30bdd78f1a5",
-      "name": "email-info-hub"
+      "name": "Build Email Context"
     },
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Gmail').item.json.id }}",
+        "messageId": "={{ $('Get Email With Attachments').item.json.id }}",
         "labelIds": [
           "Label_82"
         ]
       },
       "id": "8aaa3cbd-7e09-43af-8e5c-e89ea2c3a95d",
-      "name": "Tag n8n",
+      "name": "Add n8n Label",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3056,
+        3248,
         32
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
@@ -767,7 +709,7 @@
         32
       ],
       "id": "e136c3e3-12d3-488f-b615-dda01e459ef5",
-      "name": "Any LM",
+      "name": "Classifier LLM",
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_LLM",
@@ -779,10 +721,10 @@
       "parameters": {
         "operation": "addLabels",
         "messageId": "={{ $json.id }}",
-        "labelIds": "={{ $('Set File ID').item.json.label_ID }}"
+        "labelIds": "={{ $('Set Run Config').item.json.label_ID }}"
       },
       "id": "34bb0c26-70da-4b57-8cbc-1b2cf8d5527f",
-      "name": "Tag inProgress",
+      "name": "Add inProgress Label",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
@@ -799,9 +741,9 @@
     },
     {
       "parameters": {
-        "content": "## Extract and file invoices\nFinancial emails only. With an attachment: save to Drive, then the ledger. Without: the ledger only.",
-        "height": 416,
-        "width": 1136,
+        "content": "## File document to Drive\nA second LLM extracts the invoice data. With an attachment, the file goes to its dated Drive folder and the email is tagged `gdr`; without one, only the ledger row follows.",
+        "height": 432,
+        "width": 832,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -815,14 +757,14 @@
     },
     {
       "parameters": {
-        "content": "## Classify the email",
-        "height": 352,
-        "width": 672,
+        "content": "## Classify the email\nAn LLM sorts every email into financial, actionable, informational or other. Only financial emails go on to extraction.",
+        "height": 336,
+        "width": 752,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1344,
+        1328,
         -160
       ],
       "typeVersion": 1,
@@ -831,15 +773,15 @@
     },
     {
       "parameters": {
-        "content": "## Receive and label email",
-        "height": 768,
-        "width": 1168,
+        "content": "## Receive and label email\nA new email, or one sent by the catch-up workflow. Promotions are skipped; the email is tagged `inProgress` and fetched with its attachments.",
+        "height": 608,
+        "width": 384,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        16,
-        -208
+        176,
+        -224
       ],
       "typeVersion": 1,
       "id": "1836694c-c66d-457a-a331-6ab48261b913",
@@ -847,15 +789,15 @@
     },
     {
       "parameters": {
-        "content": "## Convert attachments to text",
+        "content": "## Extract attachment text\nEach attachment goes through any-file2json-converter. The cleaned email body and the attachment text are combined into one context.",
         "height": 416,
-        "width": 544,
+        "width": 576,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         624,
-        -32
+        -48
       ],
       "typeVersion": 1,
       "id": "7db33e93-5612-41d1-938a-54233cbe64f0",
@@ -882,7 +824,7 @@
         512
       ],
       "id": "ca3d504a-c6e4-49be-b42b-cca38b1b5309",
-      "name": "Get binary data2"
+      "name": "Restore Attachment File"
     },
     {
       "parameters": {
@@ -923,7 +865,7 @@
         512
       ],
       "id": "088452ce-c2d3-4a1e-afe3-2684e4fc0afb",
-      "name": "input folder lookup"
+      "name": "Build Folder Path"
     },
     {
       "parameters": {
@@ -937,7 +879,7 @@
         384
       ],
       "id": "dcf98772-8e29-46b5-b8ef-d7328c076a4b",
-      "name": "Structured output"
+      "name": "Invoice Output Schema"
     },
     {
       "parameters": {
@@ -951,7 +893,7 @@
         384
       ],
       "id": "58ee3305-5296-4eac-b50a-d21df0e46770",
-      "name": "any LM1",
+      "name": "Extractor LLM",
       "credentials": {
         "groqApi": {
           "id": "CREDENTIAL_ID_LLM",
@@ -966,7 +908,7 @@
             {
               "id": "1e51a7f2-4bda-4d41-895f-1bacac630ed9",
               "name": "Message",
-              "value": "=EMAIL: completed\n---\nTitle ✍: {{ ($('Set File ID').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nContact 📤: `{{ $('email-info-hub').first().json.contact_email }}`\nFinished 🗄️: {{ $('subject-classifier-LM').item.json.output.type_of_document }}\n<mail-summary>\n{{ ($('subject-classifier-LM').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\n</mail-summary>",
+              "value": "=EMAIL: completed\n---\nTitle ✍: {{ ($('Set Run Config').first().json.subject || '').replace(/[*_`\\[]/g, '·') }}\nContact 📤: `{{ $('Build Email Context').first().json.contact_email }}`\nFinished 🗄️: {{ $('Classify Email').item.json.output.type_of_document }}\n<mail-summary>\n{{ ($('Classify Email').item.json.output.message || '').replace(/[*_`\\[]/g, '·') }}\n</mail-summary>",
               "type": "string"
             }
           ]
@@ -976,11 +918,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2512,
+        2672,
         352
       ],
       "id": "c76b5fb1-5cff-4836-ae49-f00661b09ac1",
-      "name": "craft report note",
+      "name": "Build Report Message",
       "notes": "Subject and summary are free text: Markdown characters in them are replaced, or Telegram rejects the report (400, can't parse entities)."
     },
     {
@@ -995,7 +937,7 @@
         32
       ],
       "id": "156955f1-eb96-4694-ba7d-e85a2d503b1d",
-      "name": "output profile"
+      "name": "Classifier Output Schema"
     },
     {
       "parameters": {
@@ -1045,12 +987,14 @@
         240
       ],
       "id": "518e5617-8bdb-49a0-80d5-a0458f0e28cb",
-      "name": "Create Attachment Profile",
-      "alwaysOutputData": true
+      "name": "Convert Attachments to Text",
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "notes": "Calls any-file2json-converter. Inputs: none set, the item and its file are passed on.\nSource: https://github.com/runfish5/micro-services/blob/main/projects/n8n/03_any-file2json-converter/workflows/any-file2json-converter.json"
     },
     {
       "parameters": {
-        "jsCode": "// Clean Email object - Smart dual-extraction for n8n Code node\n// Handles both Google One (text=footer only) and Digitec (text=HTML) cases\n// Copy this code into the \"Clean Email object\" Code node in inbox-attachment-organizer workflow\n\nconst items = $input.all();\nconst gmail = $('Gmail').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Gmail').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\nconst from = gmail.from.value[0];\nconst to = gmail.to.value[0];\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: isOutbound ? from.address : to.address,\n    contact_email: isOutbound ? to.address : from.address,\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
+        "jsCode": "// Clean Email Body - Smart dual-extraction for n8n Code node\n// Handles both Google One (text=footer only) and Digitec (text=HTML) cases\n// Copy this code into the \"Clean Email Body\" Code node in inbox-attachment-organizer workflow\n\nconst items = $input.all();\nconst gmail = $('Get Email With Attachments').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Get Email With Attachments').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\nconst from = gmail.from.value[0];\nconst to = gmail.to.value[0];\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: isOutbound ? from.address : to.address,\n    contact_email: isOutbound ? to.address : from.address,\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1059,66 +1003,18 @@
         64
       ],
       "id": "ba35ffa3-9d13-44e3-828c-71c3e1be2f5b",
-      "name": "Clean Email object"
+      "name": "Clean Email Body"
     },
     {
       "parameters": {
-        "content": "Select your `Billing_Ledger` sheet.",
-        "height": 80,
-        "width": 150,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2256,
-        304
-      ],
-      "id": "274449ec-9b13-41ae-8cd2-7c908c423c0c",
-      "name": "Sticky Note20"
-    },
-    {
-      "parameters": {
-        "content": "\n\n\n\n\n\n\nIn **Call 'gdrive-recursion'**: set `root_folder_id` to the last part of your `/Accounting` folder URL (`https://drive.google.com/drive/folders/<ID>`). `root_path` stays `/Accounting`.",
-        "height": 124,
-        "width": 728,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1328,
-        512
-      ],
-      "id": "63119480-daab-4645-a866-fe1040c14f7e",
-      "name": "Sticky Note19"
-    },
-    {
-      "parameters": {
-        "content": "\n\n\n\n\n\nTelegram is optional: connect a bot and set the chat ID in **Telegram & done**, or disable that node.",
-        "height": 428,
-        "width": 184,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2608,
-        32
-      ],
-      "id": "8a3feb6a-8161-4ca3-9fa9-3c3e93327a1c",
-      "name": "Sticky Note18"
-    },
-    {
-      "parameters": {
-        "content": "## Auto-File Email Attachments to Google Drive\n\nReads each email's attachments, files financial documents to a dated Drive folder (`Accounting/2026/05_May/Expense/`) and records the invoice in Google Sheets.\n\n### How it works\n1. The Gmail trigger picks up each new email and tags it `inProgress`.\n2. *any-file2json-converter* turns attachments (PDF, images, documents) into text.\n3. An LLM classifies the email: financial, actionable, informational or other.\n4. For financial emails, a second LLM extracts the invoice data.\n5. *gdrive-recursion* finds or creates the folder. The file is saved and the email tagged `gdr`.\n6. One row per invoice goes to `Billing_Ledger` and a report to Telegram. The email is tagged `n8n`.\n\n### Setup\nEach step in detail: [setup-guide.md](https://github.com/runfish5/micro-services/blob/main/projects/n8n/04_inbox-attachment-organizer/docs/setup-guide.md)\n- [ ] Import and publish `any-file2json-converter` and `gdrive-recursion`, then select them in **Create Attachment Profile** and **Call 'gdrive-recursion'**\n- [ ] Contact branch: import the project 02 workflows, or disable **Call 'record-search'**, **Prepare Contact Input** and **Call 'smart-CRM-fill'**\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`, and set them in **Set File ID**, **Tag n8n** and **Tag gdr**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`\n- [ ] Set `owner_name` in **Set File ID** and `root_folder_id` in **Call 'gdrive-recursion'**\n- [ ] Connect a Telegram bot, or disable **Telegram & done**\n- [ ] Publish, then send yourself an email with an invoice attached\n\n### Customization\n- Mail already in the mailbox: run `gmail-processor-datesize`. The trigger only sees new mail.\n- Other document types: extend the schema in **output profile**.\n\n📂 **[Full docs and source code on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)**\n",
-        "height": 880,
-        "width": 544
+        "content": "## File invoice emails to Google Drive and Google Sheets\n\n### How it works\n1. The workflow picks up each new email, skips promotions and tags it `inProgress`.\n2. It converts every attachment to text with the any-file2json-converter subworkflow.\n3. An LLM classifies the email as financial, actionable, informational or other.\n4. For a financial email, a second LLM extracts the invoice data from each document.\n5. It files the document to a dated Drive folder such as `Accounting/2026/05_May/Expense/` and writes one row per invoice to `Billing_Ledger`.\n6. It sends a Telegram report and tags the email `n8n`, so an email left on `inProgress` marks a failed run.\n\n### Setup steps\n- [ ] Import and publish the subworkflows any-file2json-converter, gdrive-recursion, record-search and smart-CRM-fill, then select each one in the node that calls it\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`. In **Set Run Config** set `label_ID` to the ID of `inProgress` and set your `owner_name`; select your labels in **Add n8n Label** and **Add gdr Label**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`, and select `Billing_Ledger` in **Upsert Ledger Row in Sheets**\n- [ ] In **Find or Create Drive Folder** set `root_folder_id` to the ID of your `/Accounting` folder; `root_path` stays `/Accounting`\n- [ ] Connect a Telegram bot and set the chat ID in **Send Completion Message**, or disable that node\n- [ ] Publish and send yourself an invoice. After the first run, import gmail-processor-datesize to catch up mail already in the inbox\n\n### Customization\nWithout a contact sheet, disable the three nodes in *Look up and enrich contact*. For other document types, extend **Classifier Output Schema**.\n\n📂 [Setup guide, docs and source on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)",
+        "height": 912,
+        "width": 480
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         -384,
-        -80
+        -224
       ],
       "typeVersion": 1,
       "id": "0a1cc3eb-87e8-4f42-a269-dc095849201c",
@@ -1134,7 +1030,7 @@
         },
         "folderId": {
           "__rl": true,
-          "value": "={{ $('Call \\'gdrive-recursion\\'').item.json.folder_id }}",
+          "value": "={{ $('Find or Create Drive Folder').item.json.folder_id }}",
           "mode": "id"
         },
         "options": {}
@@ -1146,7 +1042,7 @@
         512
       ],
       "id": "57dcb262-fe5a-4499-8fbf-df77d7030072",
-      "name": "save doc to folder",
+      "name": "Upload File to Drive",
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -1165,7 +1061,7 @@
         64
       ],
       "id": "ed49abc7-054b-4628-92d7-6cf770ab20a9",
-      "name": "When Executed by Another Workflow"
+      "name": "When Called for Catch-up"
     },
     {
       "parameters": {
@@ -1175,7 +1071,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## COMPANY CONTEXT:\nYOUR COMPANY: {{ $('Set File ID').first().json.company_name }}\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- accounting_category:\n  - \"Expense\" = {{ $('Set File ID').first().json.company_name }} is paying (we receive the invoice)\n  - \"Revenue\" = {{ $('Set File ID').first().json.company_name }} is billing (we send the invoice)\n- If counterparty_name contains \"{{ $('Set File ID').first().json.company_name }}\" -> always \"Revenue\"\n- document_type: \"Invoice\" (billing doc) | \"Receipt\" (payment proof)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, counterparty_name, invoice_date, total_amount_due, currency_code, subtotal_amount, tax_amount, discount_amount, due_date_or_payment_terms, payment_method, payment_reference, date_paid, purchase_order_number\n- counterparty_name = the OTHER party on the invoice (supplier for Expense, customer for Revenue)\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
+              "message": "=You are an AI invoice processor for a Swiss SaaS company. You classify documents and extract their data.\n\n## COMPANY CONTEXT:\nYOUR COMPANY: {{ $('Set Run Config').first().json.company_name }}\n\n## YOUR TASKS (in order):\n1. **Classify** the document type and accounting category\n2. **Extract** all invoice data into structured fields\n\n## CLASSIFICATION RULES:\n- accounting_category:\n  - \"Expense\" = {{ $('Set Run Config').first().json.company_name }} is paying (we receive the invoice)\n  - \"Revenue\" = {{ $('Set Run Config').first().json.company_name }} is billing (we send the invoice)\n- If counterparty_name contains \"{{ $('Set Run Config').first().json.company_name }}\" -> always \"Revenue\"\n- document_type: \"Invoice\" (billing doc) | \"Receipt\" (payment proof)\n\n## EXTRACTION RULES:\n- Use **snake_case** keys in English\n- Prioritize standard keys: invoice_number, counterparty_name, invoice_date, total_amount_due, currency_code, subtotal_amount, tax_amount, discount_amount, due_date_or_payment_terms, payment_method, payment_reference, date_paid, purchase_order_number\n- counterparty_name = the OTHER party on the invoice (supplier for Expense, customer for Revenue)\n- For line items: array of objects with item_description, quantity, unit_price, line_item_total\n- Only include keys for data that exists—do not invent values\n- If unsure about a field's purpose, prefix with `uncertain_`\n\n## OUTPUT:\nJSON only. No explanations."
             }
           ]
         },
@@ -1190,7 +1086,7 @@
         288
       ],
       "id": "0a52d145-dedd-46ff-affc-c0d64011fdcf",
-      "name": "Accountant-concierge-LM",
+      "name": "Extract Invoice Data",
       "retryOnFail": true,
       "maxTries": 4,
       "waitBetweenTries": 5000,
@@ -1204,7 +1100,7 @@
         "messages": {
           "messageValues": [
             {
-              "message": "=# Role\nYou are an email classifier for {{ $('Set File ID').first().json.owner_name }}'s inbox.\n\n## Context\n- INBOX OWNER: {{ $('Set File ID').first().json.owner_name }} ({{ $('email-info-hub').first().json.owner_email }})\n- EMAIL DIRECTION: {{ $('email-info-hub').first().json.direction }}\n- CONTACT: {{ $('email-info-hub').first().json.contact_name }} <{{ $('email-info-hub').first().json.contact_email }}>\n\n## TASK\nClassify the email and extract key information. The contact has already been identified above.\n\n## Category Rules\n- financial: ANY email involving money (invoices, receipts, payment confirmations, billing statements, refunds, subscription charges). If money is mentioned, classify as financial.\n- actionable: Needs human response but no money involved (meeting requests, decisions, deadlines).\n- informational: No action needed (newsletters, marketing, shipping updates, routine confirmations without financial content).\n- Other: None of the above.\n\n## EXTRACT DEPTH\nSet extract_depth based on how much personal detail the email reveals about the sender:\n- 1: Automated notifications, receipts, shipping updates, brief confirmations — no personal details\n- 2: Normal correspondence discussing topics, meetings, plans — mentions context but not biographical data\n- 3: Rich biographical content — contains addresses, phone numbers, job titles, company names, birthdays, interests, expertise, or other personal/professional profile data"
+              "message": "=# Role\nYou are an email classifier for {{ $('Set Run Config').first().json.owner_name }}'s inbox.\n\n## Context\n- INBOX OWNER: {{ $('Set Run Config').first().json.owner_name }} ({{ $('Build Email Context').first().json.owner_email }})\n- EMAIL DIRECTION: {{ $('Build Email Context').first().json.direction }}\n- CONTACT: {{ $('Build Email Context').first().json.contact_name }} <{{ $('Build Email Context').first().json.contact_email }}>\n\n## TASK\nClassify the email and extract key information. The contact has already been identified above.\n\n## Category Rules\n- financial: ANY email involving money (invoices, receipts, payment confirmations, billing statements, refunds, subscription charges). If money is mentioned, classify as financial.\n- actionable: Needs human response but no money involved (meeting requests, decisions, deadlines).\n- informational: No action needed (newsletters, marketing, shipping updates, routine confirmations without financial content).\n- Other: None of the above.\n\n## EXTRACT DEPTH\nSet extract_depth based on how much personal detail the email reveals about the sender:\n- 1: Automated notifications, receipts, shipping updates, brief confirmations — no personal details\n- 2: Normal correspondence discussing topics, meetings, plans — mentions context but not biographical data\n- 3: Rich biographical content — contains addresses, phone numbers, job titles, company names, birthdays, interests, expertise, or other personal/professional profile data"
             }
           ]
         },
@@ -1217,7 +1113,7 @@
         -64
       ],
       "id": "b6f8fa01-1216-41b1-8b8e-97e949437cea",
-      "name": "subject-classifier-LM",
+      "name": "Classify Email",
       "retryOnFail": true,
       "maxTries": 2
     },
@@ -1237,7 +1133,7 @@
         240
       ],
       "id": "ecfa206b-9517-47ec-bac9-cc0b60dbee22",
-      "name": "sp"
+      "name": "Split Attachments"
     },
     {
       "parameters": {
@@ -1251,7 +1147,7 @@
           "conditions": [
             {
               "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{Object.keys($('Gmail').item.binary || {}).length}}",
+              "leftValue": "={{Object.keys($('Get Email With Attachments').item.binary || {}).length}}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -1271,7 +1167,7 @@
         112
       ],
       "id": "d14916c4-5dc5-4fb8-b16c-54e93761515d",
-      "name": "Empty?",
+      "name": "If No Attachments",
       "notesInFlow": false,
       "notes": "Null-safe: binary || {} guards against emails with no attachments (binary=undefined)."
     },
@@ -1314,7 +1210,7 @@
         48
       ],
       "id": "5ed77ebb-11d6-49e3-a621-e913b3094350",
-      "name": "financial doc router"
+      "name": "Route by Email Category"
     },
     {
       "parameters": {
@@ -1348,7 +1244,7 @@
         -112
       ],
       "id": "a8941d6d-a477-429b-ae5c-a89439d266eb",
-      "name": "Stop promotions"
+      "name": "Skip Promotions"
     },
     {
       "parameters": {
@@ -1361,11 +1257,11 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2704,
+        2864,
         352
       ],
       "id": "71a49238-6e71-4f06-b2bc-300eb3ecba20",
-      "name": "Telegram & done",
+      "name": "Send Completion Message",
       "webhookId": "c38320b7-a66e-4895-b34a-bd617f36d18d",
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -1417,7 +1313,7 @@
         "options": {}
       },
       "id": "70ec0f6c-a713-4130-b833-44fc8502ddc1",
-      "name": "Set File ID",
+      "name": "Set Run Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
@@ -1428,7 +1324,7 @@
     {
       "parameters": {
         "operation": "get",
-        "messageId": "={{ $('Set File ID').item.json.email_ID }}",
+        "messageId": "={{ $('Set Run Config').item.json.email_ID }}",
         "simple": false,
         "options": {
           "dataPropertyAttachmentsPrefixName": "attachment_",
@@ -1442,7 +1338,7 @@
         256
       ],
       "id": "bd62d5a9-29fa-4bc3-9a11-dd7e751effcb",
-      "name": "Gmail",
+      "name": "Get Email With Attachments",
       "webhookId": "492741a0-0897-4fb9-8a3f-3dc1643ad5e6",
       "credentials": {
         "gmailOAuth2": {
@@ -1476,7 +1372,7 @@
         -112
       ],
       "id": "ccbaad86-095c-43b0-8c16-cde25e616bb2",
-      "name": "Gmail Trigger",
+      "name": "When Email Received",
       "credentials": {
         "gmailOAuth2": {
           "id": "CREDENTIAL_ID_GMAIL",
@@ -1487,104 +1383,72 @@
     },
     {
       "parameters": {
-        "content": "## Write ledger row",
-        "height": 224,
-        "width": 400,
+        "content": "## Write ledger row and notify\nOne row per invoice is written to `Billing_Ledger`, then a report goes to Telegram.",
+        "height": 464,
+        "width": 768,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2064,
-        272
+        2224,
+        16
       ],
       "id": "298dcd70-3657-41a8-b878-a62e0c32acd9",
       "name": "Sticky Note1"
     },
     {
       "parameters": {
-        "content": "## Mark the run as complete\n\n\n\n\n\n\n`n8n` = this run finished.\n`inProgress` still on an email = that run died, with or without an error.\n\nSearch `label:inProgress` to find them.",
-        "height": 176,
-        "width": 384,
+        "content": "## Silent failure detector\n`n8n` marks a finished run. An email still tagged `inProgress` is a run that died: search `label:inProgress`.",
+        "height": 288,
+        "width": 464,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3024,
-        -48
+        3072,
+        -96
       ],
       "id": "3b6df6ee-9b14-443a-9bfb-00fb42e4b0e4",
       "name": "Sticky Note2"
-    },
-    {
-      "parameters": {
-        "content": "## Inputs\nnone set: the current item is passed on",
-        "height": 100,
-        "width": 180,
-        "color": 5
-      },
-      "id": "1ef90623-f2ab-5c97-a58d-b20791e49efd",
-      "name": "Sticky Inputs Record Search",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2128,
-        -112
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## Inputs\nnone set: the current item is passed on",
-        "height": 100,
-        "width": 180,
-        "color": 5
-      },
-      "id": "e828dc73-fcd8-5615-b916-eb5f2e58b5a9",
-      "name": "Sticky Inputs CRM Fill",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2544,
-        -112
-      ]
     }
   ],
   "connections": {
-    "insert doc record": {
+    "Upsert Ledger Row in Sheets": {
       "main": [
         [
           {
-            "node": "craft report note",
+            "node": "Build Report Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge": {
+    "Merge All Branches": {
       "main": [
         [
           {
-            "node": "Tag n8n",
+            "node": "Add n8n Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Call 'smart-CRM-fill'": {
+    "Update Contact Record": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge All Branches",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tag gdr": {
+    "Add gdr Label": {
       "main": [
         [
           {
@@ -1599,14 +1463,14 @@
       "main": [
         [
           {
-            "node": "insert doc record",
+            "node": "Upsert Ledger Row in Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "sender_whitelist": {
+    "Filter by Sender Whitelist": {
       "main": [
         [
           {
@@ -1617,11 +1481,11 @@
         ]
       ]
     },
-    "If": {
+    "If Has Attachments": {
       "main": [
         [
           {
-            "node": "input folder lookup",
+            "node": "Build Folder Path",
             "type": "main",
             "index": 0
           }
@@ -1635,22 +1499,22 @@
         ]
       ]
     },
-    "Call 'gdrive-recursion'": {
+    "Find or Create Drive Folder": {
       "main": [
         [
           {
-            "node": "Get binary data2",
+            "node": "Restore Attachment File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "notify the category": {
+    "Send Category Message": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge All Branches",
             "type": "main",
             "index": 1
           }
@@ -1661,14 +1525,14 @@
       "main": [
         [
           {
-            "node": "Call 'smart-CRM-fill'",
+            "node": "Update Contact Record",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Call 'record-search'": {
+    "Look Up Contact": {
       "main": [
         [
           {
@@ -1683,295 +1547,295 @@
       "main": [
         [
           {
-            "node": "Accountant-concierge-LM",
+            "node": "Extract Invoice Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "email-info-hub": {
+    "Build Email Context": {
       "main": [
         [
           {
-            "node": "subject-classifier-LM",
+            "node": "Classify Email",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tag n8n": {
+    "Add n8n Label": {
       "main": [
         [
           {
-            "node": "Remove inProgress",
+            "node": "Remove inProgress Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Any LM": {
+    "Classifier LLM": {
       "ai_languageModel": [
         [
           {
-            "node": "subject-classifier-LM",
+            "node": "Classify Email",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Tag inProgress": {
+    "Add inProgress Label": {
       "main": [
         [
           {
-            "node": "Gmail",
+            "node": "Get Email With Attachments",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get binary data2": {
+    "Restore Attachment File": {
       "main": [
         [
           {
-            "node": "save doc to folder",
+            "node": "Upload File to Drive",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "input folder lookup": {
+    "Build Folder Path": {
       "main": [
         [
           {
-            "node": "Call 'gdrive-recursion'",
+            "node": "Find or Create Drive Folder",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Structured output": {
+    "Invoice Output Schema": {
       "ai_outputParser": [
         [
           {
-            "node": "Accountant-concierge-LM",
+            "node": "Extract Invoice Data",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "any LM1": {
+    "Extractor LLM": {
       "ai_languageModel": [
         [
           {
-            "node": "Accountant-concierge-LM",
+            "node": "Extract Invoice Data",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "craft report note": {
+    "Build Report Message": {
       "main": [
         [
           {
-            "node": "Telegram & done",
+            "node": "Send Completion Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "output profile": {
+    "Classifier Output Schema": {
       "ai_outputParser": [
         [
           {
-            "node": "subject-classifier-LM",
+            "node": "Classify Email",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "Create Attachment Profile": {
+    "Convert Attachments to Text": {
       "main": [
         [
           {
-            "node": "Clean Email object",
+            "node": "Clean Email Body",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Clean Email object": {
+    "Clean Email Body": {
       "main": [
         [
           {
-            "node": "email-info-hub",
+            "node": "Build Email Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "save doc to folder": {
+    "Upload File to Drive": {
       "main": [
         [
           {
-            "node": "Tag gdr",
+            "node": "Add gdr Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "When Executed by Another Workflow": {
+    "When Called for Catch-up": {
       "main": [
         [
           {
-            "node": "Set File ID",
+            "node": "Set Run Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Accountant-concierge-LM": {
+    "Extract Invoice Data": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "If Has Attachments",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "subject-classifier-LM": {
+    "Classify Email": {
       "main": [
         [
           {
-            "node": "Call 'record-search'",
+            "node": "Look Up Contact",
             "type": "main",
             "index": 0
           },
           {
-            "node": "notify the category",
+            "node": "Send Category Message",
             "type": "main",
             "index": 0
           },
           {
-            "node": "financial doc router",
+            "node": "Route by Email Category",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "sp": {
+    "Split Attachments": {
       "main": [
         [
           {
-            "node": "Create Attachment Profile",
+            "node": "Convert Attachments to Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Empty?": {
+    "If No Attachments": {
       "main": [
         [
           {
-            "node": "Clean Email object",
+            "node": "Clean Email Body",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "sp",
+            "node": "Split Attachments",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "financial doc router": {
+    "Route by Email Category": {
       "main": [
         [
           {
-            "node": "sender_whitelist",
+            "node": "Filter by Sender Whitelist",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Merge",
+            "node": "Merge All Branches",
             "type": "main",
             "index": 2
           }
         ]
       ]
     },
-    "Stop promotions": {
+    "Skip Promotions": {
       "main": [
         [
           {
-            "node": "Set File ID",
+            "node": "Set Run Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Telegram & done": {
+    "Send Completion Message": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge All Branches",
             "type": "main",
             "index": 2
           }
         ]
       ]
     },
-    "Set File ID": {
+    "Set Run Config": {
       "main": [
         [
           {
-            "node": "Tag inProgress",
+            "node": "Add inProgress Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gmail": {
+    "Get Email With Attachments": {
       "main": [
         [
           {
-            "node": "Empty?",
+            "node": "If No Attachments",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gmail Trigger": {
+    "When Email Received": {
       "main": [
         [
           {
-            "node": "Stop promotions",
+            "node": "Skip Promotions",
             "type": "main",
             "index": 0
           }
