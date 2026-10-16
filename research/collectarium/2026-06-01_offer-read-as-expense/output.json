@@ -1,0 +1,22 @@
+{
+  "_what": "Billing_Ledger row written by Extract Invoice Data, read back by expense-trend-report run 9193 (2026-10-01)",
+  "row": {
+    "row_number": 73,
+    "accounting_category": "Expense",
+    "invoice_status": "",
+    "invoice_number": "N/A",
+    "attachment_count": 0,
+    "email_id": "olly@senja.io",
+    "counterparty_name": "Olly",
+    "invoice_date": "2026-06-01",
+    "subtotal_amount": 150,
+    "currency_code": "USD",
+    "payment_method": "-",
+    "due_date_or_payment_terms": "upon receipt",
+    "payment_reference": "-",
+    "date_paid": "-",
+    "tax_amount": "-",
+    "discount_amount": "-",
+    "purchase_order_number": "-"
+  }
+}

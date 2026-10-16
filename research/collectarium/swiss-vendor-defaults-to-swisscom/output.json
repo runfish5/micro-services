@@ -1,0 +1,36 @@
+{
+  "_what": "Billing_Ledger rows naming Swisscom, read 2026-10-16. Suspects, not confirmed: no source mail recorded (email_id empty), and '12345678' is a placeholder pattern. The operator's mobile provider is TalkTalk.",
+  "rows": [
+    {
+      "counterparty_name": "Swisscom (Schweiz) AG",
+      "invoice_date": "2024-05-27",
+      "subtotal_amount": 119.9,
+      "currency_code": "CHF",
+      "email_id": "",
+      "invoice_number": "",
+      "payment_method": "-"
+    },
+    {
+      "accounting_category": "Expense",
+      "counterparty_name": "Swisscom (Schweiz) AG",
+      "invoice_date": "2024-06-15",
+      "subtotal_amount": 249,
+      "currency_code": "CHF",
+      "email_id": "",
+      "invoice_number": "",
+      "payment_method": "-"
+    },
+    {
+      "accounting_category": "Expense",
+      "counterparty_name": "Swisscom (Schweiz) AG",
+      "invoice_number": "2024-06-RC-12345678",
+      "invoice_date": "2024-06-30",
+      "subtotal_amount": 199.9,
+      "currency_code": "CHF",
+      "payment_method": "Direct debit",
+      "due_date_or_payment_terms": "2024-07-14",
+      "tax_amount": 15.37,
+      "email_id": ""
+    }
+  ]
+}
