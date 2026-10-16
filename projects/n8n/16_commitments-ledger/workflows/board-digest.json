@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Kanban view of the Tasks sheet\n\n### How it works\n1. The 🗂 Kanban button under the briefing calls it through menu-handler (agent `board`). It also works as a briefing plugin (`key: 'board'`).\n2. It reads the `Tasks` tab of the Billing_Ledger spreadsheet.\n3. It sorts every row into three columns by `status`: `open` is To do, `assigned` is Doing, and `done` stays under Done for seven days after `closed_at`.\n4. A bill whose `charge_date` is still ahead is left out until it can be acted on.\n5. It returns a Markdown reply, or a plain-text section when called as a plugin.\n\n### Setup steps\n- [ ] Select your Google Sheets credential and the Billing_Ledger document in **Get Tasks**\n- [ ] Add `board` to the menu-handler `Config` agents and a `briefing:board` button to the briefing keyboard\n- [ ] Add a card by typing a row into `Tasks`: `task_id`, `action`, `status` open",
+        "content": "## Kanban view of the Tasks sheet\n\n### How it works\n1. The 🗂 Kanban button under the briefing calls it through menu-handler (agent `board`). It also works as a briefing plugin (`key: 'board'`).\n2. It reads the `Tasks` tab of the Billing_Ledger spreadsheet.\n3. It sorts every row into three columns by `status`: `open` is To do, `assigned` is Doing, and `done` stays under Done for seven days after `closed_at`.\n4. A bill whose `charge_date` is still ahead is left out until it can be acted on.\n5. `/board add <text>`, `/board doing <n>`, `/board done <n>` change a card; **Save Card** upserts it on `task_id`.\n6. It returns a Markdown reply, or a plain-text section when called as a plugin.\n\n### Setup steps\n- [ ] Select your Google Sheets credential and the Billing_Ledger document in **Get Tasks**\n- [ ] Add `board` to the menu-handler `Config` agents and a `briefing:board` button to the briefing keyboard\n- [ ] Add a card by typing a row into `Tasks`: `task_id`, `action`, `status` open",
         "height": 420,
         "width": 420
       },
@@ -11,7 +11,7 @@
       "typeVersion": 1,
       "position": [
         -480,
-        -120
+        -180
       ],
       "id": "c2000000-0000-4000-8000-000000000004",
       "name": "Sticky Note"
@@ -65,7 +65,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// The Kanban: every Tasks row by status. Behind the briefing's 🗂 Kanban button.\n//\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md. Plain text only.\n// No buttons: the sections that own a card (COMMITMENTS, UPKEEP) carry them.\n// Columns are statuses. A card gets in by being a row in Tasks.\n\nconst DONE_DAYS = 7;   // how long a finished card stays visible\nconst PER_COL   = 8;   // longer columns say how many were left out\n\nconst input = $('Called').first().json;\nconst today = String(input.date || $now.toFormat('yyyy-MM-dd')).slice(0, 10);\nconst since = new Date(Date.parse(today + 'T00:00:00Z') - DONE_DAYS * 864e5).toISOString().slice(0, 10);\n\nconst s = (v) => String(v ?? '').trim();\nconst rows = $('Get Tasks').all().map((i) => i.json).filter((r) => r && s(r.task_id));\n\n// A bill that has not been charged yet is not a card yet.\nconst live = rows.filter((r) => !s(r.charge_date) || s(r.charge_date).slice(0, 10) <= today);\n\nconst card = (r) => {\n  const what = s(r.vendor) ? s(r.vendor) + ' · ' + s(r.action) : s(r.action) || s(r.task_id);\n  const due  = s(r.due_date) ? ' · due ' + s(r.due_date).slice(0, 10) : '';\n  return what + due;\n};\nconst byDue = (a, b) => (s(a.due_date) || '9').localeCompare(s(b.due_date) || '9');\n\nconst st = (r) => s(r.status).toLowerCase();\nconst columns = [\n  ['To do', live.filter((r) => !['assigned', 'done', 'wont_fix', 'cancelled'].includes(st(r))).sort(byDue)],\n  ['Doing', live.filter((r) => st(r) === 'assigned').sort(byDue)],\n  ['Done',  live.filter((r) => st(r) === 'done' && s(r.closed_at).slice(0, 10) >= since)],\n];\n\nconst blocks = columns\n  .filter(([, list]) => list.length)\n  .map(([heading, list]) => ({\n    heading: heading + ' (' + list.length + ')',\n    items: list.slice(0, PER_COL).map(card)\n      .concat(list.length > PER_COL ? ['… +' + (list.length - PER_COL) + ' more'] : []),\n  }));\n\n// Two callers. The briefing registry passes key 'board' and gets a section.\n// The menu button (menu-handler, agent 'board') gets a reply; Send Reply there\n// parses Markdown, so the characters that open an entity are replaced.\nif (input.key === 'board') {\n  // Always one item: silence would look like a crash.\n  return [{ json: { key: 'board', icon: '🗂', title: 'BOARD', blocks, empty: 'No cards' } }];\n}\nconst md = (t) => String(t).replace(/[*_`\\[]/g, '·');\nconst response = '🗂 *Kanban*' + (blocks.length\n  ? blocks.map((b) => '\\n\\n*' + md(b.heading) + '*' + b.items.map((i) => '\\n  ' + md(i)).join('')).join('')\n  : '\\n\\nNo cards');\nreturn [{ json: { response } }];\n"
+        "jsCode": "// The Kanban: every Tasks row by status. Behind the briefing's 🗂 Kanban button\n// (menu-handler agent 'board') and the /board command.\n//\n//   /board              show the board, open cards numbered\n//   /board add <text>   new card in To do\n//   /board doing <n>    card n to Doing      /board done <n>   card n to Done\n//\n// A change goes out as `write` and Save Card upserts it on task_id. Rows that\n// belong to commitments or upkeep can be moved too: done is done, whoever owns it.\n\nconst DONE_DAYS = 7;   // how long a finished card stays visible\nconst PER_COL   = 8;   // longer columns say how many were left out\n\nconst input = $('Called').first().json;\nconst today = String(input.date || $now.toFormat('yyyy-MM-dd')).slice(0, 10);\nconst since = new Date(Date.parse(today + 'T00:00:00Z') - DONE_DAYS * 864e5).toISOString().slice(0, 10);\n\nconst s  = (v) => String(v ?? '').trim();\nconst st = (r) => s(r.status).toLowerCase();\nconst rows = $('Get Tasks').all().map((i) => i.json).filter((r) => r && s(r.task_id));\n\n// A bill that has not been charged yet is not a card yet.\nconst isLive = (r) => !s(r.charge_date) || s(r.charge_date).slice(0, 10) <= today;\nconst byDue  = (a, b) => (s(a.due_date) || '9').localeCompare(s(b.due_date) || '9')\n  || s(a.task_id).localeCompare(s(b.task_id));\nconst isTodo = (r) => !['assigned', 'done', 'wont_fix', 'cancelled'].includes(st(r));\n\n// Numbers follow the board as last shown: To do first, then Doing.\nconst open = [...rows.filter((r) => isLive(r) && isTodo(r)).sort(byDue),\n              ...rows.filter((r) => isLive(r) && st(r) === 'assigned').sort(byDue)];\n\nconst card = (r) => {\n  const what = s(r.vendor) ? s(r.vendor) + ' · ' + s(r.action) : s(r.action) || s(r.task_id);\n  const due  = s(r.due_date) ? ' · due ' + s(r.due_date).slice(0, 10) : '';\n  return what + due;\n};\n// ---- command ----------------------------------------------------------------\nconst cmd = s(input.text).match(/^(add|doing|done)\\s+(.+)$/i);\nlet write = null;\nlet note  = '';\nif (cmd) {\n  const verb = cmd[1].toLowerCase();\n  const arg  = cmd[2].trim();\n  const now  = $now.toISO();\n  if (verb === 'add') {\n    const slug = arg.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'card';\n    write = { task_id: 'card::' + slug + '@' + today, action: arg, status: 'open',\n              assignee: '', assigned_at: '', closed_at: '', source: 'board' };\n    note = 'Added: ' + arg;\n  } else {\n    const r = open[Number(arg) - 1];\n    if (!r) {\n      note = 'No open card ' + arg + '.';\n    } else {\n      write = { task_id: s(r.task_id), action: s(r.action), source: s(r.source),\n                status: verb === 'done' ? 'done' : 'assigned',\n                assignee: s(r.assignee) || 'me',\n                assigned_at: s(r.assigned_at) || now,\n                closed_at: verb === 'done' ? now : '' };\n      note = (verb === 'done' ? 'Done: ' : 'Doing: ') + card(r);\n    }\n  }\n  if (write) {   // show the board as it will be after the write\n    const i = rows.findIndex((r) => s(r.task_id) === write.task_id);\n    if (i >= 0) rows[i] = { ...rows[i], ...write }; else rows.push(write);\n  }\n}\n\n// ---- columns ----------------------------------------------------------------\nconst todo  = rows.filter((r) => isLive(r) && isTodo(r)).sort(byDue);\nconst doing = rows.filter((r) => isLive(r) && st(r) === 'assigned').sort(byDue);\nconst done  = rows.filter((r) => isLive(r) && st(r) === 'done' && s(r.closed_at).slice(0, 10) >= since);\n\nlet n = 0;\nconst numbered = (list) => list.map((r) => (++n) + '. ' + card(r));\nconst columns = [['To do', numbered(todo)], ['Doing', numbered(doing)], ['Done', done.map(card)]];\nconst blocks = columns\n  .filter(([, items]) => items.length)\n  .map(([heading, items]) => ({\n    heading: heading + ' (' + items.length + ')',\n    items: items.slice(0, PER_COL).concat(items.length > PER_COL ? ['… +' + (items.length - PER_COL) + ' more'] : []),\n  }));\n\n// Briefing plugin call: key 'board', plain-text section, no commands.\nif (input.key === 'board') {\n  return [{ json: { key: 'board', icon: '🗂', title: 'BOARD', blocks, empty: 'No cards' } }];\n}\n\n// Menu call: Send Reply there parses Markdown, so entity characters are replaced.\nconst md = (t) => String(t).replace(/[*_`\\[]/g, '·');\nconst response = (note ? md(note) + '\\n\\n' : '') + '🗂 *Kanban*'\n  + (blocks.length\n    ? blocks.map((b) => '\\n\\n*' + md(b.heading) + '*' + b.items.map((i) => '\\n  ' + md(i)).join('')).join('')\n    : '\\n\\nNo cards')\n  + '\\n\\n/board add <text> · /board doing <n> · /board done <n>';\nreturn [{ json: { response, write } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -75,6 +75,206 @@
       ],
       "id": "c2000000-0000-4000-8000-000000000003",
       "name": "Build Section"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2000000-0000-4000-8000-0000000000a1",
+              "leftValue": "={{ !!$json.write }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "c2000000-0000-4000-8000-000000000005",
+      "name": "Has Write"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_BILLING_LEDGER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "task_id"
+          ],
+          "value": {
+            "task_id": "={{ $json.write.task_id }}",
+            "action": "={{ $json.write.action }}",
+            "status": "={{ $json.write.status }}",
+            "assignee": "={{ $json.write.assignee }}",
+            "assigned_at": "={{ $json.write.assigned_at }}",
+            "closed_at": "={{ $json.write.closed_at }}",
+            "source": "={{ $json.write.source }}"
+          },
+          "schema": [
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assignee",
+              "displayName": "assignee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assigned_at",
+              "displayName": "assigned_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "closed_at",
+              "displayName": "closed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        -100
+      ],
+      "id": "c2000000-0000-4000-8000-000000000006",
+      "name": "Save Card",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "Upserts on task_id. Writes only the seven board columns; a commitment row keeps its vendor, amount and dates.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c2000000-0000-4000-8000-0000000000a2",
+              "name": "response",
+              "value": "={{ $('Build Section').first().json.response }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "c2000000-0000-4000-8000-000000000007",
+      "name": "Return Reply",
+      "notes": "Both branches end here, so the caller always gets the last node's item: the reply, or the briefing section untouched."
+    },
+    {
+      "parameters": {
+        "content": "## Save a changed card\nA /board command returns a write. It is upserted on task_id, then both branches return the reply.",
+        "height": 340,
+        "width": 620,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -180
+      ],
+      "id": "c2000000-0000-4000-8000-000000000008",
+      "name": "Sticky Note1"
     }
   ],
   "connections": {
@@ -94,6 +294,46 @@
         [
           {
             "node": "Build Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Section": {
+      "main": [
+        [
+          {
+            "node": "Has Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Write": {
+      "main": [
+        [
+          {
+            "node": "Save Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Card": {
+      "main": [
+        [
+          {
+            "node": "Return Reply",
             "type": "main",
             "index": 0
           }

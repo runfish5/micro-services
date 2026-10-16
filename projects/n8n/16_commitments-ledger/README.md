@@ -253,8 +253,10 @@ other two producers: `10_error-handler/docs/upkeep-tasks-spec.md`.
 `workflows/board-digest.json` (live `HGEUEyWfFhKi9EAZ`) is the BOARD section of the morning
 briefing: every `Tasks` row in three columns by `status`. `open` → To do, `assigned` → Doing,
 `done` with `closed_at` in the last 7 days → Done. A row whose `charge_date` is still ahead is not
-a card yet. It has no buttons; COMMITMENTS and UPKEEP keep theirs. **A card is added by typing a
-row:** `task_id`, `action` (the card text), `status: open`, optionally `due_date`.
+a card yet. It opens from the 🗂 Kanban button under the briefing or `/board`, and changes cards
+from Telegram: `/board add <text>` (a `card::<slug>@<date>` row, `source: board`),
+`/board doing <n>`, `/board done <n>`, numbered as last shown. `Save Card` upserts on `task_id`
+and writes only `task_id, action, status, assignee, assigned_at, closed_at, source`.
 
 Paste into row 1 of a `Tasks` tab in the same spreadsheet:
 
