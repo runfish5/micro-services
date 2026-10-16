@@ -1,0 +1,110 @@
+{
+  "name": "board-digest",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Kanban view of the Tasks sheet\n\n### How it works\n1. The 🗂 Kanban button under the briefing calls it through menu-handler (agent `board`). It also works as a briefing plugin (`key: 'board'`).\n2. It reads the `Tasks` tab of the Billing_Ledger spreadsheet.\n3. It sorts every row into three columns by `status`: `open` is To do, `assigned` is Doing, and `done` stays under Done for seven days after `closed_at`.\n4. A bill whose `charge_date` is still ahead is left out until it can be acted on.\n5. It returns a Markdown reply, or a plain-text section when called as a plugin.\n\n### Setup steps\n- [ ] Select your Google Sheets credential and the Billing_Ledger document in **Get Tasks**\n- [ ] Add `board` to the menu-handler `Config` agents and a `briefing:board` button to the briefing keyboard\n- [ ] Add a card by typing a row into `Tasks`: `task_id`, `action`, `status` open",
+        "height": 420,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -120
+      ],
+      "id": "c2000000-0000-4000-8000-000000000004",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c2000000-0000-4000-8000-000000000001",
+      "name": "Called"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_BILLING_LEDGER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tasks",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "id": "c2000000-0000-4000-8000-000000000002",
+      "name": "Get Tasks",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "Same sheet as upkeep-digest and commitments. Retries because the 07:00 briefing runs every plugin within a minute and Sheets answers 'too many requests'.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The Kanban: every Tasks row by status. Behind the briefing's 🗂 Kanban button.\n//\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md. Plain text only.\n// No buttons: the sections that own a card (COMMITMENTS, UPKEEP) carry them.\n// Columns are statuses. A card gets in by being a row in Tasks.\n\nconst DONE_DAYS = 7;   // how long a finished card stays visible\nconst PER_COL   = 8;   // longer columns say how many were left out\n\nconst input = $('Called').first().json;\nconst today = String(input.date || $now.toFormat('yyyy-MM-dd')).slice(0, 10);\nconst since = new Date(Date.parse(today + 'T00:00:00Z') - DONE_DAYS * 864e5).toISOString().slice(0, 10);\n\nconst s = (v) => String(v ?? '').trim();\nconst rows = $('Get Tasks').all().map((i) => i.json).filter((r) => r && s(r.task_id));\n\n// A bill that has not been charged yet is not a card yet.\nconst live = rows.filter((r) => !s(r.charge_date) || s(r.charge_date).slice(0, 10) <= today);\n\nconst card = (r) => {\n  const what = s(r.vendor) ? s(r.vendor) + ' · ' + s(r.action) : s(r.action) || s(r.task_id);\n  const due  = s(r.due_date) ? ' · due ' + s(r.due_date).slice(0, 10) : '';\n  return what + due;\n};\nconst byDue = (a, b) => (s(a.due_date) || '9').localeCompare(s(b.due_date) || '9');\n\nconst st = (r) => s(r.status).toLowerCase();\nconst columns = [\n  ['To do', live.filter((r) => !['assigned', 'done', 'wont_fix', 'cancelled'].includes(st(r))).sort(byDue)],\n  ['Doing', live.filter((r) => st(r) === 'assigned').sort(byDue)],\n  ['Done',  live.filter((r) => st(r) === 'done' && s(r.closed_at).slice(0, 10) >= since)],\n];\n\nconst blocks = columns\n  .filter(([, list]) => list.length)\n  .map(([heading, list]) => ({\n    heading: heading + ' (' + list.length + ')',\n    items: list.slice(0, PER_COL).map(card)\n      .concat(list.length > PER_COL ? ['… +' + (list.length - PER_COL) + ' more'] : []),\n  }));\n\n// Two callers. The briefing registry passes key 'board' and gets a section.\n// The menu button (menu-handler, agent 'board') gets a reply; Send Reply there\n// parses Markdown, so the characters that open an entity are replaced.\nif (input.key === 'board') {\n  // Always one item: silence would look like a crash.\n  return [{ json: { key: 'board', icon: '🗂', title: 'BOARD', blocks, empty: 'No cards' } }];\n}\nconst md = (t) => String(t).replace(/[*_`\\[]/g, '·');\nconst response = '🗂 *Kanban*' + (blocks.length\n  ? blocks.map((b) => '\\n\\n*' + md(b.heading) + '*' + b.items.map((i) => '\\n  ' + md(i)).join('')).join('')\n  : '\\n\\nNo cards');\nreturn [{ json: { response } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "c2000000-0000-4000-8000-000000000003",
+      "name": "Build Section"
+    }
+  ],
+  "connections": {
+    "Called": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Build Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Zurich",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}

@@ -42,7 +42,10 @@
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets OAuth"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -72,7 +75,10 @@
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
           "name": "Google Sheets OAuth"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {

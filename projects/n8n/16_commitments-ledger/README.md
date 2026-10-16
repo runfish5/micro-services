@@ -248,6 +248,14 @@ and the upkeep lifecycle stay mutually invisible with no code guarding the bound
 a column here should not assume it is free to be finance-shaped. Design and reasoning for the
 other two producers: `10_error-handler/docs/upkeep-tasks-spec.md`.
 
+### The board reads every row
+
+`workflows/board-digest.json` (live `HGEUEyWfFhKi9EAZ`) is the BOARD section of the morning
+briefing: every `Tasks` row in three columns by `status`. `open` → To do, `assigned` → Doing,
+`done` with `closed_at` in the last 7 days → Done. A row whose `charge_date` is still ahead is not
+a card yet. It has no buttons; COMMITMENTS and UPKEEP keep theirs. **A card is added by typing a
+row:** `task_id`, `action` (the card text), `status: open`, optionally `due_date`.
+
 Paste into row 1 of a `Tasks` tab in the same spreadsheet:
 
 ```

@@ -102,6 +102,12 @@
                     }
                   },
                   {
+                    "text": "🗂 Kanban",
+                    "additionalFields": {
+                      "callback_data": "briefing:board"
+                    }
+                  },
+                  {
                     "text": "❓ Help",
                     "additionalFields": {
                       "callback_data": "briefing:help"
