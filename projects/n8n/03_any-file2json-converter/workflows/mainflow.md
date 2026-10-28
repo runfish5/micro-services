@@ -3,22 +3,22 @@
 ```
 Trigger → Set Default Extraction → Split Files and Build Schema → Route by File Type
                                                     │
-   ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐
-   0      1      2      3      4      5      6      7      8
- image   pdf   json  excel  gsheet  text   csv   URL  fallback
-   │      │      │      │      │      │      │      │      │
-   │      └──────┴──────┴──────┴──────┴──────┴──────┘      │
-   │                          │                            │
-   │                  If Schema Provided                   │
-   │                     /      \                          │
-   │                  Yes        No                        │
-   │                   │          │                        │
-   │           Text-to-Structured │               Mark Unsupported File
-   │              (LLM)           │                        │
-   │                   │          │                        │
-   └───────────────────┴──────────┴────────────────────────┘
-                              │
-                        Return Result
+   ┌──────┬──────┬──────┬───────┬───────┬──────┬───────┐
+   0      1      2      3       4       5      6       7
+ image   pdf   json  excel  gsheet/csv text   URL   fallback
+   │      │      │      │       │       │      │       │
+   │      └──────┴──────┴───────┴───────┴──────┘       │
+   │                       │                           │
+   │               If Schema Provided                  │
+   │                  /      \                         │
+   │               Yes        No                       │
+   │                │          │                       │
+   │        Text-to-Structured │              Mark Unsupported File
+   │           (LLM)           │                       │
+   │                │          │                       │
+   └────────────────┴──────────┴───────────────────────┘
+                           │
+                     Return Result
 ```
 
 A step that fails fails the run: the caller's Execute Workflow node fails too and its error workflow sees
@@ -28,15 +28,14 @@ it. A caller that wants per-file results sets its own Execute Workflow node to c
 
 | # | MIME | Handler |
 |---|------|---------|
-| 0 | `image/*` except `svg` | Convert Image Format → Image-to-Text (vision LLM) |
+| 0 | `image/*` except `svg` | Convert Image Format → Check Vision Quota → Gate Vision Requests → Loop Over Images → If Vision Quota Left → Read Vision Slot → Take Vision Slot → If Slot Taken (lost the race: read again) → Pace Vision Requests (until the slot, 13 s apart across all runs) → Restore Vision Image → Image-to-Text (vision LLM), one image per pass. Image-to-Text error → Read Quota Error → Classify Vision Error (per-day 429: `status: stopped`; per-minute 429: retry; else rethrow) → If Minute Limit → Wait Out Vision Limit → Read Vision Slot, or → Remember Vision Quota → Pass Stopped Image |
 | 1 | `application/pdf` | Extract PDF Text → If Schema Provided |
 | 2 | `application/json` | Extract JSON Content → If Schema Provided |
 | 3 | `application/vnd.ms-excel`, `…spreadsheetml.sheet` (.xlsx) | Extract Excel Rows → Aggregate Rows → Join Rows into Text → If Schema Provided |
-| 4 | `application/vnd.google-apps.spreadsheet` | Extract CSV Rows → Aggregate Rows → Join Rows into Text → If Schema Provided |
+| 4 | `application/vnd.google-apps.spreadsheet`, `text/csv` | Extract CSV Rows → Aggregate Rows → Join Rows into Text → If Schema Provided |
 | 5 | `application/vnd.google-apps.document`, `*svg*`, `text/plain\|markdown\|html\|xml`, `application/xml` | Extract Document Text → If Schema Provided |
-| 6 | `text/csv` | Extract CSV Rows → Aggregate Rows → Join Rows into Text → If Schema Provided |
-| 7 | `text/x-url` (pseudo) | Fetch URL as Text (r.jina.ai, 3 tries) → If Schema Provided |
-| 8 | fallback | Mark Unsupported File (`status: unsupported`) |
+| 6 | `text/x-url` (pseudo) | Fetch URL as Text (r.jina.ai, 3 tries) → If Schema Provided |
+| 7 | fallback | Mark Unsupported File (`status: unsupported`) |
 
 SVG is excluded from rule 0 on purpose: the image converter has no decode delegate for it.
 A MIME label is a category, not a capability. See root `CLAUDE.md` § SVG.

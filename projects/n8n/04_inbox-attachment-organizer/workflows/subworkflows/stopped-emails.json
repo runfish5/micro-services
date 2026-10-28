@@ -1,0 +1,431 @@
+{
+  "name": "stopped-emails",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Stopped emails\n### How it works\nWhen an LLM's free daily quota is used up (vision, classifier, invoice extractor or contact fill), the inbox organizer holds the email back instead of filing it half done, and writes one row per email to the n8n data table `stopped_emails`. This workflow is the other side of that list, behind one trigger with two callers.\n\nThe 7 AM briefing calls it as the `inbox` plugin: while rows remain, it puts one alert in NEEDS ATTENTION naming the first emails; on a quiet day it says nothing.\n\n`/rerun_attachments` (or the Rerun button on the stop message) arrives through menu-handler: the vision block is cleared, every held-back email runs through the organizer again, 45 s apart, and each email that is filed takes its own row off the list. An email whose quota is still used up is stopped again, without a new message, and stays listed. The reply says how many were filed and how many are still waiting.\n\n### Setup steps\n1. Create the data tables `stopped_emails` and `vision_quota` (columns in the node notes) and put their ids in the data table nodes here, in the organizer and in any-file2json-converter.\n2. Put the organizer's workflow id in Rerun Each Email.\n3. Register this workflow in menu-handler's Config (`rerun_attachments`) and in the briefing's Plugins (`inbox`), then activate it.",
+        "height": 560,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -288
+      ],
+      "id": "3ae65ebe-7cf6-46bc-a7c1-ae0d4cd3bee9",
+      "name": "Overview"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "df02081a-f894-424e-afbc-df3da3660aa0",
+      "name": "When Called by Briefing or Menu"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_STOPPED_EMAILS_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "260b0662-afa1-4bcd-a393-7f592e12594d",
+      "name": "Read Stopped Emails",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "68b43e0c-bd3a-4e0f-bb3d-19ade7633b54",
+              "leftValue": "={{ $('When Called by Briefing or Menu').first().json.key }}",
+              "rightValue": "inbox",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "018d1bc2-bcd3-4664-8581-61e21a79f437",
+      "name": "If Briefing Asks"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Briefing plugin, contract: 05_daily-briefing/docs/briefing-plugin-spec.md. Plain text only.\n// Says nothing on a quiet day (empty: ''), and only an alert when emails are held back.\nconst rows = $('Read Stopped Emails').all().map((i) => i.json).filter((r) => r && r.message_id);\nconst section = { key: 'inbox', icon: '📥', title: 'INBOX', summary: '', blocks: [], empty: '' };\nif (!rows.length) return [{ json: section }];\nconst reset = rows.map((r) => r.resets_at).filter(Boolean).sort().pop();\nconst back = !reset || Date.parse(reset) <= Date.now();\nconst when = reset ? DateTime.fromISO(reset).setZone('Europe/Zurich').toFormat(\"dd.MM. HH:mm 'UTC'Z\") : '';\nconst STAGE = { vision: 'attachment reading', classifier: 'classification', extractor: 'invoice extraction', 'contact fill': 'contact update' };\nconst stage = (r) => STAGE[r.stopped_by] || 'attachment reading';\nconst stages = [...new Set(rows.map(stage))].join(', ');\nconst clip = (v, n) => { const s = String(v ?? '').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };\nconst n = rows.length;\nconst SHOWN = 3;\nsection.blocks.push({ level: 'alert', items: [\n  n + (n === 1 ? ' email' : ' emails') + ' held back: an LLM daily limit stopped ' + stages + '\\n'\n  + (back ? 'the quota is back: send /rerun_attachments' : 'send /rerun_attachments after it resets ' + when + ', or change the model') + '\\n'\n  + rows.slice(0, SHOWN).map((r) => clip(r.subject || '(no subject)', 40) + ' · since ' + String(r.stopped_at || '').slice(0, 10)).join('\\n')\n  + (n > SHOWN ? '\\n+' + (n - SHOWN) + ' more' : ''),\n] });\nreturn [{ json: section }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -160
+      ],
+      "id": "ad216c3d-d6d7-4616-a0b3-fd5ce344bca6",
+      "name": "Build Inbox Section"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d77c0479-b3ba-4ed5-9057-54760a649eee",
+              "leftValue": "={{ $('Read Stopped Emails').all().some((i) => i.json.message_id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        96
+      ],
+      "id": "ac20fa47-8a77-4d8f-b1fb-aca03b1d6b91",
+      "name": "If Any Stopped"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_VISION_QUOTA_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "model",
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        768,
+        0
+      ],
+      "id": "a4bf4534-cbb7-4c10-9d53-3b58a0f68394",
+      "name": "Clear Vision Block",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "notes": "Empties vision_quota (written by any-file2json-converter) so a changed key is tried at once. If the quota is still used up, the first image is refused (costs nothing) and the block is written again."
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per held-back email, shaped like the Gmail trigger item the organizer's catch-up entry reads.\nreturn $('Read Stopped Emails').all().map((i) => i.json).filter((r) => r && r.message_id)\n  .map((r) => ({ json: { id: r.message_id } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        0
+      ],
+      "id": "4baaa172-1349-424d-b80f-026fc47d8780",
+      "name": "List Stopped Emails"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "OxCveU5jAa3uk_3DhRMra"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1472,
+        112
+      ],
+      "id": "83fca2b3-9a4a-4abc-a700-59ac30a8cf5d",
+      "name": "Rerun Each Email",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "notes": "Calls 04_inbox-attachment-organizer once per email, 45 s apart. Inputs: none set, the item {id} is passed through to its catch-up entry. A filed email clears its own row; a failed one alerts from its own run."
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_STOPPED_EMAILS_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        0
+      ],
+      "id": "9c14b204-6d2c-45ad-98be-c028781bd371",
+      "name": "Read Stopped Again",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// The reply goes out through menu-handler's Send Reply (Markdown), so no _ * ` [ in it.\nconst clean = (s) => String(s).replace(/[_*`\\[\\]]/g, '');\nconst before = $('Read Stopped Emails').all().map((i) => i.json).filter((r) => r && r.message_id);\nif (!before.length) return [{ json: { response: 'Nothing is held back.' } }];\nconst after = $('Read Stopped Again').all().map((i) => i.json).filter((r) => r && r.message_id);\nconst filed = before.filter((b) => !after.some((a) => a.message_id === b.message_id)).length;\nlet text = 'Rerun: ' + filed + ' of ' + before.length + ' filed.';\nif (after.length) {\n  const reset = after.map((r) => r.resets_at).filter(Boolean).sort().pop();\n  text += ' Still held back: ' + after.length + ' (' + after.slice(0, 5).map((r) => clean(r.subject || '(no subject)').slice(0, 40)).join('; ') + ').'\n    + (reset ? ' Quota resets ' + DateTime.fromISO(reset).setZone('Europe/Zurich').toFormat(\"dd.MM. HH:mm 'UTC'Z\") + '.' : '');\n}\nreturn [{ json: { response: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        96
+      ],
+      "id": "b0ab8bda-839c-46fa-ae33-dde92d2b1403",
+      "name": "Build Rerun Reply"
+    },
+    {
+      "parameters": {
+        "content": "## Rerun on request\nClears the vision block, runs every held-back email again 45 s apart, replies with what is still waiting.",
+        "height": 336,
+        "width": 1496,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        -64
+      ],
+      "id": "07d9441e-92c4-4af8-971e-1032e4733478",
+      "name": "Sticky Rerun"
+    },
+    {
+      "id": "a3c1e7d2-5b8f-4e09-9d6a-2f4b8c1e7a35",
+      "name": "Loop Over Stopped Emails",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "b7d2f9e4-1c6a-4f83-8e5b-3a9c0d2f6b18",
+      "name": "Pause Between Emails",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1296,
+        112
+      ],
+      "webhookId": "c4e8a1f6-9b3d-4c72-a5e0-7d1f3b9c2e46",
+      "notesInFlow": false,
+      "notes": "45 s before every email but the first, so the reruns' LLM calls stay under the per-minute limits. Under 65 s, so n8n keeps the run in memory.",
+      "parameters": {
+        "amount": "={{ $runIndex === 0 ? 0 : 45 }}"
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Briefing or Menu": {
+      "main": [
+        [
+          {
+            "node": "Read Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Stopped Emails": {
+      "main": [
+        [
+          {
+            "node": "If Briefing Asks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Briefing Asks": {
+      "main": [
+        [
+          {
+            "node": "Build Inbox Section",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If Any Stopped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Any Stopped": {
+      "main": [
+        [
+          {
+            "node": "Clear Vision Block",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Rerun Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Vision Block": {
+      "main": [
+        [
+          {
+            "node": "List Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Stopped Emails": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rerun Each Email": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Stopped Again": {
+      "main": [
+        [
+          {
+            "node": "Build Rerun Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Stopped Emails": {
+      "main": [
+        [
+          {
+            "node": "Read Stopped Again",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pause Between Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pause Between Emails": {
+      "main": [
+        [
+          {
+            "node": "Rerun Each Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}

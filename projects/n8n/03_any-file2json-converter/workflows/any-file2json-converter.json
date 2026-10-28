@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -768,
-        768
+        -512,
+        1104
       ],
       "alwaysOutputData": true
     },
@@ -44,8 +44,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -416,
-        416
+        240,
+        944
       ]
     },
     {
@@ -65,27 +65,27 @@
       "name": "Text-to-Structured",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        -336,
-        640
+        448,
+        688
       ],
       "typeVersion": 1.4
     },
     {
       "parameters": {
-        "model": "openai/gpt-oss-120b",
+        "model": "openrouter/free",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        -352,
-        800
+        432,
+        864
       ],
       "id": "c3d4e5f6-text-language-model",
       "name": "Text LLM",
       "credentials": {
-        "groqApi": {
-          "id": "CREDENTIAL_ID_GROQ",
+        "openRouterApi": {
+          "id": "CREDENTIAL_ID_OPENROUTER",
           "name": "Text LLM credential"
         }
       }
@@ -99,8 +99,8 @@
       "name": "Text Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
-        -192,
-        800
+        592,
+        864
       ],
       "typeVersion": 1.2
     },
@@ -114,8 +114,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -736,
-        416
+        -512,
+        464
       ]
     },
     {
@@ -128,8 +128,8 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        -544,
-        912
+        -320,
+        944
       ]
     },
     {
@@ -149,8 +149,8 @@
       "type": "n8n-nodes-base.summarize",
       "typeVersion": 1,
       "position": [
-        -544,
-        768
+        -160,
+        944
       ]
     },
     {
@@ -283,9 +283,18 @@
                       "operation": "equals",
                       "name": "filter.operator.equals"
                     }
+                  },
+                  {
+                    "id": "csv-as-rows",
+                    "leftValue": "={{ $binary.values()[0].mimeType }}",
+                    "rightValue": "text/csv",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
-                "combinator": "and"
+                "combinator": "or"
               }
             },
             {
@@ -339,29 +348,6 @@
                 },
                 "conditions": [
                   {
-                    "id": "f30330d4-a83c-4e9e-9a0b-7de8a1767dc2",
-                    "leftValue": "={{ $binary.data.mimeType }}",
-                    "rightValue": "text/csv",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
                     "id": "url-route-condition",
                     "leftValue": "={{ $binary.data.mimeType }}",
                     "rightValue": "text/x-url",
@@ -386,8 +372,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -992,
-        400
+        -784,
+        304
       ],
       "notes": "SVG is XML, so it is routed to text on purpose. The image converter cannot decode it.",
       "notesInFlow": true
@@ -402,8 +388,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -768,
-        1056
+        -512,
+        784
       ]
     },
     {
@@ -413,8 +399,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -768,
-        912
+        -512,
+        944
       ],
       "id": "13d15b17-7094-43b5-a3a6-c3bfa3ec2fb1",
       "name": "Extract CSV Rows"
@@ -449,7 +435,7 @@
       "typeVersion": 3,
       "position": [
         -1456,
-        608
+        624
       ],
       "executeOnce": true,
       "disabled": true
@@ -475,10 +461,11 @@
       "name": "Image-to-Text",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "position": [
-        -688,
-        80
+        1088,
+        256
       ],
-      "typeVersion": 1.4
+      "typeVersion": 1.4,
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -492,8 +479,8 @@
       "name": "Convert Image Format",
       "type": "n8n-nodes-base.editImage",
       "position": [
-        -832,
-        80
+        112,
+        256
       ],
       "typeVersion": 1
     },
@@ -504,7 +491,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1136,
+        -1008,
         400
       ],
       "id": "29d01b4b-ec16-496e-9b9f-d551ae815bff",
@@ -528,7 +515,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1296,
+        -1232,
         400
       ],
       "id": "d444e35f-ccad-417d-a758-4649749c7fc9",
@@ -541,7 +528,7 @@
       "typeVersion": 1,
       "position": [
         -1616,
-        608
+        624
       ],
       "id": "51196187-9710-4710-a4d2-938a24171d35",
       "name": "Testing n8n Sub-Workflow",
@@ -557,8 +544,8 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -736,
-        576
+        -512,
+        624
       ],
       "id": "95d8a1ac-ede3-4c64-b6c6-cf2534192287",
       "name": "Extract JSON Content",
@@ -573,27 +560,27 @@
       "name": "Image Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "position": [
-        -592,
-        208
+        1232,
+        432
       ],
       "typeVersion": 1.2
     },
     {
       "parameters": {
-        "modelName": "models/gemini-3-flash-preview",
+        "model": "openrouter/free",
         "options": {}
       },
       "id": "e23fb0ad-c743-4e0a-9cf4-fba0736730a7",
       "name": "Vision LLM",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "position": [
-        -752,
-        208
+        1072,
+        432
       ],
       "typeVersion": 1,
       "credentials": {
-        "googlePalmApi": {
-          "id": "CREDENTIAL_ID_GEMINI",
+        "openRouterApi": {
+          "id": "CREDENTIAL_ID_OPENROUTER",
           "name": "Vision LLM credential"
         }
       }
@@ -627,8 +614,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -992,
-        816
+        -512,
+        1424
       ],
       "id": "49859284-724f-4d50-b952-27fbe38e9696",
       "name": "Mark Unsupported File"
@@ -674,8 +661,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -192,
-        416
+        944,
+        944
       ],
       "id": "1c9206c0-5927-4c4a-a124-72c9726e3668",
       "name": "Return Result"
@@ -694,8 +681,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -544,
-        1152
+        -512,
+        1264
       ],
       "id": "d3b152ce-fb60-4814-a242-74b10eb6153b",
       "name": "Fetch URL as Text",
@@ -721,8 +708,8 @@
     {
       "parameters": {
         "content": "## Receive and split files\nDefaults `extraction`, gives each attachment its own item, and builds the JSON Schema.",
-        "height": 268,
-        "width": 640,
+        "height": 272,
+        "width": 768,
         "color": 7
       },
       "id": "sticky-receive-and-split-files",
@@ -737,7 +724,7 @@
     {
       "parameters": {
         "content": "## Test with pinned data\n\n\n\n\n\n\n\n\n\n\n\nEnable both nodes above and set a Drive file, or pin one of these on **Set Default Extraction**:\n\n**URL Input:**\n```json\n{\"url\": \"https://en.wikipedia.org/wiki/N8n\"}\n```\n\n**Binary Input:**\n```json\n{\n  \"binary_files\": {\n    \"attachment_0\": {\n      \"mimeType\": \"image/jpeg\",\n      \"data\": \"base64...\",\n      \"fileName\": \"test.jpg\"\n    }\n  }\n}\n```",
-        "height": 512,
+        "height": 736,
         "width": 464,
         "color": 7
       },
@@ -747,14 +734,14 @@
       "typeVersion": 1,
       "position": [
         -1632,
-        560
+        576
       ]
     },
     {
       "parameters": {
-        "content": "## Read images with a vision LLM\nNormalizes the image, then extracts every visible field plus a classification.",
-        "height": 336,
-        "width": 416,
+        "content": "## Read images with a vision LLM\nNormalizes the image, then extracts every visible field plus a classification.\nOne image per 13 s across all runs (slot in data table `vision_pacing`). A per-minute 429 waits and retries; a used-up daily quota stops the calls and returns those images `stopped`.",
+        "height": 432,
+        "width": 2040,
         "color": 7
       },
       "id": "sticky-read-images",
@@ -762,15 +749,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -864,
-        -16
+        48,
+        128
       ]
     },
     {
       "parameters": {
         "content": "## Extract text by file type\nNative extractors for PDF, JSON, text, CSV and Excel. URLs are fetched as markdown.",
-        "height": 960,
-        "width": 368,
+        "height": 1056,
+        "width": 544,
         "color": 7
       },
       "id": "sticky-extract-text-by-type",
@@ -778,15 +765,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -800,
-        336
+        -560,
+        352
       ]
     },
     {
       "parameters": {
         "content": "## Structure text into your fields\nRuns only when the caller requested fields. Otherwise the raw text is returned.",
-        "height": 384,
-        "width": 336,
+        "height": 416,
+        "width": 352,
         "color": 7
       },
       "id": "sticky-structure-text-into-fields",
@@ -794,15 +781,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -384,
-        560
+        352,
+        576
       ]
     },
     {
       "parameters": {
         "content": "## Return one result per file\nSame shape on every path. An unknown file type returns `status: unsupported`.",
-        "height": 272,
-        "width": 256,
+        "height": 368,
+        "width": 320,
         "color": 7
       },
       "id": "sticky-return-one-result-per-file",
@@ -810,8 +797,444 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -304,
-        272
+        864,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        608,
+        256
+      ],
+      "id": "1d9ae21c-6ebc-4700-9e75-87515ffc4dbf",
+      "name": "Loop Over Images",
+      "notesInFlow": false,
+      "notes": "One image per pass, so each vision request is paced on its own (a caller may send several files in one run)."
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.max(0, Math.ceil((Date.parse($('Take Vision Slot').first().json.next_request_at) - 13000 - Date.now()) / 1000)) }}",
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        432
+      ],
+      "id": "07bc3b96-4369-4075-8363-48a18915dbbf",
+      "name": "Pace Vision Requests",
+      "webhookId": "69b1041f-3047-4a1d-9b3c-d5ab11ed4475",
+      "notesInFlow": false,
+      "notes": "Waits for the slot Take Vision Slot reserved: the free vision tier allows 5 requests per minute, and the slot keeps every run of this workflow together at one request per 13 s."
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_VISION_QUOTA_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "model",
+              "keyValue": "={{ $('Vision LLM').params.modelName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        288,
+        256
+      ],
+      "id": "5e851f25-21a5-4ae2-b52c-9d97617a91f2",
+      "name": "Check Vision Quota",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "notesInFlow": false,
+      "notes": "n8n data table vision_quota (model, quota_limit, resets_at, quota_id, hit_at). One row per model, written by Remember Vision Quota when the free DAILY quota is used up; cleared by the inbox organizer's /rerun_attachments."
+    },
+    {
+      "parameters": {
+        "jsCode": "// A model whose free daily quota is used up is not called again until the quota resets: its\n// images come back as stopped, with no request made. Changing the model in Vision LLM lifts it.\nconst model = String($('Vision LLM').params.modelName || '');\nconst row = $input.all().map((i) => i.json).find((r) => r && r.resets_at);\nconst blocked = !!row && Date.parse(row.resets_at) > Date.now();\nreturn $('Convert Image Format').all().map((img, i) => {\n  if (!blocked) return { json: { ...img.json, vision_open: true }, binary: img.binary, pairedItem: { item: i } };\n  return { json: { ...img.json, vision_open: false, status: 'stopped', error: {\n    code: 'VISION_DAILY_QUOTA', model, quota_limit: Number(row.quota_limit) || null, resets_at: row.resets_at,\n    message: 'Not read: the vision model\\'s free daily quota is used up until ' + row.resets_at,\n  } }, pairedItem: { item: i } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        256
+      ],
+      "id": "a4b7c666-621f-4a1d-b023-2602d2e3e1ac",
+      "name": "Gate Vision Requests"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e035007c-f567-44d1-946b-503e454ae28e",
+              "leftValue": "={{ $json.vision_open }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        256
+      ],
+      "id": "9b2554b8-619d-4d3a-831c-434f15a51f77",
+      "name": "If Vision Quota Left"
+    },
+    {
+      "parameters": {
+        "method": "={{ String($json.error).includes('too many requests') ? 'POST' : 'GET' }}",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + String($('Vision LLM').params.modelName).split('/').pop() + (String($json.error).includes('too many requests') ? ':generateContent' : '') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"contents\":[{\"parts\":[{\"text\":\"ok\"}]}],\"generationConfig\":{\"maxOutputTokens\":1}}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1296,
+        432
+      ],
+      "id": "dce0dc20-0080-4d97-b8b9-1734932c03ad",
+      "name": "Read Quota Error",
+      "credentials": {
+        "openRouterApi": {
+          "id": "CREDENTIAL_ID_OPENROUTER",
+          "name": "Vision LLM credential"
+        }
+      },
+      "notesInFlow": false,
+      "notes": "The LLM node keeps only \"too many requests\" and drops the 429 body, which is what names the quota. On a rate limit this asks the same model once more with a one-token request: while the quota is exhausted it is refused (costs nothing) and the refusal carries the quota id, limit and retry delay. Any other error only reads the model's metadata (free)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only a 429 that names the DAILY quota stops reading. A per-minute 429 waits for the window and\n// sends the image again (also when the repeat already succeeds: the minute has just cleared),\n// at most 4 times per run. A 503, a schema miss or anything else fails the run as before, with\n// the LLM node's own message, so its alert is unchanged.\nconst failed = $('Image-to-Text').all(1).map((i) => i.json.error).filter(Boolean).pop() || 'Vision request failed';\nconst res = $input.first().json;\nlet body = res.body;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }\nconst details = (body && body.error && body.error.details) || [];\nconst daily = details.flatMap((d) => d.violations || []).find((v) => /PerDay/i.test(v.quotaId || ''));\nconst delay = parseFloat((details.find((d) => /RetryInfo/.test(d['@type'] || '')) || {}).retryDelay);\nif (!daily) {\n  if (!String(failed).includes('too many requests') || $runIndex >= 4) throw new Error(failed);\n  return [{ json: { retry_after_s: Math.min(Number.isFinite(delay) ? delay : 20, 60) + 1 } }];\n}\n// The quota day ends when the provider says so. No retry delay means the end is unknown: look\n// again in an hour rather than guess the provider's reset time.\nconst resetsAt = new Date(Date.now() + (Number.isFinite(delay) ? delay : 3600) * 1000).toISOString();\nconst model = String($('Vision LLM').params.modelName || '');\nreturn [{ json: {\n  model, quota_limit: Number(daily.quotaValue) || null, resets_at: resetsAt, quota_id: daily.quotaId, hit_at: new Date().toISOString(),\n  status: 'stopped',\n  error: { code: 'VISION_DAILY_QUOTA', model, quota_limit: Number(daily.quotaValue) || null, resets_at: resetsAt,\n    message: \"Not read: the vision model's free daily quota (\" + daily.quotaValue + ') is used up until ' + resetsAt },\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        432
+      ],
+      "id": "52ca26be-5424-4a06-94e1-6700e1538e02",
+      "name": "Classify Vision Error"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_VISION_QUOTA_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "model",
+              "keyValue": "={{ $json.model }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "model": "={{ $json.model }}",
+            "quota_limit": "={{ $json.quota_limit }}",
+            "resets_at": "={{ $json.resets_at }}",
+            "quota_id": "={{ $json.quota_id }}",
+            "hit_at": "={{ $json.hit_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quota_limit",
+              "displayName": "quota_limit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resets_at",
+              "displayName": "resets_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quota_id",
+              "displayName": "quota_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "hit_at",
+              "displayName": "hit_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        432
+      ],
+      "id": "2b2cfe27-8f0a-4065-927e-4fcbcd088c7e",
+      "name": "Remember Vision Quota"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The table write answers with its row; the loop needs the stopped image back. Writing first and\n// passing the image on after keeps Return Result the last node, whose items the caller receives.\nreturn $('Classify Vision Error').all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        432
+      ],
+      "id": "7bc2c27f-acb9-437a-8dec-ba3b2441f933",
+      "name": "Pass Stopped Image"
+    },
+    {
+      "name": "Read Vision Slot",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "notes": "n8n data table vision_pacing: one row, next_request_at = the earliest time the next vision request may go out. Every run of this workflow shares it, so runs that overlap (a poll during a backfill, two polls at once) still send one request per 13 s between them. No row: requests go out unpaced.",
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_VISION_PACING_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "675fd8fe-b12b-4240-8038-1377e9f2a96e",
+      "position": [
+        448,
+        432
+      ]
+    },
+    {
+      "name": "Take Vision Slot",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "notes": "Compare-and-swap: moves next_request_at 13 s past this request's slot (now, or the stored time if later), but only if the row still holds the value just read. A run that read the same value at the same moment updates nothing and reads again, so no two requests share a slot.",
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_VISION_PACING_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "next_request_at",
+              "keyValue": "={{ $json.next_request_at }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "next_request_at": "={{ new Date(Math.max(Date.now(), Date.parse($json.next_request_at) || 0) + 13000).toISOString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "next_request_at",
+              "displayName": "next_request_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d17665e5-8726-47cc-9f01-88989e7dfe2c",
+      "position": [
+        608,
+        432
+      ]
+    },
+    {
+      "name": "If Slot Taken",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7e2a9d1-3b4f-4e8a-9c21-5d6f7a8b9c01",
+              "leftValue": "={{ !!$json.next_request_at || !$('Read Vision Slot').first().json.next_request_at }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "0d4d765c-e0c2-4ac3-88bb-5bedc9d3f833",
+      "position": [
+        768,
+        432
+      ]
+    },
+    {
+      "name": "Restore Vision Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// The slot nodes answer with the table row; the vision request needs this pass's image back.\nconst img = $('If Vision Quota Left').first();\nreturn [{ json: img.json, binary: img.binary, pairedItem: { item: 0 } }];"
+      },
+      "id": "16eb986c-e11a-4153-9637-cad75ee79832",
+      "position": [
+        928,
+        256
+      ]
+    },
+    {
+      "name": "If Minute Limit",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b1d0c6a2-6f0e-4a57-9a43-2f1d5c8e7a11",
+              "leftValue": "={{ !!$json.retry_after_s }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bb80dd62-5b91-43af-b517-536cf3942106",
+      "position": [
+        1616,
+        432
+      ]
+    },
+    {
+      "name": "Wait Out Vision Limit",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "webhookId": "19a9e10d-ac74-4e1c-b373-6a558ae4a238",
+      "notesInFlow": false,
+      "notes": "A per-minute 429 got through (another workflow on the same key, or a request outside the slot): waits the delay the provider names, then takes a new slot and sends the image again.",
+      "parameters": {
+        "amount": "={{ $json.retry_after_s }}"
+      },
+      "id": "a823ac74-2e35-46e8-aa47-b4b8419561ee",
+      "position": [
+        1616,
+        256
       ]
     }
   ],
@@ -906,13 +1329,6 @@
         ],
         [
           {
-            "node": "Extract CSV Rows",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "Fetch URL as Text",
             "type": "main",
             "index": 0
@@ -975,7 +1391,14 @@
       "main": [
         [
           {
-            "node": "Return Result",
+            "node": "Loop Over Images",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Quota Error",
             "type": "main",
             "index": 0
           }
@@ -986,7 +1409,7 @@
       "main": [
         [
           {
-            "node": "Image-to-Text",
+            "node": "Check Vision Quota",
             "type": "main",
             "index": 0
           }
@@ -1126,6 +1549,199 @@
         [
           {
             "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Images": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If Vision Quota Left",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pace Vision Requests": {
+      "main": [
+        [
+          {
+            "node": "Restore Vision Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Vision Quota": {
+      "main": [
+        [
+          {
+            "node": "Gate Vision Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Vision Requests": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Vision Quota Left": {
+      "main": [
+        [
+          {
+            "node": "Read Vision Slot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Quota Error": {
+      "main": [
+        [
+          {
+            "node": "Classify Vision Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Vision Error": {
+      "main": [
+        [
+          {
+            "node": "If Minute Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember Vision Quota": {
+      "main": [
+        [
+          {
+            "node": "Pass Stopped Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Stopped Image": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Vision Slot": {
+      "main": [
+        [
+          {
+            "node": "Take Vision Slot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take Vision Slot": {
+      "main": [
+        [
+          {
+            "node": "If Slot Taken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Slot Taken": {
+      "main": [
+        [
+          {
+            "node": "Pace Vision Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Vision Slot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Vision Image": {
+      "main": [
+        [
+          {
+            "node": "Image-to-Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Minute Limit": {
+      "main": [
+        [
+          {
+            "node": "Wait Out Vision Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remember Vision Quota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Out Vision Limit": {
+      "main": [
+        [
+          {
+            "node": "Read Vision Slot",
             "type": "main",
             "index": 0
           }

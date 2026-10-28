@@ -10,7 +10,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1872,
+        3168,
         -96
       ],
       "id": "931680a0-7cc1-4776-b776-a1621bad2efe",
@@ -193,7 +193,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        2448,
+        4160,
         352
       ],
       "id": "976a53e1-32ad-48c3-a83e-e5de3412f66e",
@@ -209,16 +209,20 @@
     },
     {
       "parameters": {
-        "numberInputs": 3
+        "mode": "chooseBranch",
+        "numberInputs": 3,
+        "useDataOfInput": 2
       },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        3120,
+        4832,
         16
       ],
       "id": "d0e654c0-25bf-4759-873a-981811d1a5fd",
-      "name": "Merge All Branches"
+      "name": "Merge All Branches",
+      "notes": "Waits for all three branches, then passes on the classifier item (input 2) only: one item per email, so the labels are set once.",
+      "notesInFlow": false
     },
     {
       "parameters": {
@@ -263,7 +267,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        2032,
+        3744,
         512
       ],
       "webhookId": "f781db1e-ff98-4794-bcb6-051174c15636",
@@ -276,12 +280,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// GRAIN: one row per invoice, keyed by invoice_number.\n// Documents are evidence, rows are economic events. An invoice and its receipt\n// describe ONE transaction and collapse into ONE row; two orders make two rows.\n// Row count follows invoice_number -- never attachment count, never email count.\nconst docs  = $('Extract Invoice Data').all();\nconst email = $('Build Email Context').first().json;\n\n// Extractors emit several different \"I could not find one\" sentinels. All of them\n// mean \"no invoice number\", and none may be used as a grain key -- treating '-' as\n// a real key would collapse every unkeyed row in the sheet into one, because the\n// Sheets node below matches on invoice_number.\nconst SENTINEL = /^(-+|n\\/?a|unknown|none|null|nil|tbd|\\?+|x+)$/i;\nconst BLANK = (v) => v === undefined || v === null || String(v).trim() === '' ||\n                     SENTINEL.test(String(v).trim());\nconst pick  = (prev, next) => (!BLANK(prev) ? prev : (!BLANK(next) ? next : '-'));\n\n// Values we assign ourselves are namespaced so a human reading the ledger can always\n// tell them apart from something a supplier printed. '::' appears in no real invoice\n// number, so \"contains ::\" is a reliable filter for project-assigned keys.\nconst AUTOKEY_PREFIX = 'AUTOKEY::';\nconst slug = (v, fallback) => {\n  const s = String(v ?? '').trim().toUpperCase()\n    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');\n  return s || fallback;\n};\n\n// The Gmail message id is what makes two same-day documents from the same sender\n// distinct. Counterparty + date alone is NOT unique -- e.g. two separate Wise\n// notifications on 2026-02-18 would otherwise share a key and overwrite each other\n// under the appendOrUpdate below. Including the message id also means a re-run of\n// the SAME email reproduces the SAME key, so retries still update in place.\nlet msgId = '';\ntry { msgId = String($('Set Run Config').first().json.email_ID ?? '').trim(); } catch (e) { msgId = ''; }\n\nconst groups = new Map();\n\nfor (let idx = 0; idx < docs.length; idx++) {\n  const out = docs[idx].json.output || {};\n  const inv = out.invoice_data || {};\n  const raw = String(inv.invoice_number ?? '').trim();\n  const keyed = !BLANK(raw);\n\n  // A document with no usable invoice number still deserves a row -- it just cannot\n  // share the invoice grain. Give it a synthetic key that is unique and stable, so it\n  // collides neither with a real invoice nor with another email's unkeyed row.\n  const key = keyed\n    ? raw.toUpperCase()\n    : AUTOKEY_PREFIX + slug(inv.counterparty_name, 'NO-PARTY') +\n      '::' + slug(inv.invoice_date, 'NO-DATE') +\n      '::' + slug(msgId, 'NO-MSG');\n\n  const p = groups.get(key) || {};\n  groups.set(key, {\n    // Every source document that fed this row, for n8n's paired-item lineage.\n    // Without it, downstream nodes resolving $('...').item throw, because this node\n    // is many-to-one and n8n cannot infer which document a row came from.\n    _src: [...(p._src || []), idx],\n    accounting_category:       pick(p.accounting_category,       out.accounting_category),\n    invoice_number:            p.invoice_number || (keyed ? raw : key),\n    counterparty_name:         pick(p.counterparty_name,         inv.counterparty_name),\n    invoice_date:              pick(p.invoice_date,              inv.invoice_date),\n    subtotal_amount:           pick(p.subtotal_amount,           inv.total_amount_due),\n    currency_code:             pick(p.currency_code,             inv.currency_code),\n    tax_amount:                pick(p.tax_amount,                inv.tax_amount),\n    discount_amount:           pick(p.discount_amount,           inv.discount_amount),\n    purchase_order_number:     pick(p.purchase_order_number,     inv.purchase_order_number),\n    due_date_or_payment_terms: pick(p.due_date_or_payment_terms, inv.due_date_or_payment_terms),\n    // Settlement fields normally arrive on the receipt, not the invoice.\n    payment_method:            pick(p.payment_method,            inv.payment_method),\n    payment_reference:         pick(p.payment_reference,         inv.payment_reference),\n    date_paid:                 pick(p.date_paid,                 inv.date_paid),\n  });\n}\n\nif (groups.size === 0) {\n  throw new Error(\n    'Prepare Ledger Row: Extract Invoice Data returned no documents, so there is ' +\n    'nothing to write at the invoice grain. Check the extractor output.'\n  );\n}\n\nconst attachmentCount = String(email.attachement_names?.length ?? 0);\n\nreturn [...groups.values()].map(({ _src, ...row }) => ({\n  json: {\n    ...row,\n    attachment_count: attachmentCount,\n    email_id: email.contact_email,\n  },\n  pairedItem: _src.map((i) => ({ item: i })),\n}));\n"
+        "jsCode": "// GRAIN: one row per invoice, keyed by invoice_number.\n// Documents are evidence, rows are economic events. An invoice and its receipt\n// describe ONE transaction and collapse into ONE row; two orders make two rows.\n// Row count follows invoice_number -- never attachment count, never email count.\nconst docs  = $('Join Documents').all();\nconst email = $('Build Email Context').first().json;\n\n// Extractors emit several different \"I could not find one\" sentinels. All of them\n// mean \"no invoice number\", and none may be used as a grain key -- treating '-' as\n// a real key would collapse every unkeyed row in the sheet into one, because the\n// Sheets node below matches on invoice_number.\nconst SENTINEL = /^(-+|n\\/?a|unknown|none|null|nil|tbd|\\?+|x+)$/i;\nconst BLANK = (v) => v === undefined || v === null || String(v).trim() === '' ||\n                     SENTINEL.test(String(v).trim());\nconst pick  = (prev, next) => (!BLANK(prev) ? prev : (!BLANK(next) ? next : '-'));\n\n// Values we assign ourselves are namespaced so a human reading the ledger can always\n// tell them apart from something a supplier printed. '::' appears in no real invoice\n// number, so \"contains ::\" is a reliable filter for project-assigned keys.\nconst AUTOKEY_PREFIX = 'AUTOKEY::';\nconst slug = (v, fallback) => {\n  const s = String(v ?? '').trim().toUpperCase()\n    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');\n  return s || fallback;\n};\n\n// The Gmail message id is what makes two same-day documents from the same sender\n// distinct. Counterparty + date alone is NOT unique -- e.g. two separate Wise\n// notifications on 2026-02-18 would otherwise share a key and overwrite each other\n// under the appendOrUpdate below. Including the message id also means a re-run of\n// the SAME email reproduces the SAME key, so retries still update in place.\nlet msgId = '';\ntry { msgId = String($('Set Run Config').first().json.email_ID ?? '').trim(); } catch (e) { msgId = ''; }\n\nconst groups = new Map();\n\nfor (let idx = 0; idx < docs.length; idx++) {\n  const out = docs[idx].json.output || {};\n  const inv = out.invoice_data || {};\n  const raw = String(inv.invoice_number ?? '').trim();\n  const keyed = !BLANK(raw);\n\n  // A document with no usable invoice number still deserves a row -- it just cannot\n  // share the invoice grain. Give it a synthetic key that is unique and stable, so it\n  // collides neither with a real invoice nor with another email's unkeyed row.\n  const key = keyed\n    ? raw.toUpperCase()\n    : AUTOKEY_PREFIX + slug(inv.counterparty_name, 'NO-PARTY') +\n      '::' + slug(inv.invoice_date, 'NO-DATE') +\n      '::' + slug(msgId, 'NO-MSG');\n\n  const p = groups.get(key) || {};\n  groups.set(key, {\n    // Every source document that fed this row, for n8n's paired-item lineage.\n    // Without it, downstream nodes resolving $('...').item throw, because this node\n    // is many-to-one and n8n cannot infer which document a row came from.\n    _src: [...(p._src || []), idx],\n    accounting_category:       pick(p.accounting_category,       out.accounting_category),\n    invoice_number:            p.invoice_number || (keyed ? raw : key),\n    counterparty_name:         pick(p.counterparty_name,         inv.counterparty_name),\n    invoice_date:              pick(p.invoice_date,              inv.invoice_date),\n    subtotal_amount:           pick(p.subtotal_amount,           inv.total_amount_due),\n    currency_code:             pick(p.currency_code,             inv.currency_code),\n    tax_amount:                pick(p.tax_amount,                inv.tax_amount),\n    discount_amount:           pick(p.discount_amount,           inv.discount_amount),\n    purchase_order_number:     pick(p.purchase_order_number,     inv.purchase_order_number),\n    due_date_or_payment_terms: pick(p.due_date_or_payment_terms, inv.due_date_or_payment_terms),\n    // Settlement fields normally arrive on the receipt, not the invoice.\n    payment_method:            pick(p.payment_method,            inv.payment_method),\n    payment_reference:         pick(p.payment_reference,         inv.payment_reference),\n    date_paid:                 pick(p.date_paid,                 inv.date_paid),\n  });\n}\n\nif (groups.size === 0) {\n  throw new Error(\n    'Prepare Ledger Row: Extract Invoice Data returned no documents, so there is ' +\n    'nothing to write at the invoice grain. Check the extractor output.'\n  );\n}\n\nconst attachmentCount = String(email.attachement_names?.length ?? 0);\n\nreturn [...groups.values()].map(({ _src, ...row }) => ({\n  json: {\n    ...row,\n    attachment_count: attachmentCount,\n    email_id: email.contact_email,\n  },\n  pairedItem: _src.map((i) => ({ item: i })),\n}));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2272,
+        3984,
         352
       ],
       "id": "cfe38e63-eeea-48e7-b614-a64f9c64a2f3",
@@ -296,7 +300,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3376,
+        5088,
         32
       ],
       "id": "0c7b9537-eb52-4f02-8d93-56bbc81921fb",
@@ -317,7 +321,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1904,
+        3200,
         32
       ],
       "id": "c7b086ee-13f0-4315-854b-783cb9f236da",
@@ -352,7 +356,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1904,
+        3616,
         288
       ],
       "id": "e88f6297-b187-430f-b1f6-fcb25238e400",
@@ -436,7 +440,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        1552,
+        3264,
         512
       ],
       "id": "f47b7579-6cdc-47c7-83c3-69643855c151",
@@ -455,7 +459,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2048,
+        3344,
         -16
       ],
       "id": "bedab3b3-5cf1-4bf7-b91a-77d7b2456d60",
@@ -583,13 +587,14 @@
       "id": "26394bc8-49f9-4bea-b06d-47ed6bfcb624",
       "name": "Look Up Contact",
       "notesInFlow": false,
-      "notes": "Calls record-search. Inputs: none set, the current item is passed on."
+      "notes": "Calls record-search. Inputs: none set, the current item is passed on.",
+      "executeOnce": true
     },
     {
       "parameters": {
-        "content": "## Look up and enrich contact\nFinds the sender in the contact sheet and adds what the email reveals. Optional: disable these three nodes to run without it.",
+        "content": "## Look up and enrich contact\nFinds the sender in the contact sheet and adds what the email reveals, after extraction. A per-day limit inside the fill holds the email back. Optional: disable these three nodes to run without it.",
         "height": 192,
-        "width": 592,
+        "width": 836,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -603,7 +608,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const cleanedData = $('Build Email Context').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('Classify Email').item.json.output?.body_core || '';\nconst gmailBinary = $('Get Email With Attachments').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments - still include email context for LLM\nif (attachmentNames.length === 0) {\n  return [{\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: 'No attachments found',\n      attachmentName: '',\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    }\n  }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
+        "jsCode": "const cleanedData = $('Build Email Context').item.json.cleaned_email?.data?.[0] || {};\nconst bodyCore = $('Classify Email').item.json.output?.body_core || '';\nconst gmailBinary = $('Drop Inline Images').first().binary || {};\nconst attachmentNames = Object.keys(gmailBinary);\n\n// Early return if no attachments - still include email context for LLM\nif (attachmentNames.length === 0) {\n  return [{\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: 'No attachments found',\n      attachmentName: '',\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    }\n  }];\n}\n\nconst results = [];\nfor (let i = 0; i < attachmentNames.length; i++) {\n  const binaryKey = attachmentNames[i];\n\n  results.push({\n    json: {\n      body_core: bodyCore,\n      attachmentTextForLLM: cleanedData.attachment_texts_map?.[binaryKey] || '',\n      attachmentName: binaryKey,\n      subject: cleanedData.subject,\n      from: cleanedData.from,\n      date: cleanedData.date\n    },\n    binary: { file1: gmailBinary[binaryKey] }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { message: 'No relevant attachments' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -627,7 +632,7 @@
             {
               "id": "e885d0fb-fab0-4703-985a-44236baddfa1",
               "name": "attachement_names",
-              "value": "={{ $('Get Email With Attachments').first().binary ? Object.keys($('Get Email With Attachments').first().binary) : [] }}",
+              "value": "={{ $('Drop Inline Images').first().binary ? Object.keys($('Drop Inline Images').first().binary) : [] }}",
               "type": "array"
             },
             {
@@ -686,7 +691,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3248,
+        4960,
         32
       ],
       "webhookId": "95bd2028-a0fa-481c-b8df-72bb4a2b225c",
@@ -741,14 +746,14 @@
     },
     {
       "parameters": {
-        "content": "## File document to Drive\nA second LLM extracts the invoice data. With an attachment, the file goes to its dated Drive folder and the email is tagged `gdr`; without one, only the ledger row follows.",
+        "content": "## File document to Drive\nThe extracted documents come back in here once the contact is updated. With an attachment, the file goes to its dated Drive folder and the email is tagged `gdr`; without one, only the ledger row follows.",
         "height": 432,
-        "width": 832,
+        "width": 496,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1328,
+        3376,
         208
       ],
       "typeVersion": 1,
@@ -757,15 +762,15 @@
     },
     {
       "parameters": {
-        "content": "## Classify the email\nAn LLM sorts every email into financial, actionable, informational or other. Only financial emails go on to extraction.",
-        "height": 336,
+        "content": "## Classify the email\nAn LLM sorts every email into financial, actionable, informational or other; financial emails go on to extraction. A rate limit (429) asks **llm-rate-limit**: per minute waits and asks again, per day holds the email back, anything else fails the run.",
+        "height": 544,
         "width": 752,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         1328,
-        -160
+        -368
       ],
       "typeVersion": 1,
       "id": "5b189e7b-6020-4f2c-93a9-1b07486e7409",
@@ -774,14 +779,14 @@
     {
       "parameters": {
         "content": "## Receive and label email\nA new email, or one sent by the catch-up workflow. Promotions are skipped; the email is tagged `inProgress` and fetched with its attachments.",
-        "height": 608,
+        "height": 784,
         "width": 384,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         176,
-        -224
+        -400
       ],
       "typeVersion": 1,
       "id": "1836694c-c66d-457a-a331-6ab48261b913",
@@ -820,7 +825,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1728,
+        3440,
         512
       ],
       "id": "ca3d504a-c6e4-49be-b42b-cca38b1b5309",
@@ -861,7 +866,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1360,
+        3072,
         512
       ],
       "id": "088452ce-c2d3-4a1e-afe3-2684e4fc0afb",
@@ -875,7 +880,7 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1728,
+        1952,
         384
       ],
       "id": "dcf98772-8e29-46b5-b8ef-d7328c076a4b",
@@ -889,7 +894,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        1584,
+        1808,
         384
       ],
       "id": "58ee3305-5296-4eac-b50a-d21df0e46770",
@@ -918,7 +923,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2672,
+        4384,
         352
       ],
       "id": "c76b5fb1-5cff-4836-ae49-f00661b09ac1",
@@ -994,7 +999,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Clean Email Body - Smart dual-extraction for n8n Code node\n// Handles both Google One (text=footer only) and Digitec (text=HTML) cases\n// Copy this code into the \"Clean Email Body\" Code node in inbox-attachment-organizer workflow\n\nconst items = $input.all();\nconst gmail = $('Get Email With Attachments').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Get Email With Attachments').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\nconst from = gmail.from.value[0];\nconst to = gmail.to.value[0];\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: isOutbound ? from.address : to.address,\n    contact_email: isOutbound ? to.address : from.address,\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
+        "jsCode": "// Clean Email Body - Smart dual-extraction for n8n Code node\n// Handles both Google One (text=footer only) and Digitec (text=HTML) cases\n// Copy this code into the \"Clean Email Body\" Code node in inbox-attachment-organizer workflow\n\nconst items = $input.all();\nconst gmail = $('Get Email With Attachments').first().json;\n\n// Helper: strip HTML tags and decode entities\nfunction stripHtml(str) {\n  return str\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    .replace(/<\\/(p|div|tr|li|h[1-6])>/gi, '\\n')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper: detect if string contains HTML tags\nfunction containsHtml(str) {\n  return /<(table|tr|td|div|span|p|a|br|img|style|script)\\b/i.test(str);\n}\n\n// Helper: normalize for comparison\nfunction normalize(str) {\n  return str.toLowerCase().replace(/\\s+/g, ' ').trim();\n}\n\n// 1. Extract and clean from both sources\nconst rawText = gmail.text || '';\nconst rawHtml = gmail.html || '';\n\n// Clean text - strip HTML if it contains HTML tags (Digitec case)\nconst textContent = containsHtml(rawText) ? stripHtml(rawText) : rawText.trim();\n// Clean HTML\nconst htmlContent = rawHtml ? stripHtml(rawHtml) : '';\n\n// 2. Determine what to use (smart dual-extraction)\nlet rawEmailText;\n\nif (!textContent && !htmlContent) {\n  rawEmailText = '';\n} else if (!htmlContent) {\n  rawEmailText = textContent;\n} else if (!textContent) {\n  rawEmailText = htmlContent;\n} else {\n  const normalizedText = normalize(textContent);\n  const normalizedHtml = normalize(htmlContent);\n\n  // Helper: check if content A is contained in content B using fuzzy word matching\n  function isContentSubset(contentA, contentB) {\n    const normalizedA = normalize(contentA);\n    const normalizedB = normalize(contentB);\n\n    // First try exact substring\n    if (normalizedB.includes(normalizedA)) return true;\n\n    // Fuzzy: check if 80%+ of A's significant words appear in B\n    const wordsA = normalizedA.split(' ').filter(w => w.length > 4);\n    if (wordsA.length === 0) return true; // No significant words = consider subset\n    const matchingWords = wordsA.filter(w => normalizedB.includes(w));\n    return matchingWords.length >= wordsA.length * 0.8;\n  }\n\n  // Case 1: HTML is subset of text - text has additional content (reply case)\n  if (isContentSubset(htmlContent, textContent)) {\n    rawEmailText = textContent;\n  }\n  // Case 2: Text is subset of HTML - text is redundant (Google One case)\n  else if (isContentSubset(textContent, htmlContent)) {\n    rawEmailText = htmlContent;\n  }\n  // Case 3: Neither is subset - check for unique text content\n  else {\n    // Split into chunks and find truly unique content in text\n    const textChunks = textContent\n      .split(/[.!?\\n]+/)\n      .map(s => s.trim())\n      .filter(s => s.length > 30);\n\n    const uniqueChunks = textChunks.filter(chunk => {\n      const words = normalize(chunk).split(' ').filter(w => w.length > 4);\n      if (words.length === 0) return false;\n      const matchingWords = words.filter(w => normalizedHtml.includes(w));\n      // Chunk is unique if less than 50% of its words are in HTML\n      return matchingWords.length < words.length * 0.5;\n    });\n\n    if (uniqueChunks.length >= 2) {\n      // Text has significant unique content - merge with HTML first, text after\n      rawEmailText = htmlContent + '\\n\\n---\\n\\n' + uniqueChunks.join(' ');\n    } else {\n      // Mostly overlap - use the longer one\n      rawEmailText = htmlContent.length > textContent.length ? htmlContent : textContent;\n    }\n  }\n}\n\n// 3. Sanitize the extracted text\nlet body_sanitized = '';\nif (rawEmailText.trim()) {\n  body_sanitized = rawEmailText\n    .normalize('NFD')\n    .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, ' ')\n    .replace(/[\\u200B-\\u200F\\u2028-\\u202F\\u205F-\\u206F\\uFEFF\\u034F\\u00AD]/g, '')\n    .replace(/[\\u00A0\\u1680\\u2000-\\u200A\\u3000]/g, ' ')\n    .replace(/https?:\\/\\/[^\\s]*\\.(jpg|jpeg|png|gif|svg|webp)[^\\s]*/gi, '')\n    .replace(/https?:\\/\\/[^\\s]+/gi, '[link]')\n    .replace(/\\s+([.,;!?])/g, '$1')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// The classifier is the only reader of body_sanitized, and a free-tier request above 8,000 tokens\n// is refused as too large: a long newsletter failed every time. The head of an email classifies it.\nconst BODY_CHAR_LIMIT = 12000;\nif (body_sanitized.length > BODY_CHAR_LIMIT) body_sanitized = body_sanitized.slice(0, BODY_CHAR_LIMIT) + ' [truncated]';\n\n// 4. Build attachment texts MAP\nconst attachment_texts_map = {};\nconst gmailBinaryKeys = Object.keys($('Drop Inline Images').first().binary || {});\nconst hasAttachments = gmailBinaryKeys.length > 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const $json = items[i].json;\n  const text = $json.data?.text || $json.textForLLM || $json.text || '';\n  const key = gmailBinaryKeys[i] || `attachment_${i}`;\n  if (text.trim()) {\n    attachment_texts_map[key] = text.trim();\n  }\n}\n\n// 5. Compute direction-based fields\nconst isOutbound = gmail.labelIds.includes('SENT');\n// A Bcc'd or undisclosed-recipients email has no To header: that address is unknown, not an error.\nconst from = gmail.from?.value?.[0] || {};\nconst to = gmail.to?.value?.[0] || {};\n\n// 6. Return ONE item\nreturn [{\n  json: {\n    data: [{\n      body_sanitized,\n      attachment_texts_map,\n      attachmentNames: gmailBinaryKeys,\n      hasAttachments,\n      subject: gmail.subject || 'No subject',\n      from: gmail.from || 'Unknown',\n      date: gmail.date || new Date().toISOString()\n    }],\n    direction: isOutbound ? 'outbound' : 'inbound',\n    owner_email: (isOutbound ? from.address : to.address) || '',\n    contact_email: (isOutbound ? to.address : from.address) || '',\n    contact_name: isOutbound ? (to.name || '') : (from.name || '')\n  },\n  pairedItem: { item: 0 }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1008,13 +1013,13 @@
     {
       "parameters": {
         "content": "## File invoice emails to Google Drive and Google Sheets\n\n### How it works\n1. The workflow picks up each new email, skips promotions and tags it `inProgress`.\n2. It converts every attachment to text with the any-file2json-converter subworkflow.\n3. An LLM classifies the email as financial, actionable, informational or other.\n4. For a financial email, a second LLM extracts the invoice data from each document.\n5. It files the document to a dated Drive folder such as `Accounting/2026/05_May/Expense/` and writes one row per invoice to `Billing_Ledger`.\n6. An actionable email needing a reply soon goes to Telegram at once.\n7. It sends a Telegram report and tags the email `n8n`, so an email left on `inProgress` marks a failed run.\n\n### Setup steps\n- [ ] Import and publish the subworkflows any-file2json-converter, gdrive-recursion, record-search and smart-CRM-fill, then select each one in the node that calls it\n- [ ] Connect Google OAuth (Gmail, Drive, Sheets) and your LLM credential\n- [ ] Create the Gmail labels `inProgress`, `n8n` and `gdr`. In **Set Run Config** set `label_ID` to the ID of `inProgress` and set your `owner_name`; select your labels in **Add n8n Label** and **Add gdr Label**\n- [ ] Create the sheets `Billing_Ledger` and `PathToIDLookup`, and select `Billing_Ledger` in **Upsert Ledger Row in Sheets**\n- [ ] In **Find or Create Drive Folder** set `root_folder_id` to the ID of your `/Accounting` folder; `root_path` stays `/Accounting`\n- [ ] Connect a Telegram bot and set the chat ID in **Send Completion Message** and **Send Category Message**, or disable both\n- [ ] Publish and send yourself an invoice. After the first run, import gmail-processor-datesize to catch up mail already in the inbox\n\n### Customization\nWithout a contact sheet, disable the three nodes in *Look up and enrich contact*. For other document types, extend **Classifier Output Schema**.\n\n📂 [Setup guide, docs and source on GitHub](https://github.com/runfish5/micro-services/tree/main/projects/n8n/04_inbox-attachment-organizer)",
-        "height": 912,
+        "height": 1088,
         "width": 480
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         -384,
-        -224
+        -400
       ],
       "typeVersion": 1,
       "id": "0a1cc3eb-87e8-4f42-a269-dc095849201c",
@@ -1038,7 +1043,7 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1888,
+        3600,
         512
       ],
       "id": "57dcb262-fe5a-4499-8fbf-df77d7030072",
@@ -1082,7 +1087,7 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1584,
+        1808,
         288
       ],
       "id": "0a52d145-dedd-46ff-affc-c0d64011fdcf",
@@ -1090,7 +1095,8 @@
       "retryOnFail": true,
       "maxTries": 4,
       "waitBetweenTries": 5000,
-      "notes": "One attachment per call, one after the other. Not paced: n8n ignores the batch delay when the batch size is 1, so an email with three or more documents still exceeds 8,000 tokens per minute."
+      "notes": "One attachment per call, one after the other. Not paced: n8n ignores the batch delay when the batch size is 1, so an email with three or more documents still exceeds 8,000 tokens per minute.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -1115,7 +1121,10 @@
       "id": "b6f8fa01-1216-41b1-8b8e-97e949437cea",
       "name": "Classify Email",
       "retryOnFail": true,
-      "maxTries": 2
+      "maxTries": 2,
+      "onError": "continueErrorOutput",
+      "notesInFlow": false,
+      "notes": "A 429 leaves on the error output: Check Token Limit waits out the per-minute token limit and sends the email back here (at most 4 times). maxTries 2 covers a reply that misses the schema."
     },
     {
       "parameters": {
@@ -1147,7 +1156,7 @@
           "conditions": [
             {
               "id": "1d5d56dd-157e-48ea-9e70-eba290d4f997",
-              "leftValue": "={{Object.keys($('Get Email With Attachments').item.binary || {}).length}}",
+              "leftValue": "={{Object.keys($('Drop Inline Images').item.binary || {}).length}}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -1185,13 +1194,14 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.output.type_of_document }}",
-                    "rightValue": "financial",
+                    "id": "d5660317-6722-49c5-adf5-fd6bce026987",
+                    "leftValue": "={{ $('Loop Over Documents').isExecuted }}",
+                    "rightValue": "",
                     "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "d5660317-6722-49c5-adf5-fd6bce026987"
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -1207,7 +1217,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.output.type_of_document }}",
+                    "leftValue": "={{ $('Classify Email').item.json.output.type_of_document }}",
                     "rightValue": "actionable",
                     "operator": {
                       "type": "string",
@@ -1216,7 +1226,7 @@
                     "id": "8c1e4a2b-6d3f-4b9e-a5c7-2f0d9e1b3a64"
                   },
                   {
-                    "leftValue": "={{ $json.output.requires_action }}",
+                    "leftValue": "={{ $('Classify Email').item.json.output.requires_action }}",
                     "rightValue": "",
                     "operator": {
                       "type": "boolean",
@@ -1238,7 +1248,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        1712,
+        3008,
         48
       ],
       "id": "5ed77ebb-11d6-49e3-a621-e913b3094350",
@@ -1273,7 +1283,7 @@
       "typeVersion": 2.2,
       "position": [
         416,
-        -112
+        -288
       ],
       "id": "a8941d6d-a477-429b-ae5c-a89439d266eb",
       "name": "Skip Promotions"
@@ -1289,7 +1299,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2864,
+        4576,
         352
       ],
       "id": "71a49238-6e71-4f06-b2bc-300eb3ecba20",
@@ -1401,7 +1411,7 @@
       "typeVersion": 1.2,
       "position": [
         224,
-        -112
+        -288
       ],
       "id": "ccbaad86-095c-43b0-8c16-cde25e616bb2",
       "name": "When Email Received",
@@ -1423,7 +1433,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2224,
+        3936,
         16
       ],
       "id": "298dcd70-3657-41a8-b878-a62e0c32acd9",
@@ -1433,17 +1443,799 @@
       "parameters": {
         "content": "## Silent failure detector\n`n8n` marks a finished run. An email still tagged `inProgress` is a run that died: search `label:inProgress`.",
         "height": 288,
-        "width": 464,
+        "width": 640,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3072,
+        4784,
         -96
       ],
       "id": "3b6df6ee-9b14-443a-9bfb-00fb42e4b0e4",
       "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        -112
+      ],
+      "id": "5a5ad5f8-727e-48a7-85ca-a6f9071743d1",
+      "name": "Process Each Email",
+      "onError": "continueRegularOutput",
+      "notesInFlow": false,
+      "notes": "Calls this workflow once per email, one after the other, entering at the catch-up trigger. Inputs: none set, the trigger item is passed through.\nThe nodes after the entry read one email per run (first(), one cleaned body): a poll that returned several emails filed only the first and left the rest in inProgress with no error. A failed email fails its own run (alerted there) and does not stop the others."
+    },
+    {
+      "parameters": {
+        "jsCode": "// A MIME image is not an attachment. Mail clients send logos and signature images as parts the\n// HTML shows inline (cid:), and the mail parser embeds each of them into the HTML as a data: URI.\n// A part whose bytes the HTML embeds is layout: it is dropped here, so it never reaches the vision\n// model, the extractor or Drive. Every other part stays an attachment.\nconst items = $input.all();\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const { json, binary = {} } = items[i];\n  const html = typeof json.html === 'string' ? json.html : '';\n  const kept = {};\n  let n = 0;\n  for (const [key, file] of Object.entries(binary)) {\n    const b64 = html.includes('data:') ? (await this.helpers.getBinaryDataBuffer(i, key)).toString('base64') : '';\n    // Renumbered: attachment_0 is the first real attachment, as the nodes after this one assume.\n    if (!(b64 && html.includes(b64))) kept[key.replace(/\\d+$/, String(n++))] = file;\n  }\n  out.push({ json, ...(Object.keys(kept).length ? { binary: kept } : {}), pairedItem: { item: i } });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        256
+      ],
+      "id": "697e2e00-e789-416c-933c-c9d2b6fba1d9",
+      "name": "Drop Inline Images"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8915bb3f-dcc6-4a40-8cbb-a4f1955e6e52",
+              "leftValue": "={{ $('Convert Attachments to Text').all().some((i) => i.json.status === 'stopped') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        720
+      ],
+      "id": "3ccb0f21-4d0e-4d37-aadd-06a7e2cab923",
+      "name": "If Attachments Stopped"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_STOPPED_EMAILS_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        784,
+        720
+      ],
+      "id": "ba79491f-fad5-46f9-a0ec-d03ebaf78ada",
+      "name": "Read Stopped Emails",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "notesInFlow": false,
+      "notes": "n8n data table stopped_emails (message_id, subject, attachments_skipped, stopped_at, resets_at, model, quota_limit, stopped_by): one row per email held back. Rerun and briefing section: workflow stopped-emails."
+    },
+    {
+      "parameters": {
+        "jsCode": "// An LLM's free daily quota is used up, so this email is held back, not filed: it keeps inProgress\n// and gets a row in stopped_emails; /rerun_attachments runs it again. Every LLM call runs before the\n// first write (Drive file, ledger row, report), so a rerun files the email once.\nconst email = $('Set Run Config').first().json;\nconst gmail = $('Get Email With Attachments').first().json;\nconst ran = (n) => { try { return $(n).isExecuted; } catch (e) { return false; } };\n// [node, its stop output, stopped_by, stage, where to change the model]\nconst STOPS = [\n  ['Route Classifier Rate Limit', 1, 'classifier', 'Email classification', 'inbox-attachment-organizer › Classifier LLM'],\n  ['Route Extractor Rate Limit', 1, 'extractor', 'Invoice extraction', 'inbox-attachment-organizer › Extractor LLM'],\n  ['If Contact Stopped', 0, 'contact fill', 'Contact update', 'smart-table-fill › LLM Processor'],\n];\nlet stop = null;\nfor (const [n, out, by, stage, where] of STOPS) {\n  if (!ran(n) || !$(n).all(out).length) continue;\n  const item = by === 'contact fill' ? $('Update Contact Record').all().find((i) => i.json.status === 'stopped') : $(n).all(out)[0];\n  stop = { by, stage, where, q: item.json.rate_limit || {}, skipped: '' };\n  break;\n}\nif (!stop) {\n  // The vision LLM stopped inside any-file2json-converter: name the files it could not read.\n  const files = $('Split Attachments').all();\n  const stopped = $('Convert Attachments to Text').all()\n    .map((r, i) => ({ r: r.json, f: Object.values(files[i]?.binary || {})[0] || {} }))\n    .filter((x) => x.r.status === 'stopped');\n  stop = { by: 'vision', stage: 'Attachment reading', where: 'any-file2json-converter › Vision LLM', q: stopped[0].r.error || {},\n    skipped: stopped.map((x) => x.f.fileName || 'unnamed file').join(', ') };\n}\nconst q = stop.q;\nconst row = {\n  message_id: email.email_ID,\n  subject: String(gmail.subject || ''),\n  attachments_skipped: stop.skipped,\n  stopped_at: new Date().toISOString(),\n  resets_at: q.resets_at || '',\n  model: String(q.model || '').split('/').pop(),\n  quota_limit: q.quota_limit ?? null,\n  stopped_by: stop.by,\n};\n// One message per quota day of each model. A reset hour or a local day already on the list with the\n// same model means it was announced; an email stopped again on a rerun finds its own row and stays quiet.\nconst rows = $input.all().map((i) => i.json).filter((r) => r && r.message_id);\nconst hour = (iso) => String(iso || '').slice(0, 13);\nconst day = (iso) => (iso ? DateTime.fromISO(iso).setZone('Europe/Zurich').toISODate() : '');\nconst notify = !rows.some((r) => r.model === row.model && ((row.resets_at && hour(r.resets_at) === hour(row.resets_at)) || day(r.stopped_at) === day(row.stopped_at)));\nconst pending = rows.filter((r) => r.message_id !== row.message_id).concat([row]);\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst short = (s) => (s.length > 40 ? s.slice(0, 39) + '…' : s) || '(no subject)';\nconst names = pending.slice(0, 5).map((r) => short(String(r.subject))).join('; ') + (pending.length > 5 ? '; +' + (pending.length - 5) + ' more' : '');\nconst resets = row.resets_at ? DateTime.fromISO(row.resets_at).setZone('Europe/Zurich').toFormat(\"dd.MM. HH:mm 'UTC'Z\") : 'unknown';\nconst limit = [q.limit, row.quota_limit].filter((v) => v != null && v !== '').join(', ');\nconst text = '⛔ ' + stop.stage + ' stopped — ' + esc(row.model || 'LLM') + ' free daily limit' + (limit ? ' (' + esc(limit) + ')' : '') + ' used up.\\n'\n  + 'Stopped: ' + pending.length + (pending.length === 1 ? ' email' : ' emails') + ' (' + esc(names) + ').\\n'\n  + 'Resets ' + resets + '.\\n'\n  + 'Rerun tomorrow, or change the model/key in ' + esc(stop.where) + '; then tap Rerun or send /rerun_attachments.';\nreturn [{ json: { row, notify, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        720
+      ],
+      "id": "7d408d82-94c0-4b2c-a17e-fba6092d7cf5",
+      "name": "Prepare Stop Notice"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_STOPPED_EMAILS_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "message_id",
+              "keyValue": "={{ $json.row.message_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message_id": "={{ $json.row.message_id }}",
+            "subject": "={{ $json.row.subject }}",
+            "attachments_skipped": "={{ $json.row.attachments_skipped }}",
+            "stopped_at": "={{ $json.row.stopped_at }}",
+            "resets_at": "={{ $json.row.resets_at }}",
+            "model": "={{ $json.row.model }}",
+            "quota_limit": "={{ $json.row.quota_limit }}",
+            "stopped_by": "={{ $json.row.stopped_by }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "attachments_skipped",
+              "displayName": "attachments_skipped",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stopped_at",
+              "displayName": "stopped_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resets_at",
+              "displayName": "resets_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quota_limit",
+              "displayName": "quota_limit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stopped_by",
+              "displayName": "stopped_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        720
+      ],
+      "id": "ec6b39ad-e304-47b7-a288-cd964bcf2c2c",
+      "name": "Save Stopped Email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b58179e7-e98c-462f-9cc9-66f93c75a5d9",
+              "leftValue": "={{ $('Prepare Stop Notice').first().json.notify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        720
+      ],
+      "id": "9449e769-1461-4d65-8761-f4055219e9c8",
+      "name": "If First Stop Today"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "={{ $('Prepare Stop Notice').first().json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🔁 Rerun stopped emails",
+                    "additionalFields": {
+                      "callback_data": "rerun_attachments"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1424,
+        720
+      ],
+      "id": "52032f26-b69c-49a3-867b-baebd9baf0ef",
+      "name": "Send Stop Notice",
+      "webhookId": "35e0ba68-3b2a-46e0-86e6-b5d82793f4b1",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "n8n_house_bot"
+        }
+      },
+      "notesInFlow": false,
+      "notes": "Once per quota day. The button sends callback rerun_attachments to menu-handler (agent rerun_attachments → workflow stopped-emails)."
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_STOPPED_EMAILS_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "message_id",
+              "keyValue": "={{ $('Set Run Config').first().json.email_ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        5248,
+        32
+      ],
+      "id": "6c9805ea-eda6-425c-a16d-9b44fd3a4220",
+      "name": "Clear Stopped Row",
+      "onError": "continueRegularOutput",
+      "executeOnce": true,
+      "notesInFlow": false,
+      "notes": "A filed email is off the stopped list: this is how a rerun takes its row away. No row, nothing deleted."
+    },
+    {
+      "parameters": {
+        "content": "## Hold back on a used-up daily quota\nWhen an LLM's free daily quota runs out (vision, classifier, extractor, contact fill), the email keeps `inProgress` and gets a `stopped_emails` row. The first stop per model each quota day sends one Telegram message with a Rerun button.",
+        "height": 224,
+        "width": 976,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        656
+      ],
+      "id": "cd6c35af-29d6-456f-a217-88234b2a9911",
+      "name": "Sticky Stopped Emails"
+    },
+    {
+      "id": "ec4e0c66-9b2b-d153-e590-9749a86aab03",
+      "name": "Check Classifier Rate Limit",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        -320
+      ],
+      "notesInFlow": false,
+      "notes": "Calls llm-rate-limit. Inputs:\nerror: {{ $json.error }}\nmodel: $('Classifier LLM').params.model\nattempt: {{ $runIndex }}\nitem: Build Email Context (what the classifier read)",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ZApb5gbnxdZaUR5S"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "error": "={{ $json.error }}",
+            "model": "={{ $('Classifier LLM').params.model }}",
+            "attempt": "={{ $runIndex }}",
+            "item": "={{ $('Build Email Context').first().json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "attempt",
+              "displayName": "attempt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "name": "Route Classifier Rate Limit",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1568,
+        -320
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "retry",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "487bd94c-c97d-c1e1-873d-278d19247091",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "retry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "stop",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "de70cd1f-9a3a-d687-2e38-bdc7c6672f44",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "d79a72bb-9ab3-902a-6902-027978aeda1f"
+    },
+    {
+      "name": "Fail With LLM Error",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        -320
+      ],
+      "parameters": {
+        "errorMessage": "={{ $json.rate_limit.message }}"
+      },
+      "id": "50ac5bfe-9461-e8d9-2529-ddde44a4b4b3"
+    },
+    {
+      "name": "If Financial Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1776,
+        -64
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a215d0bc-6617-0ea4-6dda-615df56ca15f",
+              "leftValue": "={{ $json.output.type_of_document === 'financial' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "62c1f093-d0a5-63fc-1beb-f79dd62d6111"
+    },
+    {
+      "name": "Loop Over Documents",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        288
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "id": "5ca6c0ae-b7de-f562-e320-6c9da0b2ab7b"
+    },
+    {
+      "id": "804ce4f4-98a2-174d-1c81-fef2851ec618",
+      "name": "Check Extractor Rate Limit",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2032,
+        288
+      ],
+      "notesInFlow": false,
+      "notes": "Calls llm-rate-limit. Inputs:\nerror: {{ $json.error }}\nmodel: $('Extractor LLM').params.model\nattempt: {{ $runIndex }}\nitem: the document in this pass",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ZApb5gbnxdZaUR5S"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "error": "={{ $json.error }}",
+            "model": "={{ $('Extractor LLM').params.model }}",
+            "attempt": "={{ $runIndex }}",
+            "item": "={{ $('Loop Over Documents').first().json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "attempt",
+              "displayName": "attempt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "name": "Route Extractor Rate Limit",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2240,
+        288
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "retry",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "555d01c0-a22f-f34d-2e17-89fb8e27e885",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "retry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "stop",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "972fdf70-6ba3-3dc9-5e79-e761f3c76bca",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "82752cb9-ac23-1b5a-fc29-65ac067a5f5f"
+    },
+    {
+      "name": "If Contact Stopped",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2784,
+        -112
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c12b1d00-1dcc-2d2b-286d-97a30b6b380d",
+              "leftValue": "={{ $('Update Contact Record').all().some((i) => i.json.status === 'stopped') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bc46658d-bcbd-d641-0819-547d8d7e1d17"
+    },
+    {
+      "name": "Join Documents",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3408,
+        288
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 1
+      },
+      "id": "68dfe700-54ee-6213-2a36-7b175f6af22b"
+    },
+    {
+      "name": "Sticky Extract Invoices",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        208
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 1112,
+        "height": 320,
+        "content": "## Extract invoices\nFinancial emails only, one document per pass, before anything is written. A per-minute limit waits and sends the same document again; a per-day limit holds the email back."
+      },
+      "id": "12ad0af9-1731-e845-aea0-acf3509a9e5a"
     }
   ],
   "connections": {
@@ -1473,7 +2265,7 @@
       "main": [
         [
           {
-            "node": "Merge All Branches",
+            "node": "If Contact Stopped",
             "type": "main",
             "index": 0
           }
@@ -1506,9 +2298,9 @@
       "main": [
         [
           {
-            "node": "Prepare Attachments",
+            "node": "Join Documents",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -1579,7 +2371,7 @@
       "main": [
         [
           {
-            "node": "Extract Invoice Data",
+            "node": "Loop Over Documents",
             "type": "main",
             "index": 0
           }
@@ -1700,7 +2492,7 @@
       "main": [
         [
           {
-            "node": "Clean Email Body",
+            "node": "If Attachments Stopped",
             "type": "main",
             "index": 0
           }
@@ -1744,7 +2536,14 @@
       "main": [
         [
           {
-            "node": "If Has Attachments",
+            "node": "Loop Over Documents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Extractor Rate Limit",
             "type": "main",
             "index": 0
           }
@@ -1755,17 +2554,14 @@
       "main": [
         [
           {
-            "node": "Look Up Contact",
+            "node": "If Financial Email",
             "type": "main",
             "index": 0
-          },
+          }
+        ],
+        [
           {
-            "node": "Merge All Branches",
-            "type": "main",
-            "index": 1
-          },
-          {
-            "node": "Route by Email Category",
+            "node": "Check Classifier Rate Limit",
             "type": "main",
             "index": 0
           }
@@ -1830,7 +2626,7 @@
       "main": [
         [
           {
-            "node": "Set Run Config",
+            "node": "Process Each Email",
             "type": "main",
             "index": 0
           }
@@ -1863,7 +2659,7 @@
       "main": [
         [
           {
-            "node": "If No Attachments",
+            "node": "Drop Inline Images",
             "type": "main",
             "index": 0
           }
@@ -1875,6 +2671,242 @@
         [
           {
             "node": "Skip Promotions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop Inline Images": {
+      "main": [
+        [
+          {
+            "node": "If No Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Attachments Stopped": {
+      "main": [
+        [
+          {
+            "node": "Read Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clean Email Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Stopped Emails": {
+      "main": [
+        [
+          {
+            "node": "Prepare Stop Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Stop Notice": {
+      "main": [
+        [
+          {
+            "node": "Save Stopped Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Stopped Email": {
+      "main": [
+        [
+          {
+            "node": "If First Stop Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If First Stop Today": {
+      "main": [
+        [
+          {
+            "node": "Send Stop Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove inProgress Label": {
+      "main": [
+        [
+          {
+            "node": "Clear Stopped Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Classifier Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Route Classifier Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Classifier Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail With LLM Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Financial Email": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Look Up Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Documents": {
+      "main": [
+        [
+          {
+            "node": "Join Documents",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Look Up Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Extractor Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Route Extractor Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Extractor Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Extract Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail With LLM Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Contact Stopped": {
+      "main": [
+        [
+          {
+            "node": "Read Stopped Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Route by Email Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join Documents": {
+      "main": [
+        [
+          {
+            "node": "If Has Attachments",
             "type": "main",
             "index": 0
           }

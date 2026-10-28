@@ -15,6 +15,23 @@ Resolves folder paths to Google Drive IDs. n8n requires IDs, not paths.
 **Called by:**
 - `04_inbox-attachment-organizer`
 
+## llm-rate-limit.json
+
+Decides what a workflow does after its LLM call failed. The LLM node keeps only "too many
+requests" and drops the 429 body, so this repeats the call once with a one-token request: while
+the limit holds the provider refuses it (no tokens spent) and names the limit and when it clears.
+
+- per minute → waits the named delay (at most 61 s), returns `rate_limit.action: retry` with the item
+- per day → `action: stop` with `model`, `limit`, `quota_limit`, `resets_at`
+- anything else, or still limited after 6 waits → `action: other` with the message
+
+Callers give the LLM node an error output, pass `error`, `model`, `attempt` (`$runIndex`) and
+`item` (what the LLM read), and route the answer with a Switch on `rate_limit.action`.
+
+**Called by:**
+- `04_inbox-attachment-organizer` (classifier, invoice extractor)
+- `02_smart-table-fill` (batch extraction)
+
 ## signup-intake.n8n.json
 
 > **Live, and now fed by the app rather than the website.** ⚠️ Its **live webhook path is

@@ -1,0 +1,171 @@
+{
+  "name": "llm-rate-limit",
+  "nodes": [
+    {
+      "id": "m",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        120
+      ],
+      "parameters": {
+        "width": 440,
+        "height": 600,
+        "content": "## LLM rate limit check\n\n### How it works\n1. A workflow whose LLM call failed calls this with the error, the model, how many times it has called before (`attempt`) and the item it sent.\n2. On a rate limit (429) it asks the provider once more with a one-token request. While the limit holds the provider refuses it without spending tokens, and the refusal says which limit it is and when it clears.\n3. A per-minute limit waits the time the provider names and returns `rate_limit.action: retry` with the item, so the caller sends it again.\n4. A per-day limit returns `action: stop` with the model, the limit and `resets_at`. The caller stops instead of failing.\n5. Anything else returns `action: other` with the message: not a rate limit, or still limited after 6 waits.\n\nGive the caller's LLM node an error output and route this workflow's answer with a Switch on `rate_limit.action`.\n\n### Setup steps\n- [ ] Connect the LLM provider credential to **Ask Provider Again** (it calls the chat and models endpoints)\n- [ ] Publish: callers run the published version\n- [ ] In each caller, an **Execute Workflow** node passing `error`, `model`, `attempt` (`$runIndex`) and `item` (`$json`)"
+      }
+    },
+    {
+      "id": "t",
+      "name": "When Called by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "error"
+            },
+            {
+              "name": "model"
+            },
+            {
+              "name": "attempt",
+              "type": "number"
+            },
+            {
+              "name": "item",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "p",
+      "name": "Ask Provider Again",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "CREDENTIAL_ID_LLM",
+          "name": "Groq 260203"
+        }
+      },
+      "notesInFlow": false,
+      "notes": "The LLM node keeps only \"too many requests\" and drops the 429 body. On a rate limit this asks the same model once more with a one-token request: while the limit holds it is refused (costs nothing) and the refusal names the limit. Any other error sends a GET the provider rejects unread (free); its answer is not used.",
+      "parameters": {
+        "method": "={{ String($json.error).includes('too many requests') ? 'POST' : 'GET' }}",
+        "url": "={{ 'https://api.groq.com/openai/v1/' + (String($json.error).includes('too many requests') ? 'chat/completions' : 'models') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: [{ role: 'user', content: 'ok' }], max_tokens: 1 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "d",
+      "name": "Decide Rate Limit Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Decides what a caller does after its LLM call failed. A 429 is asked again once, with a\n// one-token request: while a limit is hit the provider refuses it (no tokens spent) and its body\n// names the limit (per minute or per day), its size and when it clears.\n//   retry: a per-minute limit. Waits here, then the caller sends the same item again.\n//   stop:  a per-day limit. The caller stops: the email is held back, not failed.\n//   other: not a rate limit, or still limited after 6 waits. The caller decides.\nconst input = $('When Called by Another Workflow').first().json;\nconst err = String(input.error || 'LLM request failed');\nconst { error, ...item } = input.item || {};\nconst res = $input.first().json;\nconst out = (rate_limit) => [{ json: { ...item, rate_limit: { ...rate_limit, model: input.model, probe_status: res.statusCode ?? null } } }];\nif (!err.includes('too many requests')) return out({ action: 'other', message: err });\nlet body = res.body;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }\nconst msg = String((body && body.error && body.error.message) || '');\nconst kind = (msg.match(/\\((TPM|TPD|RPM|RPD)\\)/) || [])[1] || '';\n// \"try again in 1h2m3.5s\" / \"7.5s\" / \"157.5ms\" -> seconds\nlet delay = NaN;\nconst t = msg.match(/try again in ([0-9hm.]+m?s)/);\nif (t) {\n  const p = t[1].match(/^(?:(\\d+)h)?(?:(\\d+)m(?!s))?(?:([\\d.]+)s)?(?:([\\d.]+)ms)?$/);\n  if (p) delay = (+p[1] || 0) * 3600 + (+p[2] || 0) * 60 + (+p[3] || 0) + (+p[4] || 0) / 1000;\n}\nconst headers = res.headers || {};\nif (!Number.isFinite(delay) && headers['retry-after']) delay = Number(headers['retry-after']);\nif (/D$/.test(kind) || /per day/i.test(msg)) {\n  const resetsAt = new Date(Date.now() + (Number.isFinite(delay) ? delay : 3600) * 1000).toISOString();\n  return out({ action: 'stop', limit: kind === 'RPD' ? 'requests per day' : 'tokens per day',\n    quota_limit: Number((msg.match(/Limit (\\d+)/) || [])[1]) || null, resets_at: resetsAt, message: err });\n}\nif (Number(input.attempt) >= 6) return out({ action: 'other', message: err + ' (still limited after 6 waits)' });\n// A repeat that went through means the minute has just cleared.\nconst wait = res.statusCode === 429 ? Math.min(Number.isFinite(delay) ? delay : 20, 60) + 1 : 2;\nreturn out({ action: 'retry', limit: kind === 'RPM' ? 'requests per minute' : 'tokens per minute', wait_s: Math.ceil(wait) });"
+      }
+    },
+    {
+      "id": "w",
+      "name": "Wait Out Rate Limit",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        300
+      ],
+      "webhookId": "2c6e1f0a-4b7d-4e93-8a51-0f9d3c7b2e64",
+      "notesInFlow": false,
+      "notes": "Waits the delay a retry needs (0 s for stop and other), so every answer leaves through this node, the one whose item goes back to the caller. Under 65 s, so n8n keeps the run in memory.",
+      "parameters": {
+        "amount": "={{ $json.rate_limit.action === 'retry' ? $json.rate_limit.wait_s : 0 }}"
+      }
+    },
+    {
+      "id": "s1",
+      "name": "Ask and decide",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        160
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 640,
+        "height": 300,
+        "content": "## Ask the provider which limit\nOne more one-token request reads the 429 body the LLM node drops. The answer is retry, stop or other."
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Ask Provider Again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Provider Again": {
+      "main": [
+        [
+          {
+            "node": "Decide Rate Limit Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Rate Limit Action": {
+      "main": [
+        [
+          {
+            "node": "Wait Out Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}

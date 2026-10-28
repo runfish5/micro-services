@@ -11,7 +11,9 @@ call points.
 
 | File | What |
 |---|---|
-| `workflows/inbox-attachment-organizer.json` | main workflow (37 nodes) |
+| `workflows/inbox-attachment-organizer.json` | main workflow (55 nodes) |
+| `../shared/llm-rate-limit.json` | what a failed LLM call does next: wait out a per-minute 429, stop on a per-day one. Called by the classifier, the extractor and smart-table-fill. Live ID `ZApb5gbnxdZaUR5S` |
+| `workflows/subworkflows/stopped-emails.json` | the held-back list: the briefing's `inbox` section and `/rerun_attachments` (menu-handler agent). Live ID `7A07MNHtaj2tnbbX` |
 | `workflows/subworkflows/gmail-processor-datesize.json` | Gmail search → target workflow per email. Its Config defaults catch up the organizer. Live ID `eShHXaF_dgYe0K2lMb8AY`. Docs: `docs/gmail-processor-datesize.md` |
 | `workflows/gmail-backup.json` | standalone backup, verify and restore of the mailbox. Live ID `13vNowtGuPAKnfhj`. Docs: `docs/gmail-backup.md` |
 | `../03_any-file2json-converter` | converts each attachment to text. See its `CLAUDE.md` |
@@ -43,22 +45,67 @@ Rules for `Prepare Ledger Row`, and for any many-to-one Code node:
 
 - One email costs about 5,000 tokens: classifier (about 1.9k), one extractor call per attachment
   (2.4k–3.8k), contact branch.
-- **On a free tier with 8,000 tokens per minute, an email with three or more documents fails.**
-  Not fixed. `batching.delayBetweenBatches` on `Extract Invoice Data` does nothing at
-  `batchSize: 1`, and node retries wait at most 5 s. A real fix paces the attachments outside the
-  node (a loop + wait in front of the extractor, as in `gmail-processor-datesize`); mind rule 1
-  above when adding it.
+- **Every LLM call runs before the first write.** Classifier, then (financial only) the extractor
+  one document per pass (`Loop Over Documents`), then the contact fill, then `Route by Email
+  Category` and the writes: Drive, ledger, report. The documents rejoin the filing branch at
+  `Join Documents`. So a stop on a daily quota leaves nothing written, and a rerun files the email
+  once; no write needs a check-before-write. Keep it that way: a new LLM call goes before the router.
+- **Every 429 asks `llm-rate-limit`.** `Classify Email` and `Extract Invoice Data` (and
+  smart-table-fill's batch extraction) leave on their error output to an Execute Workflow node. The
+  sub-workflow repeats the call with one token to read the limit the LLM node drops. Per minute: it
+  waits what the provider names and the caller sends the same item again, at most 6 times. Per
+  day: the email is held back (below). Any other error: `Fail With LLM Error` fails the run with
+  the LLM's message. Not covered: contact-memory-update's own LLM (called async by the fill, after
+  every guarded call) and the fill's rare `Generate Schema with LLM`.
 - A free tier with 200,000 tokens per day covers about 40 emails per day. A backlog needs a paid
   tier: about 20 s per email, no pause needed.
-- Every inline image is one vision request. A catch-up run needs a vision-capable LLM without a
-  tight per-minute limit.
+- **A MIME image is not an attachment.** `Drop Inline Images` drops every part whose bytes the HTML
+  embeds (the mail parser turns each `cid:` part into a `data:` URI), so logos and signatures never
+  reach the vision LLM, the extractor or Drive. The rest are renumbered from `attachment_0`.
+- The vision LLM free tier allows 5 requests per minute and 20 per day. The converter sends one
+  image at a time, 13 s apart **across all runs**: the next free slot is one row in the data table
+  `vision_pacing`, taken by compare-and-swap, so overlapping organizer runs (a poll during a
+  backfill) still queue. A per-minute 429 that gets through anyway waits and retries. The daily
+  cap is not paced, so a backlog of real image attachments still needs a paid tier.
+- **A used-up daily vision quota holds the email back, it does not file it.** The converter reads
+  the 429 body (the LLM node drops it, so `Read Quota Error` repeats the call over HTTP) and only a
+  per-DAY quota id blocks; the per-minute one waits and retries. The block is a row in the data
+  table `vision_quota`; until it expires no image is sent. Each held-back email gets a row in
+  `stopped_emails`, keeps `inProgress`, and the first one per model and quota day (same reset hour
+  or same local day) sends one Telegram message with a Rerun button. The classifier, the extractor
+  and the contact fill hold back the same way on their per-day limit: same list, `stopped_by` names
+  the stage, the message names stage, model, limit and reset. The briefing shows an alert while
+  rows remain.
+  `/rerun_attachments` clears the block and runs every row again: use it after a key or model
+  change, before the reset. The HTTP repeat costs one request when the window has just cleared.
+- The classifier reads at most 12,000 characters of the body: a free-tier request above 8,000
+  tokens is refused as too large ("your request is invalid").
 
 ## Non-obvious architecture
 
+**One execution per email.** The trigger hands each email to `Process Each Email`, which runs this
+workflow again from the catch-up entry. Everything after the entry reads one email (`first()`, one
+cleaned body), so a poll that returned several emails used to file the first and leave the rest in
+`inProgress` with no error. `Merge All Branches` passes on one item (choose branch, input 2):
+labels set once. Inputs 1 and 2 both come from `If Contact Stopped`, after the last LLM call:
+measured in a sandbox (executions 14699–14702), n8n runs a 3-input choose-branch Merge at the end
+of a run when 2 of its 3 inputs have data, never with 1; a 2-input one never runs with 1.
+
+**Backfill has one path: `gmail-processor-datesize` with its Config defaults.** Open it, click
+**Execute workflow**, and click again until `Summarize Run` shows `left_for_next_run: 0`. From an
+agent session, call it from a throwaway webhook workflow that passes nothing (at most
+`max_emails`), then delete that workflow. It finds the emails the organizer missed and runs the
+organizer's catch-up entry once per email, one after another, 45 s apart, so each passes the same
+guards as live mail: inline images dropped, the shared vision slot, the per-minute waits, and the
+stopped list when any daily quota runs out (one alert per model and day, the run goes on;
+`/rerun_attachments` files them after the reset). A per-minute 429 that outlasts 6 waits fails
+the target run: the processor stops there after one alert, and the next click continues. Never call the organizer directly in a loop, and never
+start two backfills at once.
+
 **Three Gmail labels.** `inProgress` is set at the start and removed at the end, so an email that
 keeps it is a failed run, including runs that hung or were wired wrong and never raised an error.
-`n8n` marks a finished run. `gdr` marks a saved attachment. All three branches (contact, notify,
-financial/fallback) converge at `Merge All Branches` → `Add n8n Label` → `Remove inProgress Label`; the Merge is
+`n8n` marks a finished run. `gdr` marks a saved attachment. The contact branch and the routed
+branch (notify, financial, fallback) converge at `Merge All Branches` → `Add n8n Label` → `Remove inProgress Label`; the Merge is
 what guarantees the tags fire exactly once. This proves a run completed, not that its data is right.
 
 **Optional archiving.** `archive_when_filed` is a field in the node `Set Run Config` (default

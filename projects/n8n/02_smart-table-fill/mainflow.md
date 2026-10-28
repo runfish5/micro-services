@@ -77,13 +77,17 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
                          └→ Create and Write Schema Sheet (Sheets batchUpdate API)
                               └→ Build Output Schema (uses Generate Schema with LLM data)
                           │
-                          └→ Extract Data from String (LLM chain, one call per batch)
-                          │     ├─ LLM Processor
-                          │     └─ Dynamic Output Parser
-                          │     - No rate limiting here. After a 429 the error handler's
-                          │       recovery path takes over (see llm-extract-rate-limited below)
+                          └→ Loop Over Batches (one batch per pass) → If LLM Needed
+                          │     ├─ direct → Loop Over Batches
+                          │     └→ Extract Data from String (LLM chain) → Loop Over Batches
+                          │           ├─ LLM Processor
+                          │           ├─ Dynamic Output Parser
+                          │           └─ error output → Check Fill Rate Limit (../../shared/llm-rate-limit.json)
+                          │                 → Route Fill Rate Limit: retry → Extract Data from String,
+                          │                   stop → Return Fill Stopped (ends the run, nothing written),
+                          │                   other → Loop Over Batches (the row gets extraction_error)
                           │
-                          └→ Merge Outputs
+                          └→ Loop Over Batches done → Merge Outputs
                                │
                                ├→ Write Extracted Row (disabled, standalone mode)
                                │
@@ -111,8 +115,9 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 - **Model**: LLM (configurable)
 - **Input**: Raw text + dynamic JSON schema, one call per schema batch
 - **Output**: Structured data matching schema + confidence scores
-- **Purpose**: Extract values from unstructured text. Rate limits are handled after the fact by the
-  error handler, not here (see llm-extract-rate-limited)
+- **Purpose**: Extract values from unstructured text. A 429 asks `llm-rate-limit`: a per-minute
+  limit waits and sends the same batch again; a per-day limit returns `{status: 'stopped',
+  rate_limit}` before any write, so a caller can hold its item back and rerun it later
 
 ## Node Details
 
@@ -130,8 +135,12 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 | 10 | Schema Output Parser | outputParser | Parse schema JSON |
 | 11 | Create and Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
 | 12 | Build Output Schema | code | Build JSON schema with depth-based field filtering via DEPTH_MAP; at most `batch_size` fields per LLM call, split evenly; the match column, the text column and every `known_values` key are never sent to the LLM; row_id from match_column → match_value → email; `row_key` groups one row's batches. A row with nothing left to extract (or empty text) becomes one `direct` item |
-| 12b | If LLM Needed | if | `direct` items skip the LLM and go straight to Merge Outputs |
-| 13 | Extract Data from String | chainLlm | LLM extraction, one item per row × column batch. `retryOnFail` (2 tries), then `onError: continueRegularOutput` so a failed batch becomes `{ error }` at the same index |
+| 12a | Loop Over Batches | splitInBatches | One batch per pass; its done output hands every result, in order, to Merge Outputs |
+| 12b | If LLM Needed | if | `direct` items skip the LLM and go straight back to the loop |
+| 13 | Extract Data from String | chainLlm | LLM extraction, one item per row × column batch. `retryOnFail` (2 tries), then `onError: continueErrorOutput` to Check Fill Rate Limit |
+| 13a | Check Fill Rate Limit | executeWorkflow | Calls `llm-rate-limit` with the error, the model and the batch |
+| 13b | Route Fill Rate Limit | switch | retry → Extract Data from String; stop → Return Fill Stopped; other → the loop, so the batch counts as failed (`extraction_error`) |
+| 13c | Return Fill Stopped | set | `{status: 'stopped', rate_limit}`: the run's last node, so the caller reads it |
 | 14 | LLM Processor | lmChat | Extraction model |
 | 15 | Dynamic Output Parser | outputParser | Schema from `$json.schema`, autoFix on |
 | 16 | Merge Outputs | code | Merge batch outputs per `row_key`; failed batches → `extraction_error`; `known_values` win over LLM values; empty values are dropped |
@@ -147,8 +156,8 @@ START: Manual Trigger → Get Rows in Sheet / When Executed by Another Workflow
 - First run creates schema; subsequent runs skip creation
 - Edit schema sheet to customize extraction (types, descriptions, enum values)
 - `batch_size` = data fields per LLM call (default 10). 13 fields at 10 become 7 + 6, not 10 + 3
-- **Every call repeats the prompt and the whole text.** Batches are sent at the same time, so the number of calls, not the field count, is what hits a tokens-per-minute limit. Keep calls few
-- **Rate limiting** is not done in this flow. See llm-extract-rate-limited below
+- **Every call repeats the prompt and the whole text.** The number of calls, not the field count, is what hits a tokens-per-minute limit. Keep calls few
+- **Rate limiting**: per-minute 429s are waited out in the flow (`llm-rate-limit`); a per-day one stops the run before any write. `Generate Schema with LLM` is not covered (it runs once per sheet)
 - **Apps Script handles both writing and folder creation** - no triggers needed (CRM mode)
 
 ### Update-or-Append Logic (Merge Outputs + Write Extracted Row)
@@ -203,6 +212,10 @@ Depth 1 is automated mail (notifications, receipts, alerts): by the classifier's
 ## Subworkflows
 
 ### llm-extract-rate-limited (building block, spec, not built yet)
+
+> **Superseded for 429s in normal runs:** Extract Data from String now waits out per-minute limits
+> itself through `../shared/llm-rate-limit.json` (one batch per pass). What is left here is paced
+> bulk extraction for a free tier, which nothing builds yet.
 
 A paced version of **Extract Data from String**: `llm_rate_limit` calls, then a pause of
 `llm_rate_delay` seconds, repeated. Two uses:
@@ -340,31 +353,31 @@ ContactManager-lineage → RecordSearch → Prepare Contact Input → smart-tabl
 
 #### Flow
 ```
-Manual Trigger ──────┬──→ Config (Set node with fallbacks)
-                     │
-When Executed ───────┘   (receives config + rate_limit_wait_seconds from error handler)
+When Clicking Execute ──┬──→ Configure (Set node with fallbacks)
+                        │
+When Called ────────────┘   (receives config + rate_limit_wait_seconds from error handler)
      ↓
 Fetch Data and Schema Sheets (HTTP GET: spreadsheets.get with includeGridData - gracefully handles missing sheets)
      ↓
 If Schema Exists (inline check on raw response for schema sheet with data rows)
-     ├─ TRUE → Ensure Headers
-     └─ FALSE → Generate Schema with LLM → Create and Write Schema Sheet → Ensure Headers
+     ├─ TRUE → Ensure Sheet Headers
+     └─ FALSE → Generate Schema with LLM → Create and Write Schema Sheet → Ensure Sheet Headers
      ↓
-Ensure Headers (HTTP POST: add source_file/Text_to_interpret/extraction_status if missing)
+Ensure Sheet Headers (HTTP POST: add source_file/Text_to_interpret/extraction_status if missing)
      ↓
-List Drive Files (Google Drive: list files in folder)
+Retrieve Drive Files (Google Drive: list files in folder)
      ↓
 Build Output Schema and Filter (Code: build extraction object + filter already-processed)
      ↓
 Loop Over Files (1 at a time)
      ↓
-Download File (Google Drive: download binary per item; 3 tries, error output → Prepare Write Data)
+Fetch File from Drive (Google Drive: download binary per item; 3 tries, error output → Prepare Write Data)
      ↓
 Expand Batches (Code: split wide schemas into batch_size chunks)
      ↓
 Convert File to Text (Execute Workflow: any-file2json-converter with extraction hints; errors continue)
      ↓
-Rate Limit Wait (dynamic: from Config, default 0s)
+Wait for Rate Limit (dynamic: from Configure, default 0s)
      ↓
 Prepare Write Data (Code: parse converter JSON output, or build a failed row with extraction_status)
      ↓
@@ -393,22 +406,22 @@ Write Extracted Row (Google Sheets: append or update on source_file)
 
 | # | Node | Type | Purpose |
 |---|------|------|---------|
-| 1 | Manual Trigger | trigger | Manual execution |
-| 2 | When Executed by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
-| 3 | Config | set | Configuration with fallbacks (reads from workflow input or defaults) |
+| 1 | When Clicking Execute | trigger | Manual execution |
+| 2 | When Called by Another Workflow | trigger | Receives config + rate_limit_wait_seconds from error handler |
+| 3 | Configure | set | Configuration with fallbacks (reads from workflow input or defaults) |
 | 4 | Fetch Data and Schema Sheets | httpRequest | Read all sheets via spreadsheets.get (gracefully handles missing schema sheet) |
 | 5 | If Schema Exists | if | Inline check on raw response for schema sheet with data rows |
 | 6 | Generate Schema with LLM | chainLlm | Generate schema definitions from column headers |
-| 7 | Schema LLM | lmChatGroq | Language model for schema generation |
+| 7 | Schema LLM | lmChat | Language model for schema generation |
 | 8 | Schema Output Parser | outputParser | Parse schema JSON array |
 | 9 | Create and Write Schema Sheet | httpRequest | Create sheet + write schema via batchUpdate |
-| 10 | Ensure Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response; uses `colLetter()` helper to support columns past Z (AA, AB, …) |
-| 11 | List Drive Files | googleDrive | List all files in target folder |
+| 10 | Ensure Sheet Headers | httpRequest | Add missing `source_file`/`Text_to_interpret` headers; extracts header row inline from raw response; uses `colLetter()` helper to support columns past Z (AA, AB, …) |
+| 11 | Retrieve Drive Files | googleDrive | List all files in target folder |
 | 12 | Build Output Schema and Filter | code | Parse raw sheet data, build extraction object, skip already-processed files |
 | 13 | Loop Over Files | splitInBatches | Process one file at a time |
-| 14 | Download File | googleDrive | Download file binary data |
+| 14 | Fetch File from Drive | googleDrive | Download file binary data |
 | 15 | Convert File to Text | executeWorkflow | Calls any-file2json-converter with extraction hints |
-| 16 | Rate Limit Wait | wait | Dynamic delay from Config (default 0s) |
+| 16 | Wait for Rate Limit | wait | Dynamic delay from Configure (default 0s) |
 | 17 | Prepare Write Data | code | Parse converter JSON output for sheet write |
 | 18 | Write Extracted Row | googleSheets | Append or update on `source_file`. The operation is fixed, not an expression: the editor drops an expression-driven operation's sheet and columns on import |
 
@@ -417,8 +430,8 @@ Write Extracted Row (Google Sheets: append or update on source_file)
 The workflow uses an adaptive rate limiting pattern via Execute Workflow parameters (no sheet storage):
 
 **Two entry points:**
-- **Manual Trigger**: Uses Config defaults (`rate_limit_wait_seconds = 0`, no delay)
-- **When Executed by Another Workflow**: Receives config + `rate_limit_wait_seconds` from error handler
+- **When Clicking Execute**: Uses Config defaults (`rate_limit_wait_seconds = 0`, no delay)
+- **When Called by Another Workflow**: Receives config + `rate_limit_wait_seconds` from error handler
 
 **Pattern:**
 ```
@@ -430,7 +443,7 @@ Error Handler catches it
        ↓
 Extract "retry in 55s" from error message
        ↓
-Extract Config values from execution.runData['Config']
+Extract Config values from execution.runData['Configure']
        ↓
 Call smart-folder2table via Execute Workflow
   with: original Config + rate_limit_wait_seconds = 55
@@ -449,7 +462,7 @@ File #6 onwards with 55s waits
 - Resumability ensures already-processed files are skipped
 
 **Usage:**
-- **Manual mode**: If you hit rate limits, increase `rate_limit_wait_seconds` in Config (try 60s, or more if needed). Restart the workflow - resumability skips already-processed files.
+- **Manual mode**: If you hit rate limits, increase `rate_limit_wait_seconds` in **Configure** (try 60s, or more if needed). Restart the workflow - resumability skips already-processed files.
 - **Production mode**: When published and called via subworkflow trigger, the 010-error-handler handles it automatically - extracts retry timing from 429 errors and restarts with the correct delay.
 
 #### Resumability (Skip-on-Retry)
@@ -460,7 +473,7 @@ File #6 onwards with 55s waits
 4. Rows whose `extraction_status` starts with `failed` do not count as done: the file is retried, and Write Extracted Row (always append-or-update on `source_file`) overwrites the failed row instead of duplicating it
 5. A sheet-write failure retries 3× then stops the run (systemic, not per-file); re-running resumes
 
-The `source_file` column is auto-created by the Ensure Headers logic. `Text_to_interpret` contains the raw converter output (JSON string with extracted fields).
+The `source_file` column is auto-created by the Ensure Sheet Headers logic. `Text_to_interpret` contains the raw converter output (JSON string with extracted fields).
 
 #### Schema-Aware Extraction
 
@@ -550,7 +563,7 @@ The Prepare Write Data node:
 
 #### Target Sheet Setup
 
-The user's Google Sheet needs column headers for their data fields. Both `source_file` and `Text_to_interpret` columns are auto-created by the Ensure Headers logic if missing.
+The user's Google Sheet needs column headers for their data fields. Both `source_file` and `Text_to_interpret` columns are auto-created by the Ensure Sheet Headers logic if missing.
 
 | Column | Required | Purpose |
 |--------|----------|---------|
@@ -567,11 +580,11 @@ On first run, if the schema sheet doesn't exist:
 2. `If Schema Exists` checks the raw response inline for a schema sheet with data rows (no intermediate parse node)
 3. `Generate Schema with LLM` generates schema from data sheet column headers (extracted inline from raw response)
 4. `Create and Write Schema Sheet` creates the sheet + writes schema rows via batchUpdate
-5. Flow continues to Ensure Headers → normal processing
+5. Flow continues to Ensure Sheet Headers → normal processing
 
 **Why spreadsheets.get instead of batchGet:** The `values:batchGet` API fails entirely if ANY range references a non-existent sheet. With `spreadsheets.get`, missing sheets simply aren't in the response - no error thrown. This enables graceful first-run handling without try/catch workarounds.
 
-The schema generation uses the same LLM chain pattern as smart-table-fill (Groq with gpt-oss-120b, structured output parser).
+The schema generation uses the same LLM chain pattern as smart-table-fill (LLM with a structured output parser).
 
 ---
 
@@ -579,15 +592,15 @@ The schema generation uses the same LLM chain pattern as smart-table-fill (Groq 
 
 | Phase | smart-table-fill | smart-folder2table | Notes |
 |-------|------------------|--------------------|-------|
-| Trigger | When Executed by Another Workflow | When Executed by Another Workflow | Both passthrough |
-| Config | String Input | Config | Different names by design |
+| Trigger | When Executed by Another Workflow | When Called by Another Workflow | Both passthrough |
+| Config | String Input | Configure | Different names by design |
 | Read sheets | Fetch Data Sheet Headers + Try Fetch Schema Sheet | Fetch Data and Schema Sheets | 1 call vs 2 |
 | Schema check | If Schema Exists | If Schema Exists | string exists vs boolean |
 | Schema gen | Generate Schema with LLM | Generate Schema with LLM | Identical |
 | Schema LLM | Schema LLM | Schema LLM | Identical |
 | Schema parser | Schema Output Parser | Schema Output Parser | Identical |
 | Schema write | Create and Write Schema Sheet | Create and Write Schema Sheet | Identical (refs differ) |
-| Header setup | — | Ensure Headers | folder2table-only |
+| Header setup | — | Ensure Sheet Headers | folder2table-only |
 | Schema build | Build Output Schema | Build Output Schema and Filter (inline) | Different scope |
 | Extraction | Extract Data from String | Convert File to Text (subworkflow) | LLM chain vs subworkflow |
 | Post-process | Merge Outputs | Prepare Write Data | Different merge needs |

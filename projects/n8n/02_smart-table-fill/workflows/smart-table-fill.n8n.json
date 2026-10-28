@@ -33,8 +33,8 @@
     },
     {
       "parameters": {
-        "content": "## Extract fields with an LLM\nOne call per row and up to `batch_size` columns. Known values and empty texts skip the LLM. Optional [confidence scores](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).",
-        "height": 856,
+        "content": "## Extract fields with an LLM\nOne call per row and up to `batch_size` columns, one batch per pass. Known values and empty texts skip the LLM. A 429 asks **llm-rate-limit**: per minute waits and retries, per day returns `status: stopped` before any write. Optional [confidence scores](https://github.com/runfish5/micro-services/blob/main/projects/n8n/docs/observability-through-llm-confidence-estimate.md).",
+        "height": 1232,
         "width": 352,
         "color": 7
       },
@@ -385,7 +385,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn, matchSameRow;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n  matchSameRow = $('String Input').first().json.match_same_row !== false;\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n  matchSameRow = true;\n}\n\n// LLM outputs line up, by index, with the Build Output Schema items that went to the LLM.\n// `direct` items skipped the LLM and carry their own context.\nconst llmItems = buildOutputItems.filter(b => !b.json.direct);\nconst rowGroups = {};\nlet llmIndex = 0;\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  // index fallback handles pinned data (no Build Output Schema)\n  const originalItem = item.json.direct ? item.json : (llmItems[llmIndex++]?.json || {});\n  const rowKey = originalItem.row_key || originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowKey]) {\n    rowGroups[rowKey] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core, known: originalItem.known_values || {} };\n  }\n  rowGroups[rowKey].items.push(item);\n}\n\nconst results = [];\nfor (const group of Object.values(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n  const errors = [];\n\n  for (const item of items) {\n    if (item.json.direct) continue;\n    const output = item.json.output;\n    // A failed batch (onError: continue) arrives as { error }. Report it; never fill the gap with a guess\n    if (!output) errors.push(item.json.error || 'LLM returned no output for this batch of columns');\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n  // Caller-supplied facts beat anything the LLM produced\n  Object.assign(merged, group.known);\n  // Empty means \"not in this text\", never \"erase it\": the cell keeps its value.\n  // A known value of null means the same: leave this column alone.\n  for (const [k, v] of Object.entries(merged)) {\n    if (v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) delete merged[k];\n  }\n\n  // Written only if the sheet has an extraction_error column; empty on success clears an old error\n  merged.extraction_error = errors.join(' | ').slice(0, 500);\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Write Extracted Row always matches on `email`. Without that field it appends a new row;\n  // an empty string would instead match, and overwrite, the first row whose email is blank\n  if (!matchSameRow || !merged.email) delete merged.email;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
+        "jsCode": "// LIST MODE: Group outputs by row_id, merge batches within each row, output N items\nconst allOutputs = $input.all();\n\n// Retrieve by index because LLM chain strips input fields from output\nlet buildOutputItems = [];\ntry {\n  buildOutputItems = $('Build Output Schema').all();\n} catch (e) {}\n\nlet matchColumn, textColumn, matchSameRow;\ntry {\n  matchColumn = $('String Input').first().json.match_column || 'email';\n  textColumn = $('String Input').first().json.text_column || 'Text_to_interpret';\n  matchSameRow = $('String Input').first().json.match_same_row !== false;\n} catch (e) {\n  matchColumn = 'email';\n  textColumn = 'Text_to_interpret';\n  matchSameRow = true;\n}\n\n// LLM outputs line up, by index, with the Build Output Schema items that went to the LLM.\n// `direct` items skipped the LLM and carry their own context.\nconst llmItems = buildOutputItems.filter(b => !b.json.direct);\nconst rowGroups = {};\nlet llmIndex = 0;\nfor (let i = 0; i < allOutputs.length; i++) {\n  const item = allOutputs[i];\n  // index fallback handles pinned data (no Build Output Schema)\n  const originalItem = item.json.direct ? item.json : (llmItems[llmIndex++]?.json || {});\n  const rowKey = originalItem.row_key || originalItem.row_id || `row_${i}`;\n  \n  if (!rowGroups[rowKey]) {\n    rowGroups[rowKey] = { items: [], matchValue: originalItem.row_id, bodyCore: originalItem.body_core, known: originalItem.known_values || {} };\n  }\n  rowGroups[rowKey].items.push(item);\n}\n\nconst results = [];\nfor (const group of Object.values(rowGroups)) {\n  const items = group.items;\n  const matchValue = group.matchValue;\n  const merged = {};\n  let confidenceData = null;\n  const errors = [];\n\n  for (const item of items) {\n    if (item.json.direct) continue;\n    const output = item.json.output;\n    // A failed batch arrives with rate_limit.message (llm-rate-limit answered \"other\"). Report it; never fill the gap with a guess\n    if (!output) errors.push(item.json.error || item.json.rate_limit?.message || 'LLM returned no output for this batch of columns');\n    if (output) {\n      if (output.confidence) {\n        confidenceData = output.confidence;\n        delete output.confidence;\n      }\n      Object.assign(merged, output);\n    }\n  }\n\n  delete merged._row_id;\n  // Caller-supplied facts beat anything the LLM produced\n  Object.assign(merged, group.known);\n  // Empty means \"not in this text\", never \"erase it\": the cell keeps its value.\n  // A known value of null means the same: leave this column alone.\n  for (const [k, v] of Object.entries(merged)) {\n    if (v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) delete merged[k];\n  }\n\n  // Written only if the sheet has an extraction_error column; empty on success clears an old error\n  merged.extraction_error = errors.join(' | ').slice(0, 500);\n\n  if (confidenceData) {\n    merged.confidence_score = confidenceData.overall || 0;\n    merged.confidence_low_fields = Array.isArray(confidenceData.low_confidence_fields) \n      ? confidenceData.low_confidence_fields.join(', ') : '';\n    merged.confidence_reasoning = confidenceData.reasoning || '';\n    merged.review_needed = (confidenceData.overall || 0) < 70;\n  }\n\n  // FIX: Write Extracted Row is hardcoded to match on 'email' column, so we must always populate it\n  if (matchValue) {\n    merged[matchColumn] = matchValue;\n    if (matchColumn !== 'email') {\n      merged.email = matchValue;\n    }\n  }\n\n  // FIX: Only set textColumn if different from matchColumn to prevent overwriting match value\n  if (group.bodyCore && textColumn !== matchColumn) {\n    merged[textColumn] = group.bodyCore;\n  }\n\n  // Dedupe extracted emails into email + more_emails fields\n  if (Array.isArray(merged.extracted_emails)) {\n    const baseEmails = matchValue ? [matchValue] : [];\n    const allEmails = [...new Set([...baseEmails, ...merged.extracted_emails].filter(Boolean))];\n    merged.email = allEmails[0];\n    merged.more_emails = allEmails.slice(1).join(', ');\n  }\n\n  // Remove observability fields (not written to sheet)\n  delete merged.confidence_score;\n  delete merged.confidence_low_fields;\n  delete merged.confidence_reasoning;\n  delete merged.review_needed;\n\n  // Write Extracted Row always matches on `email`. Without that field it appends a new row;\n  // an empty string would instead match, and overwrite, the first row whose email is blank\n  if (!matchSameRow || !merged.email) delete merged.email;\n\n  results.push({ json: merged });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -733,7 +733,7 @@
       "name": "Extract Data from String",
       "retryOnFail": true,
       "maxTries": 2,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -881,10 +881,198 @@
       "typeVersion": 2.2,
       "position": [
         688,
-        112
+        272
       ],
       "id": "3ec59c8e-0acb-53d5-879b-3182a1bb8634",
       "name": "If LLM Needed"
+    },
+    {
+      "name": "Loop Over Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        688,
+        112
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "id": "81b3dfa8-539a-6da4-c51a-55d56814d13e"
+    },
+    {
+      "name": "Check Fill Rate Limit",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        512,
+        720
+      ],
+      "notesInFlow": false,
+      "notes": "Calls llm-rate-limit. Inputs:\nerror: {{ $json.error }}\nmodel: $('LLM Processor').params.model\nattempt: {{ $runIndex }}\nitem: the batch in this pass",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ZApb5gbnxdZaUR5S"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "error": "={{ $json.error }}",
+            "model": "={{ $('LLM Processor').params.model }}",
+            "attempt": "={{ $runIndex }}",
+            "item": "={{ $('Loop Over Batches').first().json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "attempt",
+              "displayName": "attempt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "eaa4e47b-2a32-6cda-2979-af5efcc5cc09"
+    },
+    {
+      "name": "Route Fill Rate Limit",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        688,
+        720
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "retry",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4fe1036a-9312-7c14-f8e6-fe96e2d6bb31",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "retry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "stop",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "778cf606-c1c9-cd0b-ac5f-fe56cca22f30",
+                    "leftValue": "={{ $json.rate_limit.action }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "fd47ef3b-6fe4-6d66-4555-bbb6b7f7937d"
+    },
+    {
+      "name": "Return Fill Stopped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        896
+      ],
+      "notesInFlow": false,
+      "notes": "The caller reads status 'stopped' and holds its email back. Nothing was written: the writes run after the last batch.",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6897e86a-de6b-32ab-3b2e-fd356e9732bf",
+              "name": "status",
+              "value": "stopped",
+              "type": "string"
+            },
+            {
+              "id": "6df2d859-7b4e-0d97-199e-00a8fc201581",
+              "name": "rate_limit",
+              "value": "={{ $json.rate_limit }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "96ac77a1-8afc-d096-e4b8-c85b46823d56"
     }
   ],
   "connections": {
@@ -930,7 +1118,7 @@
       "main": [
         [
           {
-            "node": "If LLM Needed",
+            "node": "Loop Over Batches",
             "type": "main",
             "index": 0
           }
@@ -1025,7 +1213,14 @@
       "main": [
         [
           {
-            "node": "Merge Outputs",
+            "node": "Loop Over Batches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Fill Rate Limit",
             "type": "main",
             "index": 0
           }
@@ -1109,7 +1304,61 @@
         ],
         [
           {
+            "node": "Loop Over Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Batches": {
+      "main": [
+        [
+          {
             "node": "Merge Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If LLM Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Fill Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Route Fill Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Fill Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Extract Data from String",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Fill Stopped",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Batches",
             "type": "main",
             "index": 0
           }

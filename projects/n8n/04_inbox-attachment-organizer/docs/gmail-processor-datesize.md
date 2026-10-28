@@ -23,7 +23,9 @@ flowchart LR
     D -->|"one item per window"| F["Search Gmail Messages<br/><i>Gmail search</i>"]
     F --> X["Stop If Dry Run<br/><i>also applies max_emails</i>"]
     X --> L["Loop Over Emails"]
-    L -->|"one email"| W["Rate Limit Wait"] --> T["Run Target per Email"] --> L
+    L -->|"one email"| W["Rate Limit Wait"] --> T["Run Target per Email"] --> I["If Rate Limited"]
+    I -->|"no"| L
+    I -->|"yes: stop"| R
     L -->|"done"| R["Summarize Run"]
 ```
 
@@ -44,7 +46,7 @@ field it passes (`$json.field ?? default`).
 | `query` | Gmail search, same syntax as the search bar | the emails the organizer missed ([below](#catching-up-the-organizer)) |
 | `target_workflow_id` | ID of the workflow run once per email (the part of its URL after `/workflow/`) | the author's organizer: replace it with yours |
 | `max_emails` | max emails **per run**. `0` = no cap. The rest is reported as `left_for_next_run`; run again to continue | `200` |
-| `rate_limit_wait_seconds` | pause between two emails, for targets that call a rate-limited LLM. Keep it under 60: a longer wait makes n8n park the run in its database | `0` |
+| `rate_limit_wait_seconds` | pause between two emails, for targets that call a rate-limited LLM. Keep it under 60: a longer wait makes n8n park the run in its database | `45` |
 | `batch_mode` | `date` = walk back in windows, `size` = newest N over all time | `date` |
 | `lookback_days` | how far back to start (date mode). Older emails are not looked at: raise it to reach them | `365` |
 | `interval_days` | size of each window in days (date mode) | `30` |
@@ -60,8 +62,12 @@ the run ends early looking like a success.
 **Sequential, failure-tolerant hand-off.** `Loop Over Emails` hands one email at a time to
 `Run Target per Email`, which waits for the sub-run. It is set to continue on error, so one bad
 email becomes an `error` item instead of aborting the batch, and to always output, so a target
-that returns nothing does not end the loop early. **Summarize Run** returns
-`{query, found, processed, failed, left_for_next_run, errors}` to the caller.
+that returns nothing does not end the loop early. One kind of failure does stop the batch:
+`If Rate Limited` ends the loop when a target run failed on a rate limit (429). The organizer
+waits out per-minute limits and holds an email back on a per-day one without failing, so what
+still reaches this check is a per-minute limit that outlasted 6 waits: every email after it would
+fail the same way, one alert each. **Summarize Run** returns
+`{query, found, processed, failed, stopped_on_rate_limit, left_for_next_run, errors}` to the caller.
 
 **Pause and cap.** `Rate Limit Wait` waits `rate_limit_wait_seconds` before every email except
 the first. The cap needs no node of its own: `Stop If Dry Run` stops everything when
@@ -91,7 +97,8 @@ broken, or not yet switched on goes through it. Those emails are one Gmail searc
 **How to run it**
 
 1. Paste the search into the Gmail search bar to see what will be processed.
-2. Click **Execute workflow**. One click processes up to 200 emails, about 20 seconds each.
+2. Click **Execute workflow**. One click processes up to 200 emails, about a minute each with the
+   default 45 s pause.
 3. The output of **Summarize Run** shows `left_for_next_run`. Click again until it is `0`.
 
 Running it twice is safe: every email the organizer finishes is labelled `n8n`, so the next run
@@ -105,14 +112,17 @@ labels, and the backup lets you reset those.
 **A large backlog needs a paid LLM tier.** One email costs about 5,000 tokens on average
 (classifier, one extraction per attachment, contact branch). A free tier is enough for new mail,
 not for a backlog: a typical one allows 8,000 tokens per minute and 200,000 per day, which is
-about 40 emails per day, new mail included. Past that every email fails on the limit and keeps
-its `inProgress` label until the next run. For a few hundred emails, switch the model nodes of
-the organizer and its sub-workflows to a paid tier for the catch-up: 200 emails are about one
-million tokens, well under one US dollar on a small, fast model. Emails with images also need a
-vision-capable LLM without a tight per-minute limit: every inline logo is one request.
+about 40 emails per day, new mail included. Past that the organizer holds each email back on its
+stopped list (one Telegram message per model and day) and the run goes on; `/rerun_attachments`
+files them after the reset. For a few
+hundred emails, switch the model nodes of the organizer and its sub-workflows to a paid tier for
+the catch-up: 200 emails are about one million tokens, well under one US dollar on a small, fast
+model. Image attachments also count against the vision LLM: its free tier reads about 20 images
+a day. Past that the organizer holds the email back on its stopped list (no alert) and the run
+goes on.
 
-**On a free LLM tier** set `max_emails: 25` and `rate_limit_wait_seconds: 45`, or most emails fail
-on the tokens-per-minute limit.
+**On a free LLM tier** keep the default `rate_limit_wait_seconds: 45`: without it, emails in a row
+exceed the tokens-per-minute limit.
 
 **Self-hosted n8n in queue mode** keeps its files in the database. There the attachment files of
 every processed email stay behind, about 2 MB per email with attachments. On a small database,
