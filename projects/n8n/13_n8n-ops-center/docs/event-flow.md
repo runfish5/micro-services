@@ -247,12 +247,12 @@ reconciler skip bug rows with no code guarding the boundary.
 | Throw only for *genuinely broken* — unreachable sheet, bad credential | "No data" that throws costs the `⚠️` signal its meaning |
 | `continueOnFail` on every plugin call | One bad expression takes the whole 7 AM message, calendar and all |
 | Plain text only; the briefing escapes centrally | One forgotten `esc()` in any project kills the entire `sendMessage` |
-| `order` — anything actionable sorts first | Telegram truncates at 4096 chars and the **tail** is lost. A commitments list cut by a busy day is a missed payment |
+| `order` — anything actionable sorts first | Past 4096 visible chars the collapsed detail shrinks, then the **tail** moves to a second message. What matters must not sit there |
 | `enabled: false` is the kill switch | A misbehaving plugin is switched off in one place, not unwired |
 
-Each action becomes **its own Telegram message** with exactly two buttons — the keyboard is a
-static `fixedCollection`, so the count cannot vary at runtime, and Telegram rejects the *entire*
-keyboard if one button is malformed.
+An action sends no message of its own: it is meant as one row of the briefing's keyboard, which
+waits on an HTTP send (the Telegram node's keyboard is a static `fixedCollection`). Until then
+tasks are ticked on 🗂 Kanban. Details: `05_daily-briefing/docs/briefing-plugin-spec.md` § Actions.
 
 ---
 

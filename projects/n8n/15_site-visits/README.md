@@ -82,8 +82,23 @@ Rows from 2026-10-11 until the flag shipped hold no such callers at all: they we
 
 ## Reader
 
-The `daily briefing` workflow reads this table at 7 AM, groups the last 24 hours by IP,
-and renders a per-visitor digest into the Telegram message.
+The bot detector ([20_bot-detector](../20_bot-detector/)) reads this table at 4 AM, groups
+yesterday by IP and judges each visitor; the morning briefing's SITE section is its rendering.
+
+## Live alerts
+
+**Decide Live Alert** sends one Telegram line per address per day (🆕 new, 🤖 bot) and one more
+when a new visitor clicks a link (🙋 likely human). A new address from a place already announced
+in the last 10 minutes updates that line instead of sending another: `🆕 New visitor · Ashburn,
+US ×2 · computer · same network · /`. `×2` is two addresses. `same network` (the same /24 or /48) and
+`same browser` (the identical user agent) are said only when every address in the line shares it.
+Every line names the device after the place, off the user agent: `iPad` or `Tablet` is a tablet,
+`Mobi`, `Android` or `iPhone` a phone, any other a computer, and an empty one says nothing
+(`🙋 Likely human · Zurich, CH · phone · clicked “Sign in”`). Addresses on different devices
+count each: `1 tablet, 1 phone`. The bot detector's SITE section uses the same rule.
+The sent line's id is kept in static data by **Remember Live Alert**; two visits inside the same
+second can still each send a line, since each execution saves static data only at its end.
+`SELF_NETS` in **Decide Live Alert** holds your own address prefixes, set on the live instance only.
 
 ## Executions are not saved
 

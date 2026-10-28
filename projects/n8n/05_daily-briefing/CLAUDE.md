@@ -1,7 +1,7 @@
 # CLAUDE.md — 05 Daily Briefing
 
 Guidance for Claude Code when editing the 7 AM briefing. Read `README.md` first for what the
-message contains and why the site digest reads the way it does.
+message contains.
 
 ## What this workflow actually is
 
@@ -10,7 +10,7 @@ subworkflow, read at 7 AM and turned into one Telegram message:
 
 ```
 Schedule Trigger ┐
-                 ├→ Get Today's Events → Check Prices → Get Signups → Get Visits → Format Message → Send to Telegram
+                 ├→ Get Today's Events → Check Prices → Get Signups → Plugins → Run Plugin → Format Message → Send to Telegram
 Manual Trigger   ┘
 ```
 
@@ -18,7 +18,8 @@ Manual Trigger   ┘
 |---------|--------|----------|
 | Calendar | Google Calendar | — |
 | Prices | `price-checker` subworkflow | `12_steward` |
-| Site | `visits` table (records store) | `15_site-visits` |
+| Site | `site` plugin, off its `verdicts` table | `20_bot-detector` (the visits are `15_site-visits`') |
+| App | `app` plugin | `18_account-trail` |
 | Signups | `signups` table (records store) | `shared/signup-intake` — active, but only 1 row has ever been written |
 
 Keep it that way. **Logic that produces data belongs in the owning project; this workflow only
@@ -42,29 +43,27 @@ signup POST — believe that one when they disagree.
 
 ## The plugin contract
 
-> **This describes how it works today: sections are hardcoded inside `Format Message`.**
-> A proposed replacement — one registry-driven seam where projects install their own section
-> subworkflows — is specced in `docs/briefing-plugin-spec.md`. Until that is built, the rules
-> below are the contract, and rules 3–5 survive the migration unchanged.
+Sections are plugins: a `Plugins` registry row names a subworkflow, `Run Plugin` runs it, and
+`Format Message` renders what comes back by key. The full contract is
+`docs/briefing-plugin-spec.md`; in short a plugin returns
+`{key, icon, title, summary, blocks, actions, empty}`, plain text only, and:
 
-Adding a section means one reader node plus one string. Both halves have rules.
+- a block carries a `level`: `alert` (lifted into the top ⚠️ NEEDS ATTENTION block, never
+  collapsed), `main` (visible, the default) or `detail` (collapsed). **The plugin that owns the
+  data decides which line is an alert**; an alert says what happened and what to do, in plain
+  words, with no internal ids;
+- `summary` is the section's headline: the italic line under its header, or its part of a
+  cluster's summary line;
+- a registry row's `cluster` (`{key, icon, title}`) makes its members ONE section: a visible
+  header and summary line, then one `<blockquote expandable>` with every member's sub-section.
+  Signups is the one member with no subworkflow; it is built and slotted in inside `Format Message`.
 
-**1. Insert the reader node into the chain, anywhere before `Format Message`.**
+**1. All markup lives in `Format Message`.** It reads every upstream **by node name** —
+`$('Get Signups')`, `$('Check Prices')` — and never `$input`: a single `$input.all()` silently
+rebinds to whichever node sits immediately above it.
 
-Safe because `Format Message` reads every upstream **by node name** — `$('Get Visits')`,
-`$('Check Prices')` — and never `$input`. That is load-bearing, not stylistic: it is what lets
-a node be spliced into the middle of the chain without renumbering anything downstream. A single
-`$input.all()` in that code node silently rebinds to whichever node happens to sit immediately
-above it, and the section it feeds starts rendering another plugin's data.
-
-**2. Build the section as its own `const`, concatenated at the end.**
-
-```js
-let message = `☀️ Good morning! Your day:\n${calendarBlock}${priceSection}${siteSection}${signupSection}`;
-```
-
-Each section string starts with its own leading `\n\n` and is `''` when it has nothing to say.
-No section reaches into another's variables.
+**2. Order comes from the registry.** NEEDS ATTENTION, COMMITMENTS, 🏺 PROMPTPOTTER (signups, app,
+site inbox, site), 🔧 UPKEEP. A cluster sits at its first member's `order`.
 
 **3. Escape everything interpolated.** The Telegram node uses `parse_mode: HTML`, and much of
 what flows through here is written by strangers — link labels, use cases, product names. `esc()`
@@ -75,9 +74,8 @@ exists for this. A single unescaped `<` does not mangle one line; it fails the w
 
 The precedent is split, and both sides are correct:
 
-- **SITE always renders**, even at zero visitors. A missing section is indistinguishable from a
-  broken pipeline, and that ambiguity cost real confusion the first morning it shipped — no
-  visitors looked like no feature.
+- **SITE always renders**, even at zero visitors (`No visitors`): a missing section is
+  indistinguishable from a broken pipeline.
 - **SIGNUPS always renders** — it did not always, and the flip is the clearest worked example of
   the test below. It used to only announce arrivals, so silence was a normal day. Then signing up
   started GRANTING access on the operator's shared provider key, and the section stopped answering
@@ -89,19 +87,18 @@ check ("did anything need paying?"), silence is an answer and must be printed �
 enough. If it only announces events, silence is not worth a line.
 
 **5. Respect the tail cap.** Telegram hard-rejects over 4096 characters. The truncation cuts on
-a line boundary so it can never split an HTML entity. Sections added near the end of the
-concatenation are the ones that get cut, so put anything actionable early in the message.
+a line boundary outside any open blockquote, so it never splits an entity or leaves a tag
+unclosed. The tail is what gets cut; alerts are always at the top, whatever their plugin's order.
 
 ## Two different spreadsheets
 
-`Get Signups` and `Get Visits` call the records store (`19_records-store`); neither holds a
-`documentId`. `Get Commitments` reads the **Billing_Ledger** document.
+`Get Signups` calls the records store (`19_records-store`) and holds no `documentId`. `Get Commitments` reads the **Billing_Ledger** document.
 
 ## Never commit personal data in this file
 
-`SELF_NETS` (address prefixes; `SELF_IPS` until 2026-10-11) is empty in the committed copy and
-populated only on the live instance; a home IP is
-personal data and this repo is public. The same rule extends to every plugin: customer numbers,
+A home address is personal data and this repo is public, so the own-network list (`SELF_NETS`,
+in `20_bot-detector` and `15_site-visits`) is placeheld in committed copies and set only on the
+live instance. The same rule extends to every plugin: customer numbers,
 phone numbers and account references stay in the sheets, and the workflow reads them from there.
 The mirror script refuses to write a workflow containing an IPv4 literal — treat that as the
 floor, not the ceiling.
@@ -116,42 +113,19 @@ It matters more here than almost anywhere else: the briefing is a **once-a-day s
 with a human as its only consumer**. If it throws at 07:00, nothing retries and no alert fires —
 the failure looks exactly like a quiet morning.
 
-## Live vs committed — the seam is not deployed yet
+## Live vs committed
 
-`daily-briefing.json` in this repo **has** the plugin seam. The live workflow (11 nodes) does
-**not** — it was left untouched on purpose while the seam was proven on a sandbox copy.
-
-Promoting it means splicing `Plugins` + `Run Plugin` in and replacing `Format Message`, and the
-one thing that must not be lost in the process is the live self-address list, which exists only
-on the instance. The sandbox build handled this by taking the committed code and re-injecting
-the live constant — do the same, in that direction, rather than hand-patching live code.
-
-## The site digest was promoted to live on 2026-10-11
-
-The committed `Format Message` renamed `SELF_IPS` to `SELF_NETS` (prefix match) and added three
-lines to the SITE block: sign-in presses, bounces, source. The same block went to the live node
-that day through the REST API, by the rule above: committed code, live address list re-injected.
-Only the text between `// --- Site digest` and `// Signups:` was replaced, and each live IPv4
-address was shortened to its first three octets on the way in.
-
-Why the rename mattered, measured rather than argued: the old exact list matched 369 of the
-operator's 574 home-line rows in the `Visits` sheet. The line had rotated to a second address that
-was never added, so 205 rows of their own browsing were being reported as a visitor. The prefixes
-match all of them.
-
-The live workflow had 16 nodes when this was done, so the "Live vs committed" section above
-describes a state that has since moved on.
+Promote committed code to live by taking the committed code and re-injecting any live constant,
+never by hand-patching live code.
 
 ## Open thread — `/visits`
 
-The site digest ends with "→ full detail in the visits table" rather than "→ /visits" because
-that command does not exist yet. The digest names only the 3 most engaged visitors; there is no
-way to ask for the rest from Telegram.
+The SITE section prints five lines per verdict and then `+N more visitors`; there is no way to ask
+for the rest from Telegram.
 
 Intended fix: a `/visits` agent built as `12_steward/CLAUDE.md` § "Adding a New Agent" describes.
-A subworkflow reads the `visits` table and returns `{chatId, response}`; add an entry in the
+A subworkflow reads the `verdicts` table and returns `{chatId, response}`; add an entry in the
 menu-handler **Config** registry and the key in the Classifier Output Parser `route_type` enum.
-Then swap the closing line in `Format Message`.
 
 The only live Telegram command surface is `menu-handler` (`/help`, the agent registry, free-text
 routing). `13_n8n-ops-center/telegram-command-interface.n8n.json` is committed but not imported:

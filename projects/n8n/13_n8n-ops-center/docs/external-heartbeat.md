@@ -56,8 +56,10 @@ A failed Action makes **GitHub email the repo owner** (Actions failure
 notifications, on by default). That's the whole alerting path — no bot token, no
 chat ID, no relay.
 
-**Optional Telegram:** if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` secrets exist,
-the script also posts to Telegram. Omit them and GitHub email is used.
+**Telegram:** with both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` set, every alert is also
+posted to Telegram. The post never fails the run, but it never fails silently either: a
+half-set pair or a Telegram refusal (401 dead token, 400 wrong chat id) is a `::warning::` on the
+run, next to the error.
 
 ## Setup
 

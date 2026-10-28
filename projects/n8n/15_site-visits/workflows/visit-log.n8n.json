@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Log website visits to a records store\n\nIntake door for website visit telemetry. A site's beacon POSTs one event per pageview or click, and each becomes one row of the `visits` table.\n\n### How it works\n1. **Visit Webhook** takes the event and **Respond OK** answers 204 at once, so the page never waits on storage.\n2. **Keep Visit** hands the row to the records store. Where rows live is that workflow's business.\n3. **Decide Live Alert** sends one Telegram line per visitor per day (🆕 new, 🤖 bot) and one more when a new visitor clicks a link (🙋 likely human). Your own networks are skipped.\n\nOne row is one event: `ts, ip, country, city, event, path, target, referrer, ua, flag`. `flag` is the site's own word on a caller it took for a crawler; such a row is kept, and each reader decides what to do with it. The morning briefing reads the same table and digests the last 24 hours.\n\n*Save successful production executions* is set to **none**: one execution per pageview would otherwise bury the execution list.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in **Keep Visit**. With the Google Sheets store, create a `visits` tab with the header `at` followed by the ten fields above.\n2. Activate, then give the webhook's Production URL to your site's beacon.",
+        "content": "## Log website visits to a records store\n\nIntake door for website visit telemetry. A site's beacon POSTs one event per pageview or click, and each becomes one row of the `visits` table.\n\n### How it works\n1. **Visit Webhook** takes the event and **Respond OK** answers 204 at once, so the page never waits on storage.\n2. **Keep Visit** hands the row to the records store. Where rows live is that workflow's business.\n3. **Decide Live Alert** sends one Telegram line per visitor per day (🆕 new, 🤖 bot) and one more when a new visitor clicks a link (🙋 likely human). A new visitor from a place announced in the last 10 minutes updates that line instead (`×2`, plus `same network` or `same browser` when they share one). Your own networks are skipped.\n\nOne row is one event: `ts, ip, country, city, event, path, target, referrer, ua, flag`. `flag` is the site's own word on a caller it took for a crawler; such a row is kept, and each reader decides what to do with it. The bot detector reads the same table and renders the morning briefing's SITE section.\n\n*Save successful production executions* is set to **none**: one execution per pageview would otherwise bury the execution list.\n\n### Setup steps\n1. Import a records store (`19_records-store`) and select it in **Keep Visit**. With the Google Sheets store, create a `visits` tab with the header `at` followed by the ten fields above.\n2. Activate, then give the webhook's Production URL to your site's beacon.",
         "height": 460,
         "width": 380
       },
@@ -140,7 +140,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// One live Telegram line per visitor per day, and one more when a new visitor\n// turns out human. A first look only: the Bot Detector judges the whole day overnight.\n// Your own networks, as address prefixes. Set in the n8n UI, never in the public copy.\nconst SELF_NETS = ['YOUR_HOME_NET_PREFIX.'];\nconst v = $('Visit Webhook').first().json.body || {};\nconst ip = String(v.ip || '');\nif (!ip || SELF_NETS.some((net) => ip.startsWith(net))) return [];\n\n// Who was already announced today; yesterday's list is dropped on the first event of a day.\nconst day = String(v.ts || new Date().toISOString()).slice(0, 10);\nconst memory = $getWorkflowStaticData('global');\nif (!memory.told || memory.told.day !== day) memory.told = { day, visitors: {} };\nconst was = memory.told.visitors[ip] || '';\n\nconst where = [v.city, v.country].filter(Boolean).join(', ') || 'unknown place';\nconst ua = String(v.ua || '');\nconst bot = Boolean(v.flag) || !/mozilla\\//i.test(ua);\n// A link click is stored as \"label → href\"; a bare control has no arrow and went nowhere.\nconst [label, href] = String(v.target || '').split(' → ');\nconst clicked = v.event !== 'pageview' && Boolean(href);\nlet from = '';\ntry { from = v.referrer ? new URL(v.referrer).hostname.replace(/^www\\./, '') : ''; } catch { from = String(v.referrer).slice(0, 40); }\n\nlet text = '';\nif (!was && bot) {\n  const name = (ua.match(/[\\w.-]*(bot|crawler|spider|indexer|fetcher)[\\w./-]*/i) || [])[0] || v.flag || 'no browser named';\n  text = `🤖 Bot · ${name} · ${where} · ${v.path || '/'}`;\n  memory.told.visitors[ip] = 'bot';\n} else if (!was) {\n  text = `🆕 New visitor · ${where} · ${v.path || '/'}` + (from ? ` · from ${from}` : '');\n  memory.told.visitors[ip] = 'new';\n} else if (was === 'new' && clicked) {\n  text = `🙋 Likely human · ${where} · clicked “${label.trim()}”`;\n  memory.told.visitors[ip] = 'human';\n}\nreturn text ? [{ json: { text } }] : [];\n"
+        "jsCode": "// One live Telegram line per visitor per day, and one more when a new visitor\n// turns out human. A first look only: the Bot Detector judges the whole day overnight.\n// Your own networks, as address prefixes. Set in the n8n UI, never in the public copy.\nconst SELF_NETS = ['YOUR_HOME_NET_PREFIX.'];\n// A new visitor from a place already announced this recently updates that line instead.\nconst GROUP_MIN = 10;\nconst v = $('Visit Webhook').first().json.body || {};\nconst ip = String(v.ip || '');\nif (!ip || SELF_NETS.some((net) => ip.startsWith(net))) return [];\n\n// Who was already announced today; yesterday's list is dropped on the first event of a day.\nconst day = String(v.ts || new Date().toISOString()).slice(0, 10);\nconst memory = $getWorkflowStaticData('global');\nif (!memory.told || memory.told.day !== day || !memory.told.lines) memory.told = { day, visitors: {}, lines: {} };\nconst was = memory.told.visitors[ip] || '';\n\nconst where = [v.city, v.country].filter(Boolean).join(', ') || 'unknown place';\nconst ua = String(v.ua || '');\n// The device, off the user agent; the same rule wherever a message says where a visitor is.\nconst deviceOf = (ua) => {\n  const s = String(ua ?? '').trim();\n  return !s ? '' : /iPad|Tablet/.test(s) ? 'tablet' : /Mobi|Android|iPhone/.test(s) ? 'phone' : 'computer';\n};\n// Several addresses: one word when every one agrees, a count of each known device when not.\nconst devicesText = (list) => {\n  const t = {};\n  for (const d of list) if (d) t[d] = (t[d] || 0) + 1;\n  const e = Object.entries(t).sort((a, b) => b[1] - a[1]);\n  return e.length === 1 && e[0][1] === list.length ? e[0][0] : e.map(([d, k]) => k + ' ' + d + (k === 1 ? '' : 's')).join(', ');\n};\nconst device = deviceOf(ua);\nconst bot = Boolean(v.flag) || !/mozilla\\//i.test(ua);\nconst net = ip.includes(':') ? ip.split(':').slice(0, 3).join(':') + '::' : ip.split('.').slice(0, 3).join('.') + '.x';\n// A link click is stored as \"label → href\"; a bare control has no arrow and went nowhere.\nconst [label, href] = String(v.target || '').split(' → ');\nconst clicked = v.event !== 'pageview' && Boolean(href);\nlet from = '';\ntry { from = v.referrer ? new URL(v.referrer).hostname.replace(/^www\\./, '') : ''; } catch { from = String(v.referrer).slice(0, 40); }\n\n// A first sighting: a new line, or the place's recent line counted up. \"×2\" is two\n// addresses, and what ties them is said when they share it.\nconst announce = (head, tail) => {\n  const key = head + '|' + where;\n  const line = memory.told.lines[key];\n  const now = Date.now();\n  if (line && line.id && now - line.at < GROUP_MIN * 60e3) {\n    line.n += 1;\n    line.nets = [...new Set([...line.nets, net])];\n    line.uas = [...new Set([...line.uas, ua])];\n    line.devices = [...(line.devices || []), device];\n    const ties = [line.nets.length === 1 && 'same network', line.uas.length === 1 && 'same browser'].filter(Boolean).join(', ');\n    return { text: [head + ' · ' + where + ' ×' + line.n, devicesText(line.devices), ties, line.tail].filter(Boolean).join(' · '), edit: line.id, key };\n  }\n  memory.told.lines[key] = { at: now, id: '', n: 1, nets: [net], uas: [ua], devices: [device], tail };\n  return { text: [head, where, device, tail].filter(Boolean).join(' · '), edit: '', key };\n};\n\nlet alert = null;\nif (!was && bot) {\n  const name = (ua.match(/[\\w.-]*(bot|crawler|spider|indexer|fetcher)[\\w./-]*/i) || [])[0] || v.flag || 'no browser named';\n  alert = announce('🤖 Bot · ' + name, v.path || '/');\n  memory.told.visitors[ip] = 'bot';\n} else if (!was) {\n  alert = announce('🆕 New visitor', (v.path || '/') + (from ? ` · from ${from}` : ''));\n  memory.told.visitors[ip] = 'new';\n} else if (was === 'new' && clicked) {\n  alert = { text: ['🙋 Likely human', where, device, `clicked “${label.trim()}”`].filter(Boolean).join(' · '), edit: '', key: '' };\n  memory.told.visitors[ip] = 'human';\n}\nreturn alert ? [{ json: alert }] : [];\n"
       },
       "id": "c1d2e3f4-0005-4005-8005-000000000005",
       "name": "Decide Live Alert",
@@ -148,7 +148,7 @@
       "typeVersion": 2,
       "position": [
         860,
-        500
+        580
       ]
     },
     {
@@ -164,7 +164,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1080,
+        1300,
         500
       ],
       "webhookId": "c1d2e3f4-0006-4006-8006-000000000016",
@@ -174,6 +174,109 @@
           "name": "Telegram account"
         }
       }
+    },
+    {
+      "id": "1038aebd-a578-4636-911b-0323bbf71176",
+      "name": "Route New or Repeat",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        580
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "9b45148e-cb0f-4f63-a0a1-198c4eaf8c8c",
+              "leftValue": "={{ Boolean($json.edit) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e3b30b56-7a41-42e2-8464-a8e4735fdfa6",
+      "name": "Update Live Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1300,
+        680
+      ],
+      "webhookId": "63c6b449-6869-4895-8797-f1dc13f17a92",
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "YOUR_CHAT_ID_1",
+        "messageId": "={{ $json.edit }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "824f578b-49fc-45c2-86a3-32cad0175904",
+      "name": "Remember Live Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        500
+      ],
+      "parameters": {
+        "jsCode": "// The sent line's id, so a visitor from the same place minutes later updates it.\nconst { key } = $('Decide Live Alert').first().json;\nconst line = key && ($getWorkflowStaticData('global').told?.lines || {})[key];\nconst sent = $input.first().json;\nif (line) line.id = sent.result?.message_id || sent.message_id || '';\nreturn [];\n"
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Keep each visit\n\nAnswer the beacon at once, then hand the row to the records store.",
+        "height": 260,
+        "width": 680,
+        "color": 7
+      },
+      "id": "b4b49e9f-0d0a-453d-9795-32d7084619bd",
+      "name": "Keep section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Tell Telegram live\n\nOne line per new visitor. A second from the same place within 10 minutes updates that line to ×2.",
+        "height": 360,
+        "width": 900,
+        "color": 7
+      },
+      "id": "4b4c5d3f-567b-4dca-95ae-3a409cbd8537",
+      "name": "Live section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        460
+      ]
     }
   ],
   "connections": {
@@ -208,7 +311,36 @@
       "main": [
         [
           {
+            "node": "Route New or Repeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route New or Repeat": {
+      "main": [
+        [
+          {
+            "node": "Update Live Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Send Live Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Live Alert": {
+      "main": [
+        [
+          {
+            "node": "Remember Live Alert",
             "type": "main",
             "index": 0
           }

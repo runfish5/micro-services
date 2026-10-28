@@ -19,6 +19,7 @@ The morning briefing (project 05) provides the scheduled entry point; the stewar
 | `/deals` | Shopping advisor + price tracker (add, remove, track, history, plot...) |
 | `/learning` | AI-summarized Notion notes |
 | `/expenses` | Monthly expense chart + insights |
+| `/rerun_attachments` | Runs the emails held back by the vision daily limit through the inbox organizer again (project 04; also the Rerun button on its stop message) |
 
 Free text is routed by the AI Classifier to the best-fit agent or LLM backend. Conversation memory (Postgres) enables follow-up messages without repeating context.
 

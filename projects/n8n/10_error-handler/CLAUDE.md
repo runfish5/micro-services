@@ -70,6 +70,22 @@ the whole `sendMessage` — which is how the runner-proof branch lost 22 alerts 
 exists for. This became load-bearing the moment `error_message` started carrying real error text
 instead of one fixed, punctuation-free sentence; workflow names alone (`04_inbox-…`) would break it.
 
+### A dead credential: one Telegram alert, and no alert path through it
+
+`auth_error` covers `401`/`403` and the dead-key texts that carry no such code: a revoked Google
+OAuth ("needs to be reconnected", no `httpCode`) and a bad Gemini key (a `400`). The classifier
+names the `credential` (from the message, else the failed node).
+
+- **One plain Telegram alert per credential**, saying what to reconnect. Every workflow using it
+  fails on its next run; the repeats are logged and emailed, not sent to Telegram. The memory is
+  the n8n data table `dead_credentials` (`credential`, `last_seen`), which needs no credential of
+  its own. A spell ends after 36 h with no failure from that credential.
+- **Nothing on the alert path may depend on the credential that died.** `Append to FailedItems`,
+  both Telegram senders and the email continue on error, and `Format Telegram Alert` reads
+  `Prepare & Classify Error` by name, never `$json`. Until 2026-10-27 a dead Sheets credential
+  failed `Append to FailedItems` first and every alert behind it was lost (2026-10-23 onwards).
+- A dead Telegram credential can only reach email; a dead Gmail credential only Telegram.
+
 ## Bindings and open points
 
 - 21 of 22 active workflows carry an `errorWorkflow`. Keep it that way: an unbound workflow

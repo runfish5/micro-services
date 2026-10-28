@@ -15,9 +15,12 @@ Error Trigger → Runner/Infra Down? ──TRUE──┬─> 🚨 Runner-Proof A
                               │                           │   (TRUE also continues below)
                    Retry Workflow (Execute)             FALSE
                               │                           ▼
-                    Send Auto-Retry Alert        Append to FailedItems
+                    Send Auto-Retry Alert        Append to FailedItems   (continues on error)
                                                           │
-                                                Format Telegram Alert ──> 📧 Email Alert (Gmail, full message)
+                                                 Check Dead Credential ──TRUE──> Recall ─> Remember Dead Credential
+                                                          │ FALSE                            │
+                                                Format Telegram Alert <──────────────────────┘
+                                                          │ ──> 📧 Email Alert (Gmail, full message)
                                                           │
                                                  Split Long Message
                                                           │
@@ -41,9 +44,11 @@ Error Trigger → Runner/Infra Down? ──TRUE──┬─> 🚨 Runner-Proof A
 | **Send Auto-Retry Alert** | Telegram notification that auto-retry is happening |
 | **Is Resolver Failure?** | Checks if the 8-hour Task Resolver itself failed (watchdog scenario) |
 | **CODE RED Alert** | Immediate critical alert; the TRUE branch also continues into FailedItems logging + the rich Telegram/email alerts |
-| **Append to FailedItems** | Logs to Google Sheets with upsert on execution_id |
-| **Format Telegram Alert** | Builds message with severity emoji, LLM cost info |
-| **Split Long Message** | Chunks messages over 4000 chars for Telegram limit |
+| **Append to FailedItems** | Logs to Google Sheets with upsert on execution_id. Continues on error, so a dead Sheets credential cannot swallow the alert |
+| **Check Dead Credential** | `error_type` is `auth_error` → look up the dead credential |
+| **Recall / Remember Dead Credential** | Data table `dead_credentials`: when this credential last failed, then stamp it now |
+| **Format Telegram Alert** | Builds message with severity emoji, LLM cost info. A dead credential gets one plain "reconnect X" message the first time in 36 h, and nothing on Telegram after |
+| **Split Long Message** | Chunks messages over 4000 chars for Telegram limit; sends nothing when the message is empty |
 | **Loop Over Chunks** | Sends each chunk as `[1/N]`, `[2/N]`, etc. |
 
 > **Alert channels:** every failure now fires on **both Telegram and email**, reusing existing credentials — no SMTP/extra setup. The regex in `Runner/Infra Down?` must be plain JS (no inline `(?i)` flag — n8n rejects it); case-insensitivity is done via `.toLowerCase()` on the left value.
@@ -64,7 +69,8 @@ Workflows in the registry get immediate automatic retry on rate limit errors ins
 
 **To add a workflow:** Edit the `AUTO_RETRY_REGISTRY` array in the "Prepare & Classify Error" code node.
 
-**Planned entry: LLM extraction.** For smart-table-fill (and the organizer's contact step that calls it), the default
+**Planned entry: LLM extraction** (likely unneeded: smart-table-fill and the organizer now wait out per-minute 429s
+in the flow through `shared/llm-rate-limit.json`, and hold the email back on a per-day one). For smart-table-fill (and the organizer's contact step that calls it), the default
 remedy will be `llm-extract-rate-limited`: the same extraction, re-run in paced rounds (the same block
 standalone copies use by default). Spec, not built:
 `02_smart-table-fill/mainflow.md` § llm-extract-rate-limited.
@@ -83,7 +89,7 @@ Error Handler catches it
        ↓
 Extract "retry in 55s" from error message
        ↓
-Extract Config values from execution.runData['Config']
+Extract Config values from execution.runData['Configure']
        ↓
 Call smart-folder2table via Execute Workflow
   with: original Config + rate_limit_wait_seconds = 55

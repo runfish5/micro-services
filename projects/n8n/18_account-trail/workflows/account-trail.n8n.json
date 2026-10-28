@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Print what each app account did in the morning briefing\n\nWhat each account did in an app, printed in the morning briefing as the **APP** section.\n\n### How it works\n**The app tells; this workflow never asks.** The app POSTs the whole last day every half hour and this workflow keeps the newest in its static data. A day with no send shows as *Stale*, not as a quiet day.\n\n### Setup steps\n1. Create a **Header Auth** credential: name `X-Trail-Secret`, value a long random string. Bind it on **When Trail Is Sent**.\n2. Give the app this webhook's Production URL and the same secret.\n3. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'app', order: 37, workflowId: '<this id>', enabled: true, ...ctx }`.\n\nBody: `{ as_of, accounts: [{ who, rows }], unreadable }`. A row is `YYYY-MM-DD HH:MM:SS what subject` in UTC.",
+        "content": "## Print what each app account did in the morning briefing\n\nWho signed in to an app and what each account did, printed in the morning briefing as the **APP** section, and a watch that tells Telegram when the box goes quiet.\n\n### How it works\n**The app tells; this workflow never asks.** The app POSTs the whole last day every half hour and this workflow keeps the newest in its static data. A day with no send shows as *Stale*, not as a quiet day.\n\n**Watch the Box** runs every 15 minutes and sends one line when something changes: no send for 75 minutes, or the app's public health URL failing. And one more when it is back. A broken probe in `health` is not sent from here: the box's admin bot already Telegrams it, and the briefing lists it.\n\n### Setup steps\n1. Create a **Header Auth** credential: name `X-Trail-Secret`, value a long random string. Bind it on **When Trail Is Sent**.\n2. Give the app this webhook's Production URL and the same secret.\n3. In **Watch the Box**, set `APP_HEALTH_URL` to the app's public health URL; pick your Telegram credential and chat in **Send Box Alert**.\n4. Activate, then add one line to the briefing's **Plugins** node: `{ key: 'app', order: 37, workflowId: '<this id>', enabled: true, ...ctx }`.\n\nBody: `{ as_of, accounts: [{ who, lines }], unreadable, health }`, `health` = `{ \"<probe>\": { state: \"held\"|\"broken\", since, fix } }`. A line is `{ at, what, subject, campaign, dataset, by }`, `at` in UTC.",
         "height": 560,
         "width": 480
       },
@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "content": "## Render the briefing section\n\nCalled by the morning briefing with a time zone. Prints what was last kept.",
+        "content": "## Render the briefing section\n\nCalled by the morning briefing with a time zone. Who signed in, then what each account did, per dataset.",
         "height": 240,
         "width": 512,
         "color": 7
@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// The app sends the whole last day each time, so only the newest is kept.\nconst body = $input.first().json.body || {};\nif (!body.as_of || !Array.isArray(body.accounts)) {\n  throw new Error('Not a trail: as_of and accounts are required');\n}\n$getWorkflowStaticData('global').trail = {\n  as_of: body.as_of,\n  accounts: body.accounts,\n  unreadable: Array.isArray(body.unreadable) ? body.unreadable : [],\n};\nreturn [{ json: { ok: true } }];"
+        "jsCode": "// The app sends the whole last day each time, so only the newest is kept.\nconst body = $input.first().json.body || {};\nif (!body.as_of || !Array.isArray(body.accounts) || !body.accounts.every((a) => Array.isArray(a && a.lines))) {\n  throw new Error('Not a trail: as_of, and accounts each with lines, are required');\n}\n$getWorkflowStaticData('global').trail = {\n  as_of: body.as_of,\n  // This side's clock: the box watch judges silence by it, never by the box's own.\n  received_at: new Date().toISOString(),\n  accounts: body.accounts,\n  unreadable: Array.isArray(body.unreadable) ? body.unreadable : [],\n  // The box's probes, { '<probe>': { state: 'held'|'broken', since, fix } }; absent from an older box.\n  health: body.health && typeof body.health === 'object' && !Array.isArray(body.health) ? body.health : {},\n};\nreturn [{ json: { ok: true } }];\n"
       },
       "id": "a7c1e2d0-18a1-4c00-9a01-000000000003",
       "name": "Keep Latest Trail",
@@ -102,7 +102,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Briefing plugin: the APP section. What each account did, as the app last told it.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally.\nconst MAX_ACCOUNTS = 8;\nconst MAX_ROWS = 6;        // per account; the newest are kept\nconst STALE_AFTER_H = 2;   // the app tells every half hour\n\nconst tz = $('When Called for Briefing').first().json.tz || 'UTC';\nconst told = $getWorkflowStaticData('global').trail;\nconst section = (blocks, empty) => [{ json: { key: 'app', icon: '🏺', title: 'APP', blocks, empty } }];\n// Always exactly one item: zero items is indistinguishable from a crash.\nif (!told) return section([], 'The app has not told anything yet');\n\nconst clock = (ms, withDay) => new Date(ms).toLocaleString('en-GB', {\n  ...(withDay ? { day: '2-digit', month: 'short' } : {}),\n  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,\n});\n// A row is \"YYYY-MM-DD HH:MM:SS what subject\", in UTC.\nconst line = (row) => {\n  const text = String(row ?? '');\n  const at = Date.parse(text.slice(0, 10) + 'T' + text.slice(11, 19) + 'Z');\n  return Number.isFinite(at) ? clock(at) + ' ' + text.slice(20) : text;\n};\n\nconst blocks = [];\nconst age = Date.now() - Date.parse(told.as_of);\nif (!(age < STALE_AFTER_H * 3600e3)) {\n  blocks.push({ heading: 'Stale', items: ['Last told ' + (Number.isFinite(age) ? clock(Date.now() - age, true) : 'at an unreadable time')] });\n}\nconst accounts = told.accounts.filter((a) => a && Array.isArray(a.rows) && a.rows.length);\nfor (const a of accounts.slice(0, MAX_ACCOUNTS)) {\n  const items = a.rows.slice(-MAX_ROWS).map(line);\n  if (a.rows.length > MAX_ROWS) items.unshift('+' + (a.rows.length - MAX_ROWS) + ' earlier');\n  blocks.push({ heading: String(a.who || '?'), items });\n}\nif (accounts.length > MAX_ACCOUNTS) {\n  blocks.push({ heading: 'More', items: accounts.slice(MAX_ACCOUNTS).map((a) => String(a.who || '?') + ' · ' + a.rows.length) });\n}\nif (told.unreadable.length) blocks.push({ heading: 'Could not read', items: told.unreadable.map(String) });\n\nreturn section(blocks, 'Nobody did anything');"
+        "jsCode": "// Briefing plugin: the APP section. Who signed in, and what each account did,\n// as the app last told it.\n// Contract: 05_daily-briefing/docs/briefing-plugin-spec.md\n//\n// PLAIN TEXT ONLY, never HTML. The briefing escapes centrally.\nconst MAX_ACCOUNTS = 8;\nconst STALE_AFTER_H = 2;   // the app tells every half hour\n\nconst tz = $('When Called for Briefing').first().json.tz || 'UTC';\nconst told = $getWorkflowStaticData('global').trail;\nconst section = (blocks, empty, summary = '') => [{ json: { key: 'app', icon: '🧪', title: 'APP · last 24h', summary, blocks, empty } }];\n// Always exactly one item: zero items is indistinguishable from a crash.\nif (!told) return section([], 'The app has not told anything yet');\n\nconst clock = (ms, withDay) => new Date(ms).toLocaleString('en-GB', {\n  ...(withDay ? { day: '2-digit', month: 'short' } : {}),\n  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,\n});\nconst time = (at) => (Number.isFinite(Date.parse(at)) ? clock(Date.parse(at)) : '?');\n// The app's own words, spaced: 'start-run' reads 'start run', 'terms_accepted' 'terms accepted'.\nconst words = (what) => String(what || '?').replace(/[-_]/g, ' ');\n// Repeats in a row are one entry: 'start run ×2'.\nconst runs = (list) => list.reduce((out, w) => {\n  const last = out.at(-1);\n  if (last && last.w === w) last.k += 1; else out.push({ w, k: 1 });\n  return out;\n}, []).map(({ w, k }) => w + (k > 1 ? ' ×' + k : ''));\n\n// Sign-in and the account's creation are said in the heading; everything else is what was done.\nconst SAID_ABOVE = new Set(['signed_in', 'account_created']);\n// The device a line was done from, as the box classed it; absent from an older box.\nconst device = (l) => (/^(phone|tablet|computer)$/.test(String((l && l.device) || '')) ? ' (' + l.device + ')' : '');\n// Free text from the box is clipped: one long line must not push the briefing past its limit.\nconst TEXT_MAX = 80;\nconst LINE_MAX = 240;\nconst clip = (v, n) => {\n  const s = String(v ?? '').replace(/\\s+/g, ' ').trim();\n  return s.length > n ? s.slice(0, n - 1) + '…' : s;\n};\nconst who = (a) => String(a.who || '?').split('@')[0];\n// A refused request is one line per request, and a deploy makes dozens. They are grouped:\n// '500 on /api/v1/machine-status ×18, /api/v1/auth/quota-status ×6 (13:44–15:20)'.\n// The subject reads '<METHOD> <path> -> <status> <code> [<request id>]: <message>'; the\n// request id is never printed. A 5xx is the app's fault, not the user's: it is an alert.\nconst REFUSED = /^\\s*[A-Z]+\\s+(\\S+)\\s+->\\s+(\\d{3})\\b/;\nconst grouped = (lines) => {\n  const byStatus = new Map();\n  for (const l of lines) {\n    const m = REFUSED.exec(String(l.subject || ''));\n    const status = m ? m[2] : '?';\n    const path = m ? clip(m[1].split('?')[0], 48) : clip(l.subject || 'an unreadable request', 48);\n    if (!byStatus.has(status)) byStatus.set(status, new Map());\n    const paths = byStatus.get(status);\n    paths.set(path, (paths.get(path) || 0) + 1);\n  }\n  const at = lines.map((l) => Date.parse(l.at)).filter(Number.isFinite).sort((x, y) => x - y);\n  const span = at.length ? ' (' + clock(at[0]) + (clock(at.at(-1)) !== clock(at[0]) ? '–' + clock(at.at(-1)) : '') + ')' : '';\n  const text = [...byStatus].map(([status, paths]) => status + ' on '\n    + [...paths].sort((x, y) => y[1] - x[1]).slice(0, 4).map(([p, k]) => p + (k > 1 ? ' ×' + k : '')).join(', ')\n    + (paths.size > 4 ? ', +' + (paths.size - 4) + ' more' : '')).join('; ');\n  return { n: lines.length, text: text + span };\n};\nconst refusals = (a) => {\n  const all = a.lines.filter((l) => l.what === 'request_refused');\n  const isFault = (l) => /^5/.test((REFUSED.exec(String(l.subject || '')) || [])[2] || '');\n  return { faults: grouped(all.filter(isFault)), refused: grouped(all.filter((l) => !isFault(l))) };\n};\n\nconst blocks = [];\nconst age =Date.now() - Date.parse(told.as_of);\nif (!(age < STALE_AFTER_H * 3600e3)) {\n  blocks.push({ heading: 'Stale', items: ['Last told ' + (Number.isFinite(age) ? clock(Date.now() - age, true) : 'at an unreadable time')] });\n}\n\nconst accounts = told.accounts.filter((a) => a && Array.isArray(a.lines) && a.lines.length);\nconst signedIn = accounts.filter((a) => a.lines.some((l) => l.what === 'signed_in'));\nconst opened = accounts.filter((a) => a.lines.some((l) => l.what === 'account_created'));\nif (accounts.length) {\n  blocks.push({ items: [accounts.length + ' active · ' + signedIn.length + ' signed in · ' + opened.length + ' new'] });\n}\nfor (const a of accounts.slice(0, MAX_ACCOUNTS)) {\n  const ins = a.lines.filter((l) => l.what === 'signed_in');\n  const heading = [\n    String(a.who || '?'),\n    opened.includes(a) ? 'new' + (ins.length ? '' : device(a.lines.find((l) => l.what === 'account_created'))) : '',\n    ins.length ? 'signed in ' + ins.map((l) => time(l.at) + (l.subject ? ' ' + l.subject : '') + device(l)).join(', ') : 'no sign-in, session still open',\n  ].filter(Boolean).join(' · ');\n  // One line per dataset, in the order first touched; account-level acts beside them.\n  const byPlace = new Map();\n  for (const l of a.lines.filter((x) => !SAID_ABOVE.has(x.what) && x.what !== 'request_refused')) {\n    const place = l.dataset || (l.campaign ? 'a deleted campaign' : '');\n    const what = clip(words(l.what) + (!place && l.subject ? ' ' + l.subject : ''), TEXT_MAX) + (l.by ? ' (by ' + l.by + ')' : '');\n    if (!byPlace.has(place)) byPlace.set(place, []);\n    byPlace.get(place).push(what);\n  }\n  const items = [...byPlace].map(([place, did]) => clip((place ? place + ': ' : '') + runs(did).join(', '), LINE_MAX));\n  const { faults, refused } = refusals(a);\n  if (faults.n) items.push(faults.n + ' requests failed on a server error (see attention)');\n  if (refused.n) items.push('refused ' + refused.text);\n  blocks.push({ heading, items: items.length ? items : ['nothing else'] });\n}\nif (accounts.length > MAX_ACCOUNTS) {\n  blocks.push({ heading: 'More', items: accounts.slice(MAX_ACCOUNTS).map((a) => String(a.who || '?') + ' · ' + a.lines.length + ' lines') });\n}\n// Unreadable accounts are an alert: plain words, the account by its email. An entry is\n// { workspace, email, reason, self } from the box, or a bare workspace id from an older\n// box, which is then the only name there is.\nconst unreadable = told.unreadable.map((u) => (u && typeof u === 'object' ? u : { workspace: String(u) }));\nif (unreadable.length) {\n  const name = (u) => (u.self ? 'you' : u.email ? String(u.email).split('@')[0] : String(u.workspace || '?'));\n  const reasons = [...new Set(unreadable.map((u) => clip(u.reason, TEXT_MAX)).filter(Boolean))];\n  blocks.push({\n    level: 'alert',\n    items: ['App: activity of ' + unreadable.length + (unreadable.length === 1 ? ' account' : ' accounts') + ' unreadable\\n'\n      + unreadable.map(name).join(', ') + '\\n'\n      + (reasons.length ? reasons.join('; ') : 'the app sent no reason; check its trail on the box')],\n  });\n  if (!accounts.length) blocks.push({ items: ['no activity readable (see attention)'] });\n}\n// A run that stopped before it finished is an alert. The box sends run_stopped only for\n// an abnormal stop, with subject '<campaign>/<cycle>: <stop reason>'. It is read over\n// every account, not only the eight printed below.\nconst stops = accounts.flatMap((a) => a.lines.filter((l) => l.what === 'run_stopped').map((l) => {\n  const subject = String(l.subject || '');\n  const cut = subject.indexOf(': ');\n  const reason = cut >= 0 ? subject.slice(cut + 2).trim() : '';\n  const place = l.dataset || (l.campaign ? 'a deleted campaign' : 'no dataset');\n  return who(a) + \"'s run stopped: \" + clip(reason || 'the app sent no reason', TEXT_MAX) + ' (' + place + ')';\n}));\nif (stops.length) blocks.push({ level: 'alert', items: stops });\n// A server error is an app fault: an alert for every account, not only the eight shown.\nconst faults = accounts.map((a) => ({ a, f: refusals(a).faults })).filter(({ f }) => f.n).map(({ a, f }) =>\n  'App: ' + f.n + (f.n === 1 ? ' request' : ' requests') + ' of ' + (a.self ? 'yours' : who(a)) + ' failed on a server error\\n'\n  + f.text + '\\nan app fault, not the user\\'s; check the box logs for that time');\n// The box's probes: health = { '<probe>': { state: 'held'|'broken', since: iso|null, fix } }.\n// Every broken probe is an alert, in the box's own words; held, absent or empty prints nothing.\n// No probe is special here: the box names it and says the fix.\nconst since = (iso) => {\n  const t = Date.parse(iso);\n  if (!Number.isFinite(t)) return '';\n  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', hour12: false, timeZone: tz })\n    .formatToParts(new Date(t)).map((x) => [x.type, x.value]));\n  return ' since ' + p.hour + ':' + p.minute + ', ' + p.day + '.' + p.month;\n};\nconst health = told.health && typeof told.health === 'object' ? Object.entries(told.health) : [];\nconst broken = health.filter(([, h]) => h && h.state === 'broken').map(([probe, h]) =>\n  clip(probe, 48) + ' broken' + since(h.since) + (h.fix ? ' — ' + clip(h.fix, 160) : ''));\nif (broken.length) blocks.push({ level: 'alert', items: broken });\nif (faults.length) blocks.push({ level: 'alert', items: faults });\n\nconst summary = accounts.length ? accounts.length + ' active in the app' : '';\nreturn section(blocks, 'Nobody signed in or did anything', summary);\n"
       },
       "id": "a7c1e2d0-18a1-4c00-9a01-000000000005",
       "name": "Build Briefing Section",
@@ -111,6 +111,79 @@
       "position": [
         800,
         432
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "8c211364-5bdb-4899-9a1c-d5cf2a2ff1f0",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// The box watch: one Telegram line when the box itself goes down, one when it is back, never a repeat.\n// Only what the box cannot report about itself, each judged from outside it:\n//   the app's sends stop arriving   -> the box, its admin bot or its network is down\n//   the public health URL fails     -> the app or its tunnel is down\n// A broken probe in the trail's `health` is NOT sent from here: the box's admin bot already\n// Telegrams every health change once, and the briefing lists what is still broken.\nconst QUIET_AFTER_MIN = 75;   // the app sends every 30 minutes; two missed sends and a margin\nconst APP_HEALTH_URL = 'https://app.promptpotter.com/api/v1/health';\nconst tz = 'Europe/Zurich';\n\nconst memory = $getWorkflowStaticData('global');\nconst said = memory.watch || { quiet: false, app: '' };\nconst told = memory.trail;\nconst clock = (ms) => new Date(ms).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });\n\nconst heard = told ? Date.parse(told.received_at || told.as_of) : NaN;\nconst quiet = !(Date.now() - heard < QUIET_AFTER_MIN * 60e3);\n\nlet app = '';\ntry {\n  const r = await this.helpers.httpRequest({ url: APP_HEALTH_URL, timeout: 15000, returnFullResponse: true, ignoreHttpStatusErrors: true });\n  if (r.statusCode !== 200) app = 'HTTP ' + r.statusCode;\n} catch (e) {\n  app = String(e.message || e).slice(0, 120);\n}\n\nconst lines = [];\nif (quiet && !said.quiet) lines.push('🔴 Box quiet · no word from the app since ' + (Number.isFinite(heard) ? clock(heard) : 'ever') + ': the box, its admin bot or its network is down');\nif (!quiet && said.quiet) lines.push('🟢 Box back · the app is talking again');\nif (app && !said.app) lines.push('🔴 App unreachable from outside · ' + app);\nif (!app && said.app) lines.push('🟢 App reachable again');\n\nmemory.watch = { quiet, app };\nreturn lines.length ? [{ json: { text: lines.join('\\n') } }] : [];\n"
+      },
+      "id": "506b0a5c-2f0d-4957-92fc-f338d61503b8",
+      "name": "Watch the Box",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID_1",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "7d052662-bea6-4e0a-9e68-e6911e912311",
+      "name": "Send Box Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        704
+      ],
+      "webhookId": "c7e388a3-9818-404f-a49b-d725ef25b962",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_TELEGRAM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Watch the box\n\nEvery 15 minutes: has the app stopped sending, does the app answer from outside? One line when that changes.",
+        "height": 240,
+        "width": 736,
+        "color": 7
+      },
+      "id": "3b9d8f1d-ed25-4619-a7ec-a10e31ede84f",
+      "name": "Watch section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        592
       ]
     }
   ],
@@ -131,6 +204,28 @@
         [
           {
             "node": "Build Briefing Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Watch the Box",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watch the Box": {
+      "main": [
+        [
+          {
+            "node": "Send Box Alert",
             "type": "main",
             "index": 0
           }

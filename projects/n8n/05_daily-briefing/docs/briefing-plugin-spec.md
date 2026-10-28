@@ -9,9 +9,9 @@
 | Reconciler audit of claimed-done (stage 4) | ✅ daily, in `commitments` |
 | Agent dispatch on assign (stage 3) | ❌ |
 
-Verified end to end on the live instance: `Run Plugin` returns the section, `Split Actions`
-emits one item, and Telegram echoes the keyboard back with
-`tk|d|talktalk::mobile@2026-09` / `tk|a|…` intact.
+**Since 2026-10-28 an action sends no message of its own** (see **Actions**): the per-action
+messages are gone, and the row per task on the briefing's own keyboard waits on the bot token
+being usable from an HTTP Request. Until then a task is ticked on 🗂 Kanban (`/board done <n>`).
 
 A tap records `assigned` or `done` and redraws the message. **No agent acts on an assignment
 yet** — that is stage 3, so a task sits at `⏳ assigned` until closed by hand. That is the honest
@@ -89,7 +89,9 @@ Output — exactly one item, always, even with nothing to report:
   "key": "commitments",
   "icon": "💳",
   "title": "COMMITMENTS",
+  "summary": "CHF 22.75/mo · 1 commitment",
   "blocks": [
+    { "level": "alert", "items": ["TalkTalk billed CHF 99.75, expected 22.75\n338% over · due in 4d · check the bill"] },
     { "heading": "To pay", "items": ["TalkTalk · CHF 22.75 · due in 19d"] },
     { "heading": "Leaving", "items": [] }
   ],
@@ -106,14 +108,46 @@ Output — exactly one item, always, even with nothing to report:
 }
 ```
 
-`actions` is optional. Each entry becomes **its own Telegram message** with its own buttons,
-sent after the briefing. See **Actions** below for why they cannot ride on the main message,
-and why a section cannot simply put a tappable `[ ]` in its own text.
+**Layout fields** (the approved v5 layout, 2026-10-27):
 
-**Exactly two buttons per action.** The keyboard is a static `fixedCollection`, so the number of
-buttons cannot vary at runtime; `Split Actions` drops any action that does not supply two rather
-than sending a malformed keyboard, because Telegram rejects the *entire* keyboard when one
-button is invalid. Lifting this means moving off the Telegram node — not worth it yet.
+- **`level`** on a block: `alert` | `main` (the default) | `detail`. `alert` items are lifted
+  into the ⚠️ NEEDS ATTENTION block at the top of the message and are never collapsed; `main`
+  is visible under the section; `detail` goes into one collapsed `<blockquote expandable>`.
+  **Which line is an alert is the plugin's decision** — the owner knows its data. An alert is
+  plain words, what happened and then what to do, and never an internal id.
+- **`summary`**: the section's headline, the italic line under its header (or its part of a
+  cluster's summary line). Optional; empty means nothing to headline.
+- **`empty: ''`**: the section says nothing on a quiet day. With no `main` or `detail` blocks it
+  renders no header at all, only its alerts (if any) at the top. `inbox` uses it: an alert while
+  emails are held back, otherwise nothing. Any other `empty` is printed as the quiet-day line.
+- **Item text**: a `\n` inside an item is the plugin's own layout — line one is the item, the
+  rest its detail lines. A long one-line `·` item is split by the renderer, one fact per line;
+  a fully parenthesised item renders as an italic footnote. A trailing `(…)` in a `heading`
+  renders as an italic qualifier. The renderer puts every page path (a token starting with `/`)
+  in `<code>`, so Telegram does not turn it into a bot command.
+
+`actions` is optional. An action is **one row of the briefing's own inline keyboard**, never a
+message of its own: the first button carries the glyph of its `label` plus the action's short
+label (`✅ TalkTalk · CHF 22.75`), the others their glyph only (`🤖`). The short label is the
+action's optional `label`, else the first `·`/`—` facts of its `text` that fit 26 characters.
+`Format Message` builds the whole keyboard as Telegram's own `reply_markup` (task rows, then the
+menu); an action whose `callback_data` is over 64 bytes is left out and named in NEEDS ATTENTION,
+because Telegram rejects the *entire* keyboard for one bad button.
+
+**What is live (2026-10-28): the menu only.** The Telegram node's keyboard is a static
+`fixedCollection`, and n8n drops an expression put in its place (verified: exec 14896 sent the
+briefing with no keyboard at all). A varying keyboard therefore needs a raw `sendMessage` through
+an HTTP Request, and the existing Telegram credential cannot authenticate one: `telegramApi`
+defines no `authenticate`, and the token sits in the URL path. Moving the send to HTTP needs the
+bot token in a credential an HTTP Request can use: a new holder, so the operator's call. Until
+then `reply_markup` is built and not sent, `Send to Telegram` carries the static menu, and a
+task is ticked on 🗂 Kanban (`/board done <n>`), which moves the same `Tasks` rows.
+
+A tap (on an older per-task message today, on a task row once the keyboard ships) goes through
+`menu-handler` → `commitments`: the row is written, `Redraw Keyboard` rebuilds the message's HTML
+from the callback's text and entities so the text stays exactly as sent, and works out the
+keyboard minus the tapped row; `Answer Tap` shows `✅ marked done` / `🤖 assigned to an agent`.
+`Tick Message` can only send no keyboard today, so the edit removes it.
 
 Two verbs rather than one checkbox, because they are different claims: `d` (done) asserts the
 money moved, `a` (assign) hands the task to an agent and leaves it open. Collapsing them would
@@ -151,11 +185,26 @@ payment.
 `enabled: false` is the kill switch — a misbehaving plugin gets switched off in one place
 without unwiring nodes.
 
+**`cluster`** (`{ key, icon, title }`) groups plugins into one section: a visible header, one
+summary line joined from the members' `summary`, then ONE `<blockquote expandable>` holding
+every member's sub-section (Telegram has no toggle inside a toggle). A member's alerts still go
+to the top. The live order is NEEDS ATTENTION, COMMITMENTS (20), 🏺 PROMPTPOTTER (signups 34,
+app 35, site inbox 36, site 38), 🔧 UPKEEP (60, all `detail`). Signups has no subworkflow: its
+row and section are built inside `Format Message`, and it joins the `promptpotter` cluster there.
+
 ## What is left in the briefing
 
 `Render Message` keeps only what is nobody's plugin: `esc()`, block rendering, ordering, the
-4096-char cut on a line boundary, and the calendar — which stays inline because it is the
-message's subject, not a section of it. Target is roughly 40 lines with no domain logic in them.
+4096-char limit, and the calendar — which stays inline because it is the message's subject, not
+a section of it. Target is roughly 40 lines with no domain logic in them.
+
+**The limit is measured as Telegram counts it**: the text after HTML parsing (tags stripped,
+entities unescaped), not the raw HTML. Over it, nothing is dropped silently. First the collapsed
+detail shrinks, step by step (8 items per list, then 5 with 3 detail lines, then 3 with 1, then
+1 with none), each cut saying `… +N more`. Only if that is still too long does the rest go out as
+a second message, `Morning briefing, continued`, cut at a section boundary; a single section
+too long by itself is split on line boundaries, a collapsed box closed and reopened at the cut.
+The keyboard stays on the first message.
 
 ## Actions — the checkbox, and what Telegram will actually do
 
@@ -312,7 +361,7 @@ Staged, so the seam is proven before anything working is moved onto it.
 | 2 | `Tasks` tab + generator; `actions` in the contract; `tk\|` route in `Normalize`; tap → `☑` | Low, but it edits `menu-handler` — the live command surface |
 | 3 | Agent assignment: tap dispatches through the classifier, agent writes back `done`/`failed` | The interesting one |
 | 4 | Reconciler audits claimed-done against `Billing_Ledger` | Low — read-only until it resurrects a row |
-| 5 | Move the site digest into `15_site-visits/workflows/visits-digest.json`; `SELF_IPS` moves with it | Real. Behaviour must be identical; diff the rendered message before and after |
+| 5 | Done differently: the site digest became `20_bot-detector`'s `site` section, rendered off its verdicts, and `SELF_NETS` moved there. It counts yesterday's visitors rather than the last 24 h, so the message changed on purpose | — |
 | 6 | Signups and prices become plugins. Note the Signups section has never rendered (one signup, ever) — port it, but do not read its silence as proof the port worked | Low |
 
 Stage 1 stands on its own even if nothing after it happens: it ships the nagging list, and it

@@ -77,7 +77,7 @@ The AI Classifier has Postgres-backed conversation memory (keyed by Telegram cha
 | Calendar | daily-briefing / Get Today's Events | `YOUR_GOOGLE_CALENDAR_EMAIL` |
 | Chat ID | daily-briefing / Send to Telegram | `YOUR_CHAT_ID_1` |
 | Allowed users | menu-handler / Whitelist | `YOUR_CHAT_ID_1`, `YOUR_CHAT_ID_2` |
-| Agent registry | menu-handler / Config | expenses, learning, deals |
+| Agent registry | menu-handler / Config | expenses, learning, deals, board, task, rerun_attachments |
 | Notion search term | learning-notes / Config | `NVIDIA` (configurable) |
 
 ## Post-Import Setup

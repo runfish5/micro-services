@@ -29,10 +29,16 @@ PY="$(command -v python3 || command -v python || true)"
 alert() {
   local msg="$1"
   echo "::error::${msg}"
-  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+  # The Telegram post must never fail the alert itself, but it must never fail SILENTLY
+  # either: a half-set secret pair or a dead bot token would otherwise leave email as the
+  # only channel with nothing saying so.
+  if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+    echo "::warning::Telegram alert not sent: secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must both be set."
+  else
+    tg=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
       --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-      --data-urlencode "text=🚨 n8n heartbeat: ${msg}" >/dev/null || true
+      --data-urlencode "text=🚨 n8n heartbeat: ${msg}" || true)
+    [ "$tg" = "200" ] || echo "::warning::Telegram alert not sent: Telegram answered HTTP ${tg:-000} (401 = dead bot token, 400 = wrong chat id)."
   fi
   exit 1
 }

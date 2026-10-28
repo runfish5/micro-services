@@ -98,6 +98,7 @@
       "id": "a1000000-0000-4000-8000-000000000005",
       "name": "Get Existing Tasks",
       "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -416,10 +417,11 @@
         "operation": "editMessageText",
         "chatId": "={{ $('Called').first().json.chatId }}",
         "messageId": "={{ $('Called').first().json.messageId }}",
-        "text": "={{ $('Called').first().json.taskText + ($('Called').first().json.taskVerb === 'd' ? '\\n✅ done' : $('Called').first().json.taskVerb === 'm' ? '\\n🔕 won’t fix' : '\\n🤖 assigned to an agent') }}",
+        "text": "={{ $json.html }}",
         "replyMarkup": "none",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -444,7 +446,9 @@
         "resource": "callback",
         "operation": "answerQuery",
         "queryId": "={{ $('Called').first().json.callbackId }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "text": "={{ $('Redraw Keyboard').first().json.toast }}"
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -508,7 +512,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Briefing plugin. Returns ONE item shaped by the contract in\n// 05_daily-briefing/docs/briefing-plugin-spec.md.\n//\n// PLAIN TEXT ONLY — never HTML. The briefing escapes centrally. Emitting markup\n// here would make escaping every plugin's shared responsibility, and one missed\n// escape anywhere kills the whole sendMessage.\n\nconst MANUAL = ['qr-invoice', 'bank-transfer', 'twint'];\nconst MAX_BUTTONS = 5;\n// Telegram caps callback_data at 64 bytes and rejects the ENTIRE keyboard if one\n// button is over — so an oversized id costs every button, not just its own.\nconst CB_LIMIT = 60;\nconst DAY = 86400000;\n\nconst input = $('Called').first().json;\nconst parsed = Date.parse(`${String(input.date || '').slice(0, 10)}T00:00:00`);\nconst base = Number.isFinite(parsed) ? new Date(parsed) : new Date();\nconst startOfDay = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();\n\n// Tasks is the LAB's table, not this project's — 10_error-handler writes upkeep rows\n// into it under commitment_id 'self::code-health'. Each producer renders only its own\n// rows: without this filter a code defect shows up here as\n// \"self::code-health · amount unknown · no due date\" under Leaving, because a blank\n// payment_method is not in MANUAL. See 10_error-handler/docs/upkeep-tasks-spec.md.\nconst rows = $('Get Tasks').all().map((i) => i.json)\n  .filter((t) => t && t.task_id)\n  .filter((t) => String(t.commitment_id || '').trim().toLowerCase() !== 'self::code-health');\n\nconst closed = ['done', 'cancelled'];\nconst live = rows.filter((t) => !closed.includes(String(t.status || '').trim().toLowerCase()));\n\n// One line per commitment: the nearest outstanding period. The generator keeps\n// two months of tasks alive, but showing both would double the list every day —\n// next month surfaces only once this month is closed.\nconst byCommitment = new Map();\nfor (const t of live) {\n  const key = String(t.commitment_id || t.task_id);\n  const prev = byCommitment.get(key);\n  if (!prev || String(t.due_date) < String(prev.due_date)) byCommitment.set(key, t);\n}\n\nconst shown = [...byCommitment.values()]\n  .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));\n\nconst toPay = [];\nconst leaving = [];\nconst actions = [];\nlet total = 0;\nlet currency = '';\n\nfor (const t of shown) {\n  const amt = parseFloat(String(t.amount ?? '').replace(',', '.'));\n  if (Number.isFinite(amt)) {\n    total += amt;\n    currency = currency || String(t.currency || '');\n  }\n\n  const dueTs = Date.parse(`${String(t.due_date || '')}T00:00:00`);\n  const d = Number.isFinite(dueTs) ? Math.round((dueTs - startOfDay) / DAY) : null;\n  const when = d === null ? 'no due date'\n    : d < 0 ? `⚠️ ${-d}d overdue`\n      : d === 0 ? '⚠️ due today'\n        : `due in ${d}d`;\n\n  const money = Number.isFinite(amt)\n    ? `${t.currency || ''} ${amt.toFixed(2)}`.trim()\n    : 'amount unknown';\n\n  const status = String(t.status || '').trim().toLowerCase();\n  // 'failed' stays on the list and says so. Presence is the default state, so a\n  // task nobody finished needs no error handling to remain visible.\n  const state = status === 'assigned' ? ' · ⏳ assigned'\n    : status === 'failed' ? ' · ⚠️ failed'\n      : '';\n\n  // Audit findings ride on notes and are shown for ANY status — a reopened task\n  // is 'open' again, so gating this on 'failed' would hide the reason it came back.\n  const flag = String(t.notes || '').trim();\n  const who = t.vendor || t.commitment_id;\n  const line = `${who} · ${money} · ${when}${state}${flag ? ` · ⚠️ ${flag}` : ''}`;\n\n  if (MANUAL.includes(String(t.payment_method || '').trim().toLowerCase())) {\n    toPay.push(line);\n\n    // Only money that leaves if we act gets a button. A checkbox next to a direct\n    // debit invites ticking something you did not do.\n    // Two verbs, because they are genuinely different claims: 'done' is a\n    // self-report that the money moved, 'assign' hands the task to an agent and\n    // leaves it open. Collapsing them would make an assignment look like payment.\n    const cbAssign = `tk|a|${t.task_id}`;\n    if (actions.length < MAX_BUTTONS && cbAssign.length <= CB_LIMIT && status === 'open') {\n      actions.push({\n        text: `${who} · ${money} · ${when}`,\n        buttons: [\n          { label: '✅ Done', cb: `tk|d|${t.task_id}` },\n          { label: '🤖 Assign', cb: cbAssign },\n        ],\n      });\n    }\n  } else {\n    leaving.push(line);\n  }\n}\n\nconst blocks = [];\nif (shown.length) {\n  blocks.push({\n    items: [`${currency} ${total.toFixed(2)}/mo · ${shown.length} commitment${shown.length === 1 ? '' : 's'}`],\n  });\n}\nif (toPay.length) blocks.push({ heading: 'To pay', items: toPay });\nif (leaving.length) blocks.push({ heading: 'Leaving', items: leaving });\n\nreturn [{\n  json: {\n    key: 'commitments',\n    icon: '💳',\n    title: 'COMMITMENTS',\n    blocks,\n    actions,\n    empty: 'Nothing tracked yet',\n  },\n}];"
+        "jsCode": "// Briefing plugin. Returns ONE item shaped by the contract in\n// 05_daily-briefing/docs/briefing-plugin-spec.md.\n//\n// PLAIN TEXT ONLY — never HTML. The briefing escapes centrally. Emitting markup\n// here would make escaping every plugin's shared responsibility, and one missed\n// escape anywhere kills the whole sendMessage.\n\nconst MANUAL = ['qr-invoice', 'bank-transfer', 'twint'];\nconst MAX_BUTTONS = 5;\n// Telegram caps callback_data at 64 bytes and rejects the ENTIRE keyboard if one\n// button is over — so an oversized id costs every button, not just its own.\nconst CB_LIMIT = 60;\nconst DAY = 86400000;\n\nconst input = $('Called').first().json;\nconst parsed = Date.parse(`${String(input.date || '').slice(0, 10)}T00:00:00`);\nconst base = Number.isFinite(parsed) ? new Date(parsed) : new Date();\nconst startOfDay = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();\n\n// Tasks is the LAB's table, not this project's — 10_error-handler writes upkeep rows\n// into it under commitment_id 'self::code-health', and the board writes cards with no\n// commitment_id at all. Each producer renders only its own rows: a commitment task is\n// one with a commitment behind it. Without this a board card shows up under Leaving as\n// \" · amount unknown · no due date\" (no vendor, no commitment, blank payment_method).\n// See 10_error-handler/docs/upkeep-tasks-spec.md and this project's README § Tasks.\nconst rows = $('Get Tasks').all().map((i) => i.json)\n  .filter((t) => t && t.task_id)\n  .filter((t) => {\n    const owner = String(t.commitment_id || '').trim().toLowerCase();\n    return owner && owner !== 'self::code-health';\n  });\n\nconst closed = ['done', 'cancelled'];\nconst live = rows.filter((t) => !closed.includes(String(t.status || '').trim().toLowerCase()));\n\n// One line per commitment: the nearest outstanding period. The generator keeps\n// two months of tasks alive, but showing both would double the list every day —\n// next month surfaces only once this month is closed.\nconst byCommitment = new Map();\nfor (const t of live) {\n  const key = String(t.commitment_id || t.task_id);\n  const prev = byCommitment.get(key);\n  if (!prev || String(t.due_date) < String(prev.due_date)) byCommitment.set(key, t);\n}\n\nconst shown = [...byCommitment.values()]\n  .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));\n\nconst toPay = [];\nconst leaving = [];\nconst actions = [];\nconst alerts = [];\nlet total = 0;\nlet currency = '';\n\nfor (const t of shown) {\n  const amt = parseFloat(String(t.amount ?? '').replace(',', '.'));\n  if (Number.isFinite(amt)) {\n    total += amt;\n    currency = currency || String(t.currency || '');\n  }\n\n  const dueTs = Date.parse(`${String(t.due_date || '')}T00:00:00`);\n  const d = Number.isFinite(dueTs) ? Math.round((dueTs - startOfDay) / DAY) : null;\n  const when = d === null ? 'no due date'\n    : d < 0 ? `⚠️ ${-d}d overdue`\n      : d === 0 ? '⚠️ due today'\n        : `due in ${d}d`;\n\n  const money = Number.isFinite(amt)\n    ? `${t.currency || ''} ${amt.toFixed(2)}`.trim()\n    : 'amount unknown';\n\n  const status = String(t.status || '').trim().toLowerCase();\n  // 'failed' stays on the list and says so. Presence is the default state, so a\n  // task nobody finished needs no error handling to remain visible.\n  const state = status === 'assigned' ? ' · ⏳ assigned'\n    : status === 'failed' ? ' · ⚠️ failed'\n      : '';\n\n  // Audit findings ride on notes and are shown for ANY status — a reopened task\n  // is 'open' again, so gating this on 'failed' would hide the reason it came back.\n  // They are this section's alerts: the briefing lifts them to NEEDS ATTENTION, in\n  // plain words — what happened, then what to do.\n  const who = t.vendor || t.commitment_id;\n  const plainWhen = when.replace('⚠️ ', '');\n  for (const note of String(t.notes || '').split(';').map((s) => s.trim()).filter(Boolean)) {\n    const m = /^billed ([\\d.]+) vs expected ([\\d.]+) \\((\\d+)% over a [\\d.]+% tolerance\\)$/.exec(note);\n    alerts.push(m\n      ? `${who} billed ${`${t.currency || ''} ${m[1]}`.trim()}, expected ${m[2]}\\n`\n        + `${m[3]}% ${Number(m[1]) > Number(m[2]) ? 'over' : 'under'} · ${plainWhen} · check the bill`\n      : `${who}: ${note}\\n${plainWhen} · check it`);\n  }\n  // Only money that leaves if we act can be late by our doing.\n  const manual = MANUAL.includes(String(t.payment_method || '').trim().toLowerCase());\n  if (manual && d !== null && d <= 0 && status !== 'assigned') {\n    alerts.push(`${who} ${money} ${d < 0 ? `is ${-d}d overdue` : 'is due today'}\\npay it, or mark it done`);\n  }\n  const line = `${who} · ${money} · ${when}${state}`;\n\n  if (manual) {\n    toPay.push(line);\n\n    // Only money that leaves if we act gets a button. A checkbox next to a direct\n    // debit invites ticking something you did not do.\n    // Two verbs, because they are genuinely different claims: 'done' is a\n    // self-report that the money moved, 'assign' hands the task to an agent and\n    // leaves it open. Collapsing them would make an assignment look like payment.\n    const cbAssign = `tk|a|${t.task_id}`;\n    if (actions.length < MAX_BUTTONS && cbAssign.length <= CB_LIMIT && status === 'open') {\n      actions.push({\n        text: `${who} · ${money} · ${when}`,\n        buttons: [\n          { label: '✅ Done', cb: `tk|d|${t.task_id}` },\n          { label: '🤖 Assign', cb: cbAssign },\n        ],\n      });\n    }\n  } else {\n    leaving.push(line);\n  }\n}\n\nconst blocks = [];\nif (alerts.length) blocks.push({ level: 'alert', items: alerts });\nif (toPay.length) blocks.push({ heading: 'To pay', items: toPay });\nif (leaving.length) blocks.push({ heading: 'Leaving', items: leaving });\n\nreturn [{\n  json: {\n    key: 'commitments',\n    icon: '💳',\n    title: 'COMMITMENTS',\n    summary: shown.length\n      ? `${currency} ${total.toFixed(2)}/mo · ${shown.length} commitment${shown.length === 1 ? '' : 's'}`.trim()\n      : '',\n    blocks,\n    actions,\n    empty: 'Nothing tracked yet',\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -521,7 +525,7 @@
     },
     {
       "parameters": {
-        "content": "## commitments — one workflow, three jobs\n\nThe whole of project 16. Kept as a single workflow because all three\nbranches need the *same* paste-time configuration: one spreadsheet id\nand one Sheets credential.\n\n**1. Generate** (Daily 06:30) — Commitments → Tasks, append-only.\n**2. Digest** (called by 05 briefing) — Tasks → morning section.\n**3. Tap** (called by 12 menu-handler) — button press → Tasks row + tick.\n\nBranches 2 and 3 share one Execute Workflow Trigger because n8n allows\nonly one per workflow; `Tap or Digest?` splits them on whether a\ntaskId came in.\n\nGrain, columns and the append-only rule: `../README.md`",
+        "content": "## commitments — one workflow, three jobs\n\nThe whole of project 16. Kept as a single workflow because all three\nbranches need the *same* paste-time configuration: one spreadsheet id\nand one Sheets credential.\n\n**1. Generate** (Daily 06:30) — Commitments → Tasks, append-only.\n**2. Digest** (called by 05 briefing) — Tasks → morning section.\n**3. Tap** (called by 12 menu-handler) — button press → Tasks row; the row leaves the keyboard.\n\nBranches 2 and 3 share one Execute Workflow Trigger because n8n allows\nonly one per workflow; `Tap or Digest?` splits them on whether a\ntaskId came in.\n\nGrain, columns and the append-only rule: `../README.md`",
         "height": 340,
         "width": 460,
         "color": 7
@@ -622,6 +626,7 @@
       "id": "a1000000-0000-4000-8000-000000000020",
       "name": "Get Ledger",
       "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "CREDENTIAL_ID_GOOGLE_DRIVE",
@@ -872,6 +877,19 @@
       ],
       "id": "a1000000-0000-4000-8000-000000000023",
       "name": "Sticky - Audit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// A tap leaves the text alone and drops its own row from the message's keyboard.\n//\n// The row is already written to Tasks above: this redraw is cosmetic, and Tick Message\n// may fail on an old message without undoing anything.\n//\n// Telegram's editMessageText needs the text again. The callback carries it as plain text\n// plus entities, so the HTML is rebuilt from them: bold, code and the collapsed boxes come\n// back exactly as sent.\n//\n// reply_markup is the message's keyboard minus the tapped row, in Telegram's own shape.\n// The Telegram node cannot send a keyboard that varies (static fixedCollection; n8n drops\n// an expression there), so Tick Message sends none and the edit removes the keyboard\n// until the redraw goes through an HTTP Request with the bot token. 05_daily-briefing\n// Format Message builds the matching rows.\nconst c = $('Called').first().json;\nconst taskId = String(c.taskId || '');\nconst text = String(c.taskText || '');\nconst entities = Array.isArray(c.taskEntities) ? c.taskEntities : [];\nconst rows = c.taskMarkup && Array.isArray(c.taskMarkup.inline_keyboard) ? c.taskMarkup.inline_keyboard : [];\n\nconst isThisTask = (b) => {\n  const cb = String((b && b.callback_data) || '');\n  return cb.startsWith('tk|') && cb.split('|').slice(2).join('|') === taskId;\n};\nconst kept = rows.filter((row) => Array.isArray(row) && !row.some(isThisTask));\nconst reply_markup = { inline_keyboard: kept };\n\nconst esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst attr = (s) => esc(String(s)).replace(/\"/g, '&quot;');\nconst TAGS = {\n  bold: ['<b>', '</b>'],\n  italic: ['<i>', '</i>'],\n  underline: ['<u>', '</u>'],\n  strikethrough: ['<s>', '</s>'],\n  spoiler: ['<tg-spoiler>', '</tg-spoiler>'],\n  code: ['<code>', '</code>'],\n  blockquote: ['<blockquote>', '</blockquote>'],\n  expandable_blockquote: ['<blockquote expandable>', '</blockquote>'],\n};\nconst tagsOf = (e) => {\n  if (TAGS[e.type]) return TAGS[e.type];\n  if (e.type === 'pre') return [e.language ? `<pre><code class=\"language-${attr(e.language)}\">` : '<pre>', e.language ? '</code></pre>' : '</pre>'];\n  if (e.type === 'text_link') return [`<a href=\"${attr(e.url)}\">`, '</a>'];\n  if (e.type === 'text_mention' && e.user) return [`<a href=\"tg://user?id=${e.user.id}\">`, '</a>'];\n  if (e.type === 'custom_emoji') return [`<tg-emoji emoji-id=\"${attr(e.custom_emoji_id)}\">`, '</tg-emoji>'];\n  return null; // url, mention, bot_command, …: Telegram finds those again by itself\n};\n// Offsets are UTF-16 code units, which is what JS string indices are.\nconst spans = entities\n  .map((e) => ({ start: e.offset, end: e.offset + e.length, tags: tagsOf(e) }))\n  .filter((s) => s.tags && s.end > s.start)\n  .sort((a, b) => a.start - b.start || b.end - a.end);\nconst cuts = [...new Set([0, text.length, ...spans.flatMap((s) => [s.start, s.end])])].sort((a, b) => a - b);\nlet html = '';\nconst stack = [];\nfor (let k = 0; k < cuts.length; k++) {\n  const at = cuts[k];\n  while (stack.length && stack.at(-1).end <= at) html += stack.pop().tags[1];\n  for (const s of spans) if (s.start === at) { html += s.tags[0]; stack.push(s); }\n  if (k + 1 < cuts.length) html += esc(text.slice(at, cuts[k + 1]));\n}\nwhile (stack.length) html += stack.pop().tags[1];\n\nconst toast = c.taskVerb === 'd' ? '✅ marked done' : c.taskVerb === 'm' ? '🔕 marked won’t fix' : '🤖 assigned to an agent';\nreturn [{ json: { html, reply_markup, toast } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        360
+      ],
+      "id": "a1000000-0000-4000-8000-000000000031",
+      "name": "Redraw Keyboard"
     }
   ],
   "connections": {
@@ -968,7 +986,7 @@
       "main": [
         [
           {
-            "node": "Tick Message",
+            "node": "Redraw Keyboard",
             "type": "main",
             "index": 0
           }
@@ -1024,6 +1042,17 @@
         [
           {
             "node": "Write Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redraw Keyboard": {
+      "main": [
+        [
+          {
+            "node": "Tick Message",
             "type": "main",
             "index": 0
           }
