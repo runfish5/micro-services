@@ -19,7 +19,7 @@ Email-CRM is an **extension** of [inbox-attachment-organizer](../../04_inbox-att
 ```mermaid
 flowchart TB
     subgraph "📧 inbox-attachment-organizer"
-        Gmail[Gmail Trigger] --> Classify[🤖 subject-classifier-LM]
+        Gmail[When Email Received] --> Classify[🤖 Classify Email]
         Classify --> RecordSearch[🔍 record-search]
     end
 
@@ -59,7 +59,7 @@ For each email, the system creates or updates:
 
 Before starting, confirm the email pipeline in [inbox-attachment-organizer](../../04_inbox-attachment-organizer) is working.
 
-**Not set up yet?** You need the email pipeline from [inbox-attachment-organizer](../../04_inbox-attachment-organizer) — at minimum: Gmail Trigger through subject-classifier-LM and the CRM-lineage nodes. The other lineages (finance, appointments) are optional.
+**Not set up yet?** You need the email pipeline from [inbox-attachment-organizer](../../04_inbox-attachment-organizer) — at minimum: When Email Received through Classify Email and the CRM-lineage nodes. The other lineages (finance, appointments) are optional.
 
 ### 1.2 Import Subworkflows
 
@@ -184,7 +184,7 @@ Back in your **inbox-attachment-organizer** workflow.
 Look for this chain of 4 connected nodes:
 
 ```
-ContactManager-lineage → Call 'record-search' → Prepare Contact Input → Call 'smart-table-fill'
+ContactManager-lineage → Look Up Contact → Prepare Contact Input → Update Contact Record
 ```
 
 ### 6.2 Select the Subworkflows
@@ -193,8 +193,8 @@ Open each Execute Workflow node and select the correct workflow from the dropdow
 
 | Node | Select from dropdown |
 |------|----------------------|
-| `Call 'record-search'` | **record-search** |
-| `Call 'smart-table-fill'` | **smart-table-fill** |
+| `Look Up Contact` | **record-search** |
+| `Update Contact Record` | **smart-table-fill** |
 
 ### 6.3 Enable the Branch
 
@@ -212,7 +212,7 @@ Click **Save** and **Publish**.
 2. Wait for the workflow to process (~1 min)
 
 **Verify:**
-- [ ] Email classified by subject-classifier-LM
+- [ ] Email classified by Classify Email
 - [ ] Contact row created/updated in Entries sheet
 - [ ] `folder_id` and `emails_folder_id` columns populated
 - [ ] Contact folder created in Drive with `README.md`

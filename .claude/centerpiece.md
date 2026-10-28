@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    C["subject-classifier-LM"] -->|financial| ACC["accounting route (existing)"]
+    C["Classify Email"] -->|financial| ACC["accounting route (existing)"]
     C -->|non-financial| REG["Read FilingProjects registry"]
     REG --> CLERK["filing-clerk LLM picks project and year"]
     CLERK --> H{"handler"}

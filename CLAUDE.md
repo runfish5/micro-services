@@ -101,17 +101,18 @@ Most projects have their own `CLAUDE.md`. Read it before working in that project
 - **Republish subworkflows** after changes: parents call the published version, not the draft.
   If publish fails with "1 node has issues": Executions → a successful run → Copy to Editor → Publish.
 - **Replace triggers with a Manual Trigger** when testing.
-- **Blue sticky behind every Execute Workflow node** listing the inputs passed (name: value, one
-  per line). n8n's UI can silently clear `workflowInputs`; the sticky is the restore reference.
-- **Sticky notes and node names**: read `projects/n8n/docs/template-sticky-guidelines.md` before
-  creating or annotating a workflow.
-
-| Sticky colour | Code | Usage |
-|-------|------|-------|
-| Yellow | (default) | the one main overview sticky |
-| Red | 3 | what to update after import, over one node |
-| Blue | 5 | inputs behind an Execute Workflow node |
-| White | 7 | section labels over several nodes |
+- **Every Execute Workflow node lists the inputs it passes in its Notes** (`name: value`, one per
+  line, `notesInFlow: false`). n8n's UI can silently clear `workflowInputs`; the Notes are the
+  restore reference. Per-node gotchas go in Notes too, never in a sticky.
+- **Stickies and node names follow n8n's template rules**, owned by
+  `projects/n8n/docs/template-submission.md` (`/n8n-template` runs the procedure):
+  - one yellow main sticky, top-left, 100–300 words, `### How it works` + `### Setup steps`;
+  - white (7) `## Sentence case` sections, under 50 words, over several nodes, no overlap;
+  - red (3) only over one node, sparingly; no other colour;
+  - node names Title Case, verb first, under 40 chars, `[A-Za-z0-9 -]`; rename only with
+    `npm run wf:template-rename`.
+- **Workflow JSON edits keep `npm run wf:template-check` clean.** Workflows with legacy stickies
+  (blue inputs, orange setup notes) are migrated the next time each one is edited.
 
 - **Workflow as code** (`@n8n/workflow-sdk`): `npm run wf:to-ts` / `wf:from-ts` for large
   refactors. The `.ts` is throwaway and never committed; run it only against the committed
@@ -143,9 +144,10 @@ Most projects have their own `CLAUDE.md`. Read it before working in that project
 - `projects/n8n/credentials-guide.md` - Setting up API credentials
 - `projects/n8n/docs/observability-through-llm-confidence-estimate.md` - LLM confidence scoring
 - `.claude/skills/n8n-executions/skill.md` - When to use MCP vs REST API
+- `.claude/skills/n8n-template/skill.md` - `/n8n-template`: make a workflow template-compliant
 - `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
 - `projects/n8n/docs/setup.md` - Setup and key rotation: services, variables, every secret's holders
 - `projects/n8n/docs/infra-ops.md` - Binary data mode, pruning, volume management
 - `projects/n8n/14_db-janitor/docs/runbook.md` - DB growth guard: alerts, allowances, disk-full recovery
 - `projects/n8n/docs/workflow-as-code-sdk.md` - Code-first authoring via `@n8n/workflow-sdk`
-- `projects/n8n/docs/template-sticky-guidelines.md` - Sticky notes and node names
+- `projects/n8n/docs/template-submission.md` - Template rules: stickies, node names, portal fields

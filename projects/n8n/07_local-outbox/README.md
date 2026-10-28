@@ -47,7 +47,7 @@ by git. Everything below is the evidence, then the spec.
 |---|---|
 | **Email ingestion** | live. `04_inbox-attachment-organizer` polls, labels, classifies, files. |
 | **A CRM** | live. `smart-CRM-fill` writes an `Entries` sheet. |
-| **The CRM branch being reached** | live. `subject-classifier-LM` to `record-search` to `Prepare Contact Input` to `smart-CRM-fill` to `Merge`. |
+| **The CRM branch being reached** | live. `Classify Email` to `Look Up Contact` to `Prepare Contact Input` to `Update Contact Record` to `Merge All Branches`. |
 | **Any record of an application** | ❌ **does not exist.** |
 | **Any record of an outcome** | ❌ **does not exist.** |
 | **Any path from the lab back to the workstation** | ❌ **does not exist.** |
@@ -88,7 +88,7 @@ over.**
 
 ### D3 - The CRM branch is unconditional
 
-`Call 'record-search'` hangs off `subject-classifier-LM` main output 0 with **no filter in front
+`Look Up Contact` hangs off `Classify Email` main output 0 with **no filter in front
 of it**. Every classified email pays for two subworkflow calls, whether it is a job reply, a
 newsletter, or an invoice that the financial branch is already handling in parallel.
 
@@ -100,8 +100,8 @@ the route is easy once something can say *this one*.
 
 `04_inbox-attachment-organizer/CLAUDE.md` states: *"ContactManager (disabled): record-search →
 Prepare Contact Input → smart-table-fill"*. In the committed workflow JSON **none of those three
-nodes carries a `disabled` flag** - only `sender_whitelist`, `notify the category` and one
-sticky note do.
+nodes carries a `disabled` flag** - only `Filter by Sender Whitelist` and `Send Category Message`
+do.
 
 **Consequence:** the file a maintainer is told to read first is wrong about a branch that runs on
 every email. Either the doc is stale or the export is; both readings are expensive, and the repo
@@ -121,7 +121,7 @@ it. Today it is a label.
 
 ### D6 - There is no outcome vocabulary
 
-`subject-classifier-LM` sorts on `type_of_document` with a `financial` branch and a fallback. A
+`Classify Email` sorts on `type_of_document` with a `financial` branch and a fallback. A
 rejection, an acknowledgement, an interview invitation and a recruiter's redirect are all the
 same thing to it: not financial.
 

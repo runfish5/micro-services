@@ -6,7 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "wf:to-ts": "node scripts/n8n-sdk.js to-ts",
-    "wf:from-ts": "node scripts/n8n-sdk.js from-ts"
+    "wf:from-ts": "node scripts/n8n-sdk.js from-ts",
+    "wf:template-check": "node scripts/n8n-template.js check",
+    "wf:template-rename": "node scripts/n8n-template.js rename"
   },
   "engines": {
     "node": ">=18"
