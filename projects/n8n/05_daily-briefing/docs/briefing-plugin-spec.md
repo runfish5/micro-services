@@ -10,8 +10,7 @@
 | Agent dispatch on assign (stage 3) | ❌ |
 
 **Since 2026-10-28 an action sends no message of its own** (see **Actions**): the per-action
-messages are gone, and the row per task on the briefing's own keyboard waits on the bot token
-being usable from an HTTP Request. Until then a task is ticked on 🗂 Kanban (`/board done <n>`).
+messages are gone, and a task is ticked on 🗂 Kanban (`/board done <n>`).
 
 A tap records `assigned` or `done` and redraws the message. **No agent acts on an assignment
 yet** — that is stage 3, so a task sits at `⏳ assigned` until closed by hand. That is the honest
@@ -126,24 +125,13 @@ Output — exactly one item, always, even with nothing to report:
   renders as an italic qualifier. The renderer puts every page path (a token starting with `/`)
   in `<code>`, so Telegram does not turn it into a bot command.
 
-`actions` is optional. An action is **one row of the briefing's own inline keyboard**, never a
-message of its own: the first button carries the glyph of its `label` plus the action's short
-label (`✅ TalkTalk · CHF 22.75`), the others their glyph only (`🤖`). The short label is the
-action's optional `label`, else the first `·`/`—` facts of its `text` that fit 26 characters.
-`Format Message` builds the whole keyboard as Telegram's own `reply_markup` (task rows, then the
-menu); an action whose `callback_data` is over 64 bytes is left out and named in NEEDS ATTENTION,
-because Telegram rejects the *entire* keyboard for one bad button.
+`actions` is optional, and the briefing renders none: its keyboard is the static menu. The
+Telegram node's keyboard is a `fixedCollection`, and n8n drops an expression put in its place
+(verified: exec 14896 sent the briefing with no keyboard at all), so a row per task would need a
+raw `sendMessage` through an HTTP Request holding the bot token. A task is ticked on 🗂 Kanban
+(`/board done <n>`), which moves the same `Tasks` rows.
 
-**What is live (2026-10-28): the menu only.** The Telegram node's keyboard is a static
-`fixedCollection`, and n8n drops an expression put in its place (verified: exec 14896 sent the
-briefing with no keyboard at all). A varying keyboard therefore needs a raw `sendMessage` through
-an HTTP Request, and the existing Telegram credential cannot authenticate one: `telegramApi`
-defines no `authenticate`, and the token sits in the URL path. Moving the send to HTTP needs the
-bot token in a credential an HTTP Request can use: a new holder, so the operator's call. Until
-then `reply_markup` is built and not sent, `Send to Telegram` carries the static menu, and a
-task is ticked on 🗂 Kanban (`/board done <n>`), which moves the same `Tasks` rows.
-
-A tap (on an older per-task message today, on a task row once the keyboard ships) goes through
+A tap (on an older per-task message) goes through
 `menu-handler` → `commitments`: the row is written, `Redraw Keyboard` rebuilds the message's HTML
 from the callback's text and entities so the text stays exactly as sent, and works out the
 keyboard minus the tapped row; `Answer Tap` shows `✅ marked done` / `🤖 assigned to an agent`.

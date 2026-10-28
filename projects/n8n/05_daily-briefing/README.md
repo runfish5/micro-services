@@ -10,8 +10,7 @@ Sends a Telegram message with:
 - Current prices for tracked products (via price-checker subworkflow)
 - Who visited the website yesterday, who signed in to the app and what they did, and who signed up
 - Inline buttons for on-demand actions: Expenses, Learning Notes, Deal Finder, Kanban, Help.
-  Tasks send no message of their own; they are ticked on Kanban until the keyboard carries a row
-  per task (spec § Actions)
+  Tasks send no message of their own; they are ticked on Kanban (spec § Actions)
 
 Button taps route through the steward's menu-handler (project 10).
 
