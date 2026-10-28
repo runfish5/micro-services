@@ -5,7 +5,7 @@ name: n8n-heartbeat
 # GitHub emails the repo owner (Actions failure notifications, on by default),
 # so no alerting credentials are required. Telegram is optional (see secrets).
 #
-# Setup (one time):  bash scripts/setup-heartbeat.sh   (reuses .claude/n8n-api.env)
+# Setup: projects/n8n/13_n8n-ops-center/docs/external-heartbeat.md
 #
 # Secrets used:
 #   N8N_API_URL         (required)

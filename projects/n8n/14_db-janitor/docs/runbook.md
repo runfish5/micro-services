@@ -121,25 +121,12 @@ sit clearly above the normal peak and far below the free space.
 
 ## Setup from scratch
 
-The guard is one small service next to Postgres. There is nothing to import or configure in n8n.
-On Railway:
-
-1. **New service** in the project that holds n8n: source = this repository, **Root Directory**
-   `projects/n8n/14_db-janitor`. Railway builds the `Dockerfile` it finds there.
-2. **Variables**: paste [`docs/railway/db-guard.env.example`](../../docs/railway/db-guard.env.example)
-   into the Raw Editor and fill in the placeholders. Only `DATABASE_URL` is required, and it is a
-   reference, not a typed value.
-3. **Deploy.** The log must show `guard installed, mode=observe` and then one `ok ...` line every
-   two minutes. The service creates the schema `guard` itself; it touches nothing of n8n.
-4. **Calibrate** `overhead_mb`: take the volume figure the host shows and subtract the `used_mb`
-   of a log line from the same minute.
-5. **After a day without false alarms** set `GUARD_MODE` to `enforce`. That needs
-   `N8N_BASE_URL` and `N8N_API_KEY`.
-6. **Outside heartbeat** (optional): set `PORT`, generate a domain for the service, then set the
-   repository variables `GUARD_STATUS_URL` (`https://<domain>/status.json`) and
-   `HEARTBEAT_GUARD_CHECK=required`.
-
-On any other host: run the image wherever it can reach the database, with the same variables.
+Service and variables: [`docs/setup.md`](../../docs/setup.md). The deploy log must show
+`guard installed, mode=observe`, then one `ok ...` line every two minutes; the guard creates schema
+`guard` itself and touches nothing of n8n. Then calibrate `overhead_mb` (the host's volume figure
+minus `used_mb` from the same minute), and after a day without false alarms set `GUARD_MODE` to
+`enforce`. For the outside heartbeat: `PORT`, a generated domain, and the repository variables
+`GUARD_STATUS_URL` (`https://<domain>/status.json`) and `HEARTBEAT_GUARD_CHECK=required`.
 
 `scripts/db-guard.sh` is for the operator, not for setup: `preflight` (read-only facts), `status`,
 `allow`. It uses `DATABASE_URL` with a local `psql` if set; otherwise the Railway CLI, which runs
@@ -148,9 +135,6 @@ On any other host: run the image wherever it can reach the database, with the sa
 
 The write-ahead log lives on the same volume as the data, and the Postgres default lets it grow
 to 1 GB. `preflight` shows `max_wal_size`; `scripts/db-guard.sh tune-wal` caps it at 64 MB.
-
-The instance-wide variables that belong to this (pruning, run-time limit) are listed in
-[`docs/infra-ops.md`](../../docs/infra-ops.md).
 
 ## Drill
 

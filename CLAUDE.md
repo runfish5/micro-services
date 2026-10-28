@@ -144,7 +144,8 @@ Most projects have their own `CLAUDE.md`. Read it before working in that project
 - `projects/n8n/docs/observability-through-llm-confidence-estimate.md` - LLM confidence scoring
 - `.claude/skills/n8n-executions/skill.md` - When to use MCP vs REST API
 - `projects/n8n/docs/n8n-retry-api-reference.md` - n8n API retry endpoint behavior
-- `projects/n8n/docs/infra-ops.md` - Infrastructure, binary data mode, volume management
+- `projects/n8n/docs/setup.md` - Setup and key rotation: services, variables, every secret's holders
+- `projects/n8n/docs/infra-ops.md` - Binary data mode, pruning, volume management
 - `projects/n8n/14_db-janitor/docs/runbook.md` - DB growth guard: alerts, allowances, disk-full recovery
 - `projects/n8n/docs/workflow-as-code-sdk.md` - Code-first authoring via `@n8n/workflow-sdk`
 - `projects/n8n/docs/template-sticky-guidelines.md` - Sticky notes and node names

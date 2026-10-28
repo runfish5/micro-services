@@ -59,21 +59,12 @@ chat ID, no relay.
 **Optional Telegram:** if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` secrets exist,
 the script also posts to Telegram. Omit them and GitHub email is used.
 
-## Setup (one time)
+## Setup
 
-```bash
-bash scripts/setup-heartbeat.sh   # reuses .claude/n8n-api.env → GitHub secrets
-git add .github/workflows/n8n-heartbeat.yml scripts/ && git commit && git push
-# then: Actions tab → n8n-heartbeat → "Run workflow" to test once
-```
-
-Secrets used: `N8N_API_URL` (required), `N8N_API_KEY` (optional — enables the
-runner/error check), `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` (optional).
-
-Repository variables (not secrets), once the guard service runs with a public domain:
-`GUARD_STATUS_URL` (`https://<guard domain>/status.json`) and `HEARTBEAT_GUARD_CHECK=required`
-(`gh variable set HEARTBEAT_GUARD_CHECK --body required`). Left unset, the guard check is
-skipped.
+Secrets, set with `gh secret set`: `N8N_API_URL` (required), `N8N_API_KEY` (enables the
+runner/error check), `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` (optional). Repository variables
+`GUARD_STATUS_URL` and `HEARTBEAT_GUARD_CHECK=required` turn on the guard check. Then Actions →
+n8n-heartbeat → "Run workflow" once. Where each secret comes from: [`docs/setup.md`](../../docs/setup.md).
 
 ## Tuning
 
