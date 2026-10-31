@@ -719,7 +719,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Extract the fields of the JSON schema below from the source text.\n\n{{ ($json.contact_name || $json.contact_email || $json.subject) ? '<context>\\nContact: ' + ($json.contact_name || '') + '\\nEmail: ' + ($json.contact_email || '') + '\\nSubject: ' + ($json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $json.body_core }}\n</source_text>\n\nRules:\n- Use only what the text states. Do not guess, round or reword values.\n- A field the text does not mention: empty string \"\" (empty list for lists).\n- Fields with fixed options: one of the options, or \"\" if the text does not say.\n- confidence.overall: 0-100 for the values as a whole. Missing or guessed values lower it.\n/no_think",
+        "text": "=Extract the fields of the JSON schema below from the source text.\n\nDecide the contact identity before filling any field: the contact is the entity named in the context header, not a person mentioned inside the body. An address found only in the body (for example a registration or organiser address) belongs to someone else and must never be used as the contact email. The email field is the context header's Email value copied verbatim, with no fallback to a body address and no empty value when the header provides one. Names come only from the header Contact name when it denotes a person; otherwise first_name and surname are empty strings. last_topic is the Subject line copied verbatim, not a summary or an extension.\n\n{{ ($json.contact_name || $json.contact_email || $json.subject) ? '<context>\\nContact: ' + ($json.contact_name || '') + '\\nEmail: ' + ($json.contact_email || '') + '\\nSubject: ' + ($json.subject || '') + '\\n</context>\\n\\n' : '' }}<source_text>\n{{ $json.body_core }}\n</source_text>\n\nRules:\n- Use only what the text states. Do not guess, round or reword values.\n- A field the text does not mention: empty string \"\" (empty list for lists).\n- Fields with fixed options: one of the options, or \"\" if the text does not say.\n- confidence.overall: 0-100 for the values as a whole. Missing or guessed values lower it.",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -754,8 +754,10 @@
     },
     {
       "parameters": {
-        "model": "qwen/qwen3.8-27b",
-        "options": {}
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,

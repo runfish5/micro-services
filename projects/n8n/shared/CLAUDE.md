@@ -7,6 +7,43 @@ description. Read this before editing the JSON. See the root `CLAUDE.md` for rep
 
 ---
 
+## `eval-harness.json` — evaluation harness for any n8n pipeline
+
+A template with a fixed head and tail; the user pastes their own nodes in between. It is the backend
+of PromptPotter's `n8n` connector: n8n Evaluations measure the origin, PromptPotter optimizes through
+the webhook, and the same Evaluation reproduces the winner. One copy per pipeline under test.
+
+Instances, built from this template (their JSON is not committed: it holds real credential IDs and
+keeps production node names):
+- `eval-harness - Classify Email (requires_action)`, id `quV6vxoIQxIdfdrR`, webhook `eval-harness-classify`.
+  The prompt slot is the `## requires_action` section; Build Answer defaults to `['requires_action']`.
+- `eval-harness - Extract Data from String (CRM fill)`, id `6idnhmnjIEXLgqGD`, webhook `eval-harness-extract`.
+  The prompt slot is the instruction; the schema arrives in `params.output_schema`.
+
+- **Contract (fixed; the connector ships against it).** `POST /webhook/<path>`, header `X-Eval-Secret`
+  (credential `Eval harness shared secret`), body `{case_id, input, expected, prompt, params}` →
+  `{case_id, answer, raw}`. Evaluations door: sheet `id, query, ground_truth`, optional `prompt`, `schema`.
+- **Head.** `Parse Eval Input` (Set in raw JSON mode, so `input` keeps its type) gives both doors one case:
+  `case_id`, `input` (text, or an object when it is JSON object text), `prompt` (`""` = production),
+  `params`. `expected` is left out, so no middle can pass it to a model.
+- **Middle.** Reads `$('Parse Eval Input').first().json`. The default is one LLM chain plus a model sub-node.
+  A pasted production node keeps its prompt; only its slot becomes `prompt || <production text>`, and reads
+  of nodes the harness lacks (`$('Gmail')`) are rewired to the head. Re-copy it after every production
+  prompt change: the eval proves nothing if the copy differs from what runs live.
+- **Tail.** `Build Answer` takes the last item's `output`, `text`, `answer`, `response`, `content`,
+  `message.content` or `choices[0].message.content`, else the whole item; an error item answers `''`, which
+  the connector counts as errored, not wrong. `params.answer_fields`: one field = its value, several = JSON
+  of exactly them. The tail's one knob is the default field list for callers that send none.
+- **Scoring, no judge** (Evaluations door only). `Score Answer` reads `ground_truth` from the trigger: text =
+  exact match ignoring case and outer spaces; a JSON object `{field: [accepted, …]}` = share of its non-null
+  fields right, close to PromptPotter's `fields_match`. Sheet columns written: `predicted`, `score`.
+- **Same model, same credential** as production, so a score measures what runs live. A campaign sends
+  hundreds of calls on that quota: watch it during big runs.
+- **Storage:** `saveDataSuccessExecution: none` and `saveDataErrorExecution: none`; the trigger ships with
+  `maxRows: 3`. Measure one run against the DB guard (root `CLAUDE.md`) before raising it.
+
+---
+
 ## `signup-intake.n8n.json` — Signup Intake → CRM triage
 
 A generic **intake door** for inbound people (waitlist / signups). Two ways in, one pipeline, a

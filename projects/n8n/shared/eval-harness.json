@@ -1,0 +1,401 @@
+{
+  "name": "eval-harness",
+  "nodes": [
+    {
+      "id": "0f3c2a71-5b6e-4d8a-9c1f-2e7b8a4d6c01",
+      "name": "Main Sticky",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        -224
+      ],
+      "parameters": {
+        "content": "## Eval harness: score any n8n pipeline\n\nGives the nodes between a fixed head and tail two doors: n8n Evaluations and an outside prompt optimizer. Both send the same case and get the same answer.\n\n### How it works\n1. An Evaluation run reads one sheet row (`id`, `query`, `ground_truth`, optional `prompt`, `schema`); an optimizer posts `{case_id, input, expected, prompt, params}` to the webhook.\n2. Parse Eval Input turns both into `case_id`, `input`, `prompt` and `params`. The expected answer is left out, so your nodes never see it.\n3. Your nodes in the middle answer the case; by default one LLM step does.\n4. Build Answer reads the answer from `output`, `text` or the whole last item, cut to `params.answer_fields` when given.\n5. An Evaluation run scores the answer against `ground_truth` and writes it back; a webhook call gets `{case_id, answer, raw}`.\n\n### Setup steps\n- [ ] Paste your nodes between Parse Eval Input and Build Answer, or keep the default LLM step and select its model credential.\n- [ ] Put your production prompt in place of `''` in your prompt expression, so an empty `prompt` runs it.\n- [ ] If your last node returns an object and callers send no `answer_fields`, name the graded field in Build Answer.\n- [ ] Add a header-auth credential (`X-Eval-Secret`) to When Called by Optimizer.\n- [ ] Select the dataset sheet in both sheet nodes and add the columns `predicted` and `score`.\n- [ ] Keep the row limit at 3 until one run's storage is known.\n\nGuide: https://github.com/runfish5/micro-services/tree/main/projects/n8n/shared",
+        "height": 800,
+        "width": 480
+      }
+    },
+    {
+      "id": "0f3c2a71-5b6e-4d8a-9c1f-2e7b8a4d6c02",
+      "name": "Section Two Ways In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -224
+      ],
+      "parameters": {
+        "content": "## Two ways in\n\nA sheet row or one optimizer call becomes the same case: `case_id`, `input`, `prompt`, `params`. The expected answer stays out.",
+        "height": 528,
+        "width": 480,
+        "color": 7
+      }
+    },
+    {
+      "id": "0f3c2a71-5b6e-4d8a-9c1f-2e7b8a4d6c03",
+      "name": "Section Your Nodes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -224
+      ],
+      "parameters": {
+        "content": "## Your nodes go here\n\nRead `$('Parse Eval Input').first().json`: `input`, `prompt` (empty = your production prompt) and `params`. The last node's `output`, `text` or JSON is the answer.",
+        "height": 528,
+        "width": 400,
+        "color": 7
+      }
+    },
+    {
+      "id": "0f3c2a71-5b6e-4d8a-9c1f-2e7b8a4d6c04",
+      "name": "Section Score or Reply",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        -224
+      ],
+      "parameters": {
+        "content": "## Score or reply\n\nThe answer is read from the last node. Evaluation runs score it against `ground_truth` and write to the sheet; webhook calls get it back.",
+        "height": 528,
+        "width": 880,
+        "color": 7
+      }
+    },
+    {
+      "id": "1a2b3c4d-0001-4e5f-8a9b-0c1d2e3f4a01",
+      "name": "When Running Evaluation",
+      "type": "n8n-nodes-base.evaluationTrigger",
+      "typeVersion": 4.6,
+      "position": [
+        64,
+        -64
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_EVAL_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "limitRows": true,
+        "maxRows": 3
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      },
+      "notes": "Dataset columns: id, query, ground_truth; optional prompt, schema (JSON text). Extra columns are ignored.\nmaxRows 3 is the first-run probe; raise it once one run's storage is known.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0002-4e5f-8a9b-0c1d2e3f4a02",
+      "name": "When Called by Optimizer",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        64,
+        128
+      ],
+      "webhookId": "6d0e4b8a-3f2c-4a51-9b7e-8c1d2f3a4b5c",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eval-harness",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_EVAL_HARNESS_SECRET",
+          "name": "Eval harness shared secret"
+        }
+      },
+      "notes": "Header X-Eval-Secret. Body: { case_id, input, expected, prompt, params }.\nprompt \"\" = the production prompt. expected is never passed on: the caller grades.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0003-4e5f-8a9b-0c1d2e3f4a03",
+      "name": "Parse Eval Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        288,
+        32
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify((b => { const obj = v => { if (typeof v !== 'string') return v ?? ''; try { const o = JSON.parse(v); return o && typeof o === 'object' && !Array.isArray(o) ? o : v; } catch (e) { return v; } }; const schema = b ? null : $json.schema; return { case_id: (b ? b.case_id : $json.id) ?? '', input: obj(b ? b.input : $json.query), prompt: String((b ? b.prompt : $json.prompt) ?? ''), params: b ? (b.params || {}) : (schema ? { output_schema: typeof schema === 'string' ? JSON.parse(schema) : schema } : {}) }; })($json.body)) }}",
+        "options": {}
+      },
+      "notes": "The middle reads $('Parse Eval Input').first().json:\ncase_id: text\ninput: text, or an object when the row is JSON object text\nprompt: candidate prompt, '' = production\nparams: { output_schema, answer_fields } when sent\nexpected is left out on purpose.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0004-4e5f-8a9b-0c1d2e3f4a04",
+      "name": "Generate Answer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        608,
+        32
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ (c => (p => p ? p + '\\n\\n' : '')(c.prompt || '') + (typeof c.input === 'string' ? c.input : JSON.stringify(c.input, null, 2)) + (c.params.output_schema ? '\\n\\nAnswer with JSON that matches this schema:\\n' + JSON.stringify(c.params.output_schema) : ''))($('Parse Eval Input').first().json) }}",
+        "batching": {}
+      },
+      "notes": "Default middle: replace it with your nodes, or keep it.\nYour production prompt goes in place of '' in (c.prompt || ''), so prompt '' runs it.\nparams.output_schema, when sent, is appended to the message.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0005-4e5f-8a9b-0c1d2e3f4a05",
+      "name": "Answer LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        608,
+        240
+      ],
+      "parameters": {
+        "model": "openrouter/auto",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openRouterApi": {
+          "id": "CREDENTIAL_ID_OPENROUTER",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "id": "1a2b3c4d-0006-4e5f-8a9b-0c1d2e3f4a06",
+      "name": "Build Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        32
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify((() => { const c = $('Parse Eval Input').first().json; const fields = (c.params.answer_fields || []).length ? c.params.answer_fields : []; const j = $json; const pick = [j.output, j.text, j.answer, j.response, j.content, j.message && j.message.content, j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content].find(v => v !== undefined && v !== null); const raw = pick !== undefined ? pick : (j.error ? { error: j.error } : j); const asObject = v => { if (v && typeof v === 'object' && !Array.isArray(v)) return v; if (typeof v !== 'string') return null; try { const o = JSON.parse(v.trim().replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '')); return o && typeof o === 'object' && !Array.isArray(o) ? o : null; } catch (e) { return null; } }; const text = v => v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v).trim(); const o = asObject(raw); const answer = j.error && pick === undefined ? '' : fields.length && o ? (fields.length === 1 ? text(o[fields[0]]) : JSON.stringify(Object.fromEntries(fields.map(k => [k, o[k] ?? ''])))) : text(raw); return { case_id: c.case_id, answer: answer, raw: raw }; })()) }}",
+        "options": {}
+      },
+      "notes": "Reads the last middle node: output, text, answer, response, content, message.content or choices[0].message.content, else the whole item. An error item answers ''.\nanswer_fields: one field = its value, several = JSON of exactly them.\nDefault when the caller sends none: the [] after answer_fields, e.g. ['requires_action'].",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0007-4e5f-8a9b-0c1d2e3f4a07",
+      "name": "Check If Evaluating",
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.7,
+      "position": [
+        1168,
+        32
+      ],
+      "parameters": {
+        "operation": "checkIfEvaluating"
+      }
+    },
+    {
+      "id": "1a2b3c4d-0008-4e5f-8a9b-0c1d2e3f4a08",
+      "name": "Score Answer",
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.7,
+      "position": [
+        1392,
+        -64
+      ],
+      "parameters": {
+        "operation": "setMetrics",
+        "metric": "customMetrics",
+        "metrics": {
+          "assignments": [
+            {
+              "id": "e4b3f9d5-0001-4f6a-8b1c-4d5e6f7a8b01",
+              "name": "score",
+              "value": "={{ (() => { const norm = v => (v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v ?? '')).trim().toLowerCase(); const parse = v => { if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch (e) { return v; } }; const gold = parse($('When Running Evaluation').first().json.ground_truth); const answer = $('Build Answer').first().json.answer; if (!gold || typeof gold !== 'object' || Array.isArray(gold)) return norm(answer) === norm(gold) ? 1 : 0; const keys = Object.keys(gold).filter(k => gold[k] !== null); if (!keys.length) return 0; const parsed = parse(answer); const got = parsed && typeof parsed === 'object' ? parsed : (keys.length === 1 ? { [keys[0]]: answer } : {}); return keys.filter(k => [].concat(gold[k]).map(norm).includes(norm(got[k]))).length / keys.length; })() }}",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "notes": "ground_truth text: exact match, case and outer spaces ignored (1 or 0).\nground_truth JSON object {field: [accepted, ...]}: share of its non-null fields right.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1a2b3c4d-0009-4e5f-8a9b-0c1d2e3f4a09",
+      "name": "Write Results to Sheet",
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.7,
+      "position": [
+        1616,
+        -64
+      ],
+      "parameters": {
+        "operation": "setOutputs",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_EVAL_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "outputs": {
+          "values": [
+            {
+              "outputName": "predicted",
+              "outputValue": "={{ $('Build Answer').first().json.answer }}"
+            },
+            {
+              "outputName": "score",
+              "outputValue": "={{ $json.score }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "id": "1a2b3c4d-0010-4e5f-8a9b-0c1d2e3f4a10",
+      "name": "Return Answer to Caller",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        128
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ case_id: $json.case_id, answer: $json.answer, raw: $json.raw }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When Running Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Parse Eval Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called by Optimizer": {
+      "main": [
+        [
+          {
+            "node": "Parse Eval Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Eval Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Answer": {
+      "main": [
+        [
+          {
+            "node": "Build Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Answer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Answer": {
+      "main": [
+        [
+          {
+            "node": "Check If Evaluating",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Evaluating": {
+      "main": [
+        [
+          {
+            "node": "Score Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Answer to Caller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Answer": {
+      "main": [
+        [
+          {
+            "node": "Write Results to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  },
+  "pinData": {}
+}
