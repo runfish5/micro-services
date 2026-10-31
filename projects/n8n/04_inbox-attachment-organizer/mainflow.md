@@ -174,7 +174,7 @@ START (one email): When Called for Catch-up
                     │                       └→ Build Report Message
                     │                          └→ Send Completion Message ──→ Merge[2]
                     │
-                    ├─ ACTIONABLE + requires_action (output 1):
+                    ├─ ACTIONABLE + requires_action + inbound, not calendar (output 1):
                     │  └→ Send Category Message (Telegram) ──→ Merge[2]
                     │
                     └─ FALLBACK (output 2):
@@ -191,8 +191,8 @@ Both AI nodes use an LLM with structured output support. Their sub-nodes: `Class
 
 ### 1. Classification
 - **Node**: Classify Email
-- **Model**: LLM with structured output
-- **Input**: Email text + attachment content + contact context from Build Email Context
+- **Model**: LLM with structured output, temperature 0
+- **Input**: Email text + attachment content + contact context from Build Email Context + `RECEIVED` (the email's own date from `Get Email With Attachments`, in the instance's time zone, `unknown` when missing), so deadlines are read against the arrival day
 - **Output**: Document type, action required, Telegram summary, body_core (stripped content), optional `contact_name_extracted`
 - **Classification Types**:
   - financial, actionable, informational, Other
@@ -281,6 +281,6 @@ Each Execute Workflow node lists the inputs it passes in its Notes (the restore 
 - The folder structure makes manual file browsing intuitive
 - **Three Gmail labels**: `inProgress` is a temporary canary applied at start and removed on success (emails still carrying it indicate failed processing). `n8n` is a permanent success marker applied once after the Merge convergence. `gdr` marks emails whose attachments were saved to Google Drive (attachment branch only).
 - **Merge convergence**: `If Contact Stopped` feeds inputs 1 and 2 of the 3-input `Merge All Branches` node, the routed branch (notify, financial, fallback) input 3. It passes on input 2 only, so `Add n8n Label` and `Remove inProgress Label` execute exactly once. A held-back email reaches none of its inputs, so it is never labelled done.
-- **Action alert**: an `actionable` email with `requires_action` leaves `Route by Email Category` on output 1 and goes straight to Telegram (`Send Category Message`, then Merge[2]). A financial email with `requires_action` (failed payment, reminder, debt collection) starts its report with `⚡ ACTION: money`. Fallback is output 2.
+- **Action alert**: an `actionable` email with `requires_action` leaves `Route by Email Category` on output 1 and goes straight to Telegram (`Send Category Message`, then Merge[2]). A financial email with `requires_action` (failed payment, reminder, debt collection) starts its report with `⚡ ACTION: money`. Outbound mail (the owner wrote it, including the owner's own alerts) and calendar notifications (`calendar-notification@google.com`: the calendar already reminds the owner) never count: both checks are `requires_action && direction !== 'outbound' && contact_email !== 'calendar-notification@google.com'`, so neither ever pings. Fallback is output 2.
 - Financial documents without attachments still get logged via the "No" branch (LLM extracts data from email body)
 - Filter by Sender Whitelist is disabled by default; before enabling it, edit its sender array (a red warning sticky marks it), or every financial email is dropped. It sits after extraction, so a dropped email's documents were still extracted, and it is still labelled `n8n`
