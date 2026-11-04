@@ -88,10 +88,10 @@ Output — exactly one item, always, even with nothing to report:
   "key": "commitments",
   "icon": "💳",
   "title": "COMMITMENTS",
-  "summary": "CHF 22.75/mo · 1 commitment",
+  "summary": "2 commitments · CHF 72.65/mo",
   "blocks": [
-    { "level": "alert", "items": ["TalkTalk billed CHF 99.75, expected 22.75\n338% over · due in 4d · check the bill"] },
-    { "heading": "To pay", "items": ["TalkTalk · CHF 22.75 · due in 19d"] },
+    { "level": "alert", "items": ["TalkTalk CHF 22.75 · due today · pay or mark done\nbilled CHF 99.75, 338% over expected: check the bill"] },
+    { "heading": "To pay", "items": ["Swisscom · CHF 49.90 · due in 19d"] },
     { "heading": "Leaving", "items": [] }
   ],
   "actions": [
@@ -107,18 +107,22 @@ Output — exactly one item, always, even with nothing to report:
 }
 ```
 
-**Layout fields** (the approved v5 layout, 2026-10-27):
+**Layout fields** (the approved v6 layout, 2026-11-04: every fact said once):
 
 - **`level`** on a block: `alert` | `main` (the default) | `detail`. `alert` items are lifted
   into the ⚠️ NEEDS ATTENTION block at the top of the message and are never collapsed; `main`
   is visible under the section; `detail` goes into one collapsed `<blockquote expandable>`.
   **Which line is an alert is the plugin's decision** — the owner knows its data. An alert is
-  plain words, what happened and then what to do, and never an internal id.
-- **`summary`**: the section's headline, the italic line under its header (or its part of a
-  cluster's summary line). Optional; empty means nothing to headline.
-- **`empty: ''`**: the section says nothing on a quiet day. With no `main` or `detail` blocks it
-  renders no header at all, only its alerts (if any) at the top. `inbox` uses it: an alert while
-  emails are held back, otherwise nothing. Any other `empty` is printed as the quiet-day line.
+  plain words, what happened and then what to do, and never an internal id. It is complete:
+  the plugin does not list its subject again in `main`/`detail` nor point at it, and several
+  findings about one subject are one alert (line one the subject, one line per finding).
+- **`summary`**: the section's headline, the italic line under its header (on a cluster
+  member, its header line). Optional; empty means nothing to headline. A count the summary
+  gives is not repeated as a block line.
+- **`empty`**: with no `main` or `detail` blocks the section is ONE line, `header · summary,
+  empty`; in a cluster it joins the status line as `summary, empty`. `''` says nothing at all:
+  only its alerts (if any) at the top. `inbox` uses it (an alert while emails are held back,
+  otherwise nothing), and `upkeep` while its failures are alerts.
 - **Item text**: a `\n` inside an item is the plugin's own layout — line one is the item, the
   rest its detail lines. A long one-line `·` item is split by the renderer, one fact per line;
   a fully parenthesised item renders as an italic footnote. A trailing `(…)` in a `heading`
@@ -174,10 +178,11 @@ payment.
 without unwiring nodes.
 
 **`cluster`** (`{ key, icon, title }`) groups plugins into one section: a visible header, one
-summary line joined from the members' `summary`, then ONE `<blockquote expandable>` holding
-every member's sub-section (Telegram has no toggle inside a toggle). A member's alerts still go
-to the top. The live order is NEEDS ATTENTION, COMMITMENTS (20), 🏺 PROMPTPOTTER (signups 34,
-app 35, site inbox 36, site 38), 🔧 UPKEEP (60, all `detail`). Signups has no subworkflow: its
+status line folding every quiet member (no `main`/`detail` blocks: its `summary, empty`), then
+each member with news under its own header, its summary on that line. Past 8 lines those
+sub-sections go into ONE `<blockquote expandable>` (Telegram has no toggle inside a toggle). A
+member's alerts still go to the top. The live order is NEEDS ATTENTION, COMMITMENTS (20), 🏺
+PROMPTPOTTER (signups 34, app 35, site inbox 36, site 38), 🔧 UPKEEP (60). Signups has no subworkflow: its
 row and section are built inside `Format Message`, and it joins the `promptpotter` cluster there.
 
 ## What is left in the briefing

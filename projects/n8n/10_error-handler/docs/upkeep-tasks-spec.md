@@ -338,9 +338,13 @@ first; both sort above traffic. This matters because the 4096-character cap trun
 
 ### Message text
 
-`<project> · <short signature> · <n>× since <first seen>`. The signature is the normalised message
-truncated to ~40 chars — enough to recognise the bug, not enough to be a stack trace. Escaping is
-the briefing's job; the plugin emits plain text and never markup.
+`<workflow> fails at <node>`, then `<short signature> · <n>× since <first seen>`. The signature is
+the normalised message truncated to ~40 chars — enough to recognise the bug, not enough to be a
+stack trace. Escaping is the briefing's job; the plugin emits plain text and never markup.
+
+Since 2026-11-04 each observed row is an **alert** of its own, said in full at the top of the
+briefing and not listed again under UPKEEP; the section keeps only the declared threads, and with
+none it says nothing (its failures already answer *is anything quietly broken?*).
 
 ## The second producer — declared threads
 

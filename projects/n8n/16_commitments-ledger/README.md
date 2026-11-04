@@ -406,12 +406,16 @@ header rows before the first run — nothing creates them.
 
 **`commitments-digest` must be activated.** A subworkflow whose only trigger is an Execute
 Workflow Trigger still has to be active to be callable; an inactive one fails with *"Workflow is
-not active and cannot be executed"* and the briefing renders `⚠️ COMMITMENTS unavailable`. That
-was the first failure on the live instance, and the symptom names no cause.
+not active and cannot be executed"* and the briefing's alert reads `Briefing section
+"commitments" is missing`. That was the first failure on the live instance, and the symptom
+names no cause.
 
 The digest shows **one line per commitment**: the nearest outstanding period. The generator
 keeps two months alive, but printing both would double the list every morning, so next month
-surfaces only once this month is closed.
+surfaces only once this month is closed. A commitment that needs doing (a manual payment due or
+overdue, or a reconciler finding) is instead ONE alert, said in full and not listed again:
+`TalkTalk CHF 22.75 · 4d overdue · pay or mark done`, then a line per finding. When every
+commitment is an alert the section is one line, `1 commitment · CHF 22.75/mo, nothing else due`.
 
 ## The tap is a steward agent, not a special case
 

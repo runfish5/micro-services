@@ -33,7 +33,7 @@ of a spreadsheet or a file on your own server, by the store **Keep Visit** point
 | `target` | client | for clicks: the link/button label and its href |
 | `referrer` | client | pageviews only |
 | `ua` | server | browser user-agent |
-| `flag` | server | empty, or the site's word on a caller it took for a crawler: `bot-ua`, `stale-browser` |
+| `flag` | server | empty, or the site's word on the caller: `self` (the owner), `bot-ua`, `stale-browser` |
 
 The Google Sheets store writes every value **RAW**. That is deliberate and load-bearing: a
 visitor can put anything in a link label, and under `USER_ENTERED` a `target` of `=1+1` would be
@@ -56,19 +56,21 @@ Dropped by the website before a row is written, so every reader of this table se
 set rather than each one re-deriving it:
 
 - **Loopback and private addresses** — local development.
-- **The owner's own devices** — a browser that once opened the site with `?self=1` reports nothing
-  from then on (`?self=0` undoes it). This is the only thing the site ever stores on a device, and
-  only on one whose owner typed that parameter. It exists because the briefing's address list
-  cannot recognise a phone: mobile carriers hand out a new address per session.
 
-Rows written before 2026-10-11 predate the own-devices rule and carry no flag. Anything computed
-over older rows has to filter them itself.
+Rows written before 2026-11-04 carry no `self` flag: the owner's phone among them reads as a
+visitor. Anything computed over older rows has to filter them itself.
 
 ## What is flagged, not dropped
 
-The website names a caller it takes for a crawler in `flag` and keeps the row. The briefing leaves
-flagged rows out of its visitor counts; [`20_bot-detector`](../20_bot-detector/README.md) reads
-the flag as one more feature.
+The website names the caller in `flag` and keeps the row. The briefing leaves flagged rows out of
+its visitor counts; [`20_bot-detector`](../20_bot-detector/README.md) reads the flag as one more
+feature.
+
+- `self` — **the owner's own browser**, carrying the `pp-self` cookie on the site's domain. Signing
+  into the app as its admin sets it; `?self=1` on any page sets it on a browser that never signs
+  in, `?self=0` takes it off. It is the only thing ever stored on a device, and only on the
+  owner's. It follows the browser, not the address, because a phone on mobile data gets a new
+  address every session.
 
 - `bot-ua` — **anything naming itself a bot**: `bot`, `crawl`, `headless`, `curl` and the like in
   the user-agent.
@@ -98,7 +100,8 @@ Every line names the device after the place, off the user agent: `iPad` or `Tabl
 count each: `1 tablet, 1 phone`. The bot detector's SITE section uses the same rule.
 The sent line's id is kept in static data by **Remember Live Alert**; two visits inside the same
 second can still each send a line, since each execution saves static data only at its end.
-`SELF_NETS` in **Decide Live Alert** holds your own address prefixes, set on the live instance only.
+A visit the site flagged `self`, your own browser, is never announced: the flag follows the
+browser, so your phone on mobile data is caught too ([`20_bot-detector`](../20_bot-detector/README.md)).
 
 ## Executions are not saved
 

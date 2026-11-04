@@ -52,10 +52,15 @@ Sections are plugins: a `Plugins` registry row names a subworkflow, `Run Plugin`
   collapsed), `main` (visible, the default) or `detail` (collapsed). **The plugin that owns the
   data decides which line is an alert**; an alert says what happened and what to do, in plain
   words, with no internal ids;
-- `summary` is the section's headline: the italic line under its header, or its part of a
-  cluster's summary line;
-- a registry row's `cluster` (`{key, icon, title}`) makes its members ONE section: a visible
-  header and summary line, then one `<blockquote expandable>` with every member's sub-section.
+- **every fact is said once**: an alert is complete at the top, and its section neither repeats
+  it nor points at it ("details under …", "see attention"). Alerts about one subject are one
+  alert, merged by the plugin that owns the subject. A failed plugin is only its alert;
+- `summary` is the section's headline: the italic line under its header, or a cluster member's
+  header line. A section with nothing below its header (only alerts, or a quiet day) is one
+  line: header, summary, `empty`;
+- a registry row's `cluster` (`{key, icon, title}`) makes its members ONE section: a header, one
+  status line folding every quiet member (`summary, empty`), then each member with news under
+  its own header, collapsed into one `<blockquote expandable>` only when long.
   Signups is the one member with no subworkflow; it is built and slotted in inside `Format Message`.
 
 **1. All markup lives in `Format Message`.** It reads every upstream **by node name** —
@@ -74,7 +79,7 @@ exists for this. A single unescaped `<` does not mangle one line; it fails the w
 
 The precedent is split, and both sides are correct:
 
-- **SITE always renders**, even at zero visitors (`No visitors`): a missing section is
+- **SITE always renders**, even at zero visitors (`no site visitors yesterday`): a missing section is
   indistinguishable from a broken pipeline.
 - **SIGNUPS always renders** — it did not always, and the flip is the clearest worked example of
   the test below. It used to only announce arrivals, so silence was a normal day. Then signing up
@@ -96,9 +101,8 @@ unclosed. The tail is what gets cut; alerts are always at the top, whatever thei
 
 ## Never commit personal data in this file
 
-A home address is personal data and this repo is public, so the own-network list (`SELF_NETS`,
-in `20_bot-detector` and `15_site-visits`) is placeheld in committed copies and set only on the
-live instance. The same rule extends to every plugin: customer numbers,
+This repo is public, so personal data is placeheld in committed copies and set only on the live
+instance. That holds for every plugin: customer numbers,
 phone numbers and account references stay in the sheets, and the workflow reads them from there.
 The mirror script refuses to write a workflow containing an IPv4 literal — treat that as the
 floor, not the ceiling.

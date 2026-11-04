@@ -24,9 +24,9 @@ Adding a morning section is one line in `Plugins` — no new nodes here. `order`
 sections first: when the message is too long, what sorts last is what moves to a second message.
 
 `Run Plugin` has `onError: continueRegularOutput`, which is the point of the whole arrangement:
-a plugin that throws costs its own section (`⚠️ COMMITMENTS unavailable`) instead of the entire
-morning message. Failures are named by matching registry keys against returned keys, so a
-crashed plugin is still identifiable.
+a plugin that throws costs its own section (an alert, `Briefing section "commitments" is
+missing`) instead of the entire morning message. Failures are named by matching registry keys
+against returned keys, so a crashed plugin is still identifiable.
 
 Currently installed: `commitments` (project 16), `upkeep` (project 10), `reach` (project 17:
 yesterday's contact-form messages in full, and who asked for, confirmed or left the newsletter),
@@ -34,9 +34,12 @@ yesterday's contact-form messages in full, and who asked for, confirmed or left 
 emails held back because an LLM daily quota ran out: an alert until they are rerun, nothing on a quiet day) and `site` (project 20:
 yesterday's website visitors). The signups section is built inside `Format Message`.
 
-Layout (v5): ⚠️ NEEDS ATTENTION (every plugin's `alert` lines), 💳 COMMITMENTS, 🏺 PROMPTPOTTER
-(signups, app, site inbox and site as one cluster: a summary line and one collapsed box), 🔧 UPKEEP
-(collapsed). Levels, summaries and clusters: [docs/briefing-plugin-spec.md](docs/briefing-plugin-spec.md).
+Layout (v6): the date and the day's events (a duplicate shown once), ⚠️ NEEDS ATTENTION (every
+plugin's `alert` lines, each said once and in full), 💳 COMMITMENTS, 🏺 PROMPTPOTTER (signups,
+app, site inbox and site as one cluster: one status line for the quiet members, the rest under
+their own headers), 🔧 UPKEEP (declared threads, collapsed). Every fact is said once: a section
+does not repeat its alerts, and a section with nothing else to say is one line. Levels,
+summaries and clusters: [docs/briefing-plugin-spec.md](docs/briefing-plugin-spec.md).
 
 ## The site section
 

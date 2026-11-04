@@ -47,18 +47,18 @@ is deleted. `by` names a delegate who acted in the account's workspace. `device`
 The section prints, for up to eight accounts:
 
 ```
-🏺 APP · last 24h
-  2 active · 2 signed in · 1 new
+🧪 App · last 24h · 2 active · 2 signed in · 1 new
 ada@example.com · new · signed in 12:45 google (phone)
   terms accepted 2026-10-11
   justlogic: resolve origin, start checkin, start run ×2
 ```
 
-A head line counts accounts with any line, with a sign-in and with a new account. Each account's
+The summary counts accounts with any line, with a sign-in and with a new account. Each account's
 heading carries its sign-ins in the briefing's zone; below it, one line per dataset in the order
 first touched, the app's own words spaced, a repeat in a row as `×N`. An account that acted with
 no sign-in in the window says `no sign-in, session still open`. In the briefing the section is
-`🧪 App`, a member of the PromptPotter cluster.
+`🧪 App`, a member of the PromptPotter cluster; a quiet day folds into its status line as
+`nobody signed in or did anything`.
 
 **A run that stopped before it finished is an alert**: a `run_stopped` line (the box sends one
 only for an abnormal stop, `subject` = `<campaign>/<cycle>: <stop reason>`) prints
@@ -69,8 +69,8 @@ only for an abnormal stop, `subject` = `<campaign>/<cycle>: <stop reason>`) prin
 account's refusals print as one item per status class, `500 on /api/v1/machine-status ×18,
 /api/v1/auth/quota-status ×6 (14:44–16:20)`; the request id is never shown. **A 5xx is an
 alert**, since it is the app's fault and not the user's: `App: 24 requests of ada failed on a
-server error`, the grouped line, then what to do; the account's own lines say
-`24 requests failed on a server error (see attention)`. A 4xx stays under the account as
+server error`, the grouped line, then what to do; the account's own lines do not repeat it.
+A 4xx stays under the account as
 `refused 403 on …`. Free text from the box (subjects, reasons) is clipped to 80 characters and
 a dataset line to 240, so one long line cannot push the briefing past its limit.
 
